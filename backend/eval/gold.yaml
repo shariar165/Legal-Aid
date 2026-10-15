@@ -1,0 +1,27 @@
+# Expected findings per demo document. A risk counts as found when its playbook rule id
+# matches, or (for off-playbook risks) when its title contains one of the keywords.
+migrant_my_contract.txt:
+  expect:
+    - {rule: PB-PASSPORT}
+    - {rule: PB-RECRUIT-FEE}
+    - {rule: PB-MIN-WAGE}
+    - {rule: PB-DEDUCTION-CAP}
+    - {rule: PB-CLAIM-WAIVER}
+    - {keywords: [return, repatriat, ফেরা]}
+    - {keywords: [debt, bondage, penalty, exit]}
+rmg_dhaka_epz.txt:
+  expect:
+    - {rule: PB-EXPORT-PROCEEDS}
+    - {rule: PB-NONCOMPETE}
+    - {rule: PB-LIMITATION}
+    - {rule: PB-PENALTY}
+    - {rule: PB-FOREIGN-COURT}
+    - {rule: PB-DD-COST-SHIFT}
+    - {rule: PB-WORKER-DATA}
+    - {rule: PB-NOTICE}
+    - {rule: PB-MATERNITY}
+    - {keywords: [union, association, epz]}
+  must_cite: [BD-EPZLABOUR-2019-s22, BD-EPZLABOUR-2019-s30]
+  must_not_cite_prefix: [BD-LABOUR-2006]
+control_clean.txt:
+  expect: []

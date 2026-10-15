@@ -790,3 +790,178 @@
   font-size: 14px;
   color: var(--green-sub);
 }
+
+/* ---------- Samples (home) ---------- */
+
+.samples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.samplesTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+}
+
+.sampleList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sampleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  min-height: 56px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sampleBtn:hover {
+  border-color: var(--green);
+}
+
+.sampleIcon {
+  font-size: 22px;
+}
+
+.sampleText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.sampleName {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sampleSub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.counselLink {
+  display: inline-block;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* ---------- Live agent feed (analyzing) ---------- */
+
+.liveFeed {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--details-bg);
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  align-self: center;
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+
+.liveAgent {
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+@keyframes livePulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot {
+    animation: none;
+  }
+}
+
+/* ---------- Result: extra cards ---------- */
+
+.banner[data-safe="true"] {
+  background: var(--green);
+}
+
+.card[data-kind="pay"] {
+  --head-bg: var(--amber-tint);
+  --head-c: var(--amber-ink);
+  --accent: var(--amber-btn);
+}
+
+.card[data-kind="letter"] {
+  --head-bg: var(--green-tint);
+  --head-c: var(--green);
+  --accent: var(--green);
+}
+
+a.citName {
+  color: inherit;
+}
+
+.letterSub {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.letterText {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--details-bg);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.memoLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 2px solid var(--green);
+  background: var(--card);
+  text-decoration: none;
+  color: var(--green);
+}
+
+.memoMain {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.memoSub {
+  font-size: 13px;
+  color: var(--muted);
+}

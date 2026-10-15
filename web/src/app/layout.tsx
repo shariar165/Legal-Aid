@@ -26,7 +26,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="bn" className={`${hindSiliguri.variable} ${notoSerifBengali.variable}`}>
-      <body>{children}</body>
+      {/* browser extensions (e.g. ColorZilla) add attributes to <body> before hydration */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

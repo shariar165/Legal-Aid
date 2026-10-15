@@ -39,4 +39,6 @@ def compute(facts: DocFacts, route: RouteDecision, salary: float | None = None, 
         if c == cur and pack in route.pack_ids:
             calc.deduction_cap_pct, calc.cap_citation = cap, cid
             calc.over_cap = calc.pct_deducted > cap
+    if not calc.deductions and calc.minimum_wage is None:
+        return None  # nothing to compare against: a bare salary figure adds no insight
     return calc

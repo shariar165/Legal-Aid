@@ -19,8 +19,10 @@ def test_user_confirmed_salary_overrides_ocr():
 
 
 def test_no_minimum_wage_outside_routed_jurisdiction():
-    w = calculator.compute(DocFacts(salary_amount=12500, salary_currency="BDT"), RouteDecision(packs=[]))
-    assert w.minimum_wage is None and not w.below_minimum
+    facts = DocFacts(salary_amount=12500, salary_currency="BDT", deductions=[Deduction(label="canteen", amount=500)])
+    w = calculator.compute(facts, RouteDecision(packs=[]))
+    assert w.minimum_wage is None and not w.below_minimum and w.net == 12000
+    assert calculator.compute(DocFacts(salary_amount=12500, salary_currency="BDT"), RouteDecision(packs=[])) is None
 
 
 async def test_drafter_strips_unverified_citations(corpus):

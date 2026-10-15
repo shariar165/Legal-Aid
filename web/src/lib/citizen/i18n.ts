@@ -37,6 +37,12 @@ export const STRINGS = {
       en: "Your name and passport number are kept private.",
     },
     disclaimer: { bn: "সিদ্ধান্তে সহায়তা, আইনি পরামর্শ নয়।", en: "Decision support, not legal advice." },
+    samplesTitle: { bn: "অথবা একটি নমুনা চুক্তি দিয়ে দেখুন", en: "Or try a sample contract" },
+    counselLink: { bn: "আইনজীবী / এনজিও মোড →", en: "Lawyer / NGO mode →" },
+    offline: {
+      bn: "সার্ভারের সঙ্গে যোগাযোগ হচ্ছে না। একটু পরে আবার চেষ্টা করুন।",
+      en: "Cannot reach the server. Please try again in a moment.",
+    },
   },
 
   analyzing: {
@@ -60,6 +66,10 @@ export const STRINGS = {
       en: "Confirm the salary above before seeing the result.",
     },
     seeResult: { bn: "ফলাফল দেখুন →", en: "See result →" },
+    liveLabel: { bn: "এখন যা হচ্ছে", en: "Happening now" },
+    failed: { bn: "বিশ্লেষণ শেষ করা যায়নি।", en: "The analysis could not be completed." },
+    retry: { bn: "আবার চেষ্টা করুন", en: "Try again" },
+    ocrLowConf: { bn: "ছবি থেকে পড়ার নিশ্চয়তা", en: "Reading confidence" },
   },
 
   result: {
@@ -84,10 +94,30 @@ export const STRINGS = {
     help: { bn: "প্রবাসী কল্যাণ হেল্পডেস্কে যোগাযোগ", en: "Contact migrant welfare helpdesk" },
     helpSub: { bn: "Contact migrant welfare helpdesk", en: "প্রবাসী কল্যাণ হেল্পডেস্কে যোগাযোগ" },
     calling: { bn: "কল করা হচ্ছে…", en: "Calling…" },
+    openSource: { bn: "সরকারি উৎসে দেখুন", en: "Open official source" },
+    letterTitle: { bn: "এজেন্সিকে পাঠানোর চিঠি", en: "Letter to send to the agency" },
+    letterSub: {
+      bn: "এই চিঠিতে কোন শর্ত বদলাতে হবে আর কোন আইনে, তা লেখা আছে।",
+      en: "This letter lists the terms to change and the law behind each one.",
+    },
+    copy: { bn: "কপি করুন", en: "Copy" },
+    copied: { bn: "✓ কপি হয়েছে", en: "✓ Copied" },
+    share: { bn: "শেয়ার করুন", en: "Share" },
+    memoLink: { bn: "আইনজীবীর জন্য পূর্ণ আইনি মেমো →", en: "Full legal memo for a lawyer →" },
+    memoSub: {
+      bn: "প্রতিটি আইনি দাবির যাচাই-তালিকা, ভার্চুয়াল বেঞ্চের রায়সহ",
+      en: "With the verification ledger and the Virtual Bench ruling",
+    },
+    noDanger: { bn: "বড় কোনো বিপদ পাওয়া যায়নি", en: "No serious danger found" },
+    offlineMode: {
+      bn: "অফলাইন ডেমো মোড: আইনের যাচাই আসল, ভাষা মডেলের উত্তর নমুনা।",
+      en: "Offline demo mode: law checks are real, language-model answers are samples.",
+    },
   },
 } as const;
 
 export function bannerTitle(count: number, lang: Lang): string {
+  if (count === 0) return lang === "bn" ? "বড় কোনো বিপদ পাওয়া যায়নি" : "No serious danger found";
   return lang === "bn"
     ? `সাবধান! চুক্তিতে ${formatNumber(count, "bn")}টি বড় বিপদ আছে`
     : `Warning! Your contract has ${count} serious ${count === 1 ? "risk" : "risks"}`;

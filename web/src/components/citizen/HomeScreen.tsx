@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { api, type Sample } from "@/lib/api";
 import { SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { useScreenFocus } from "./useScreenFocus";
@@ -13,10 +15,21 @@ interface Props {
   lang: Lang;
   onLangChange: (lang: Lang) => void;
   onFile: (file: File | null) => void;
+  onSample: (sampleId: string) => void;
   speech: ReturnType<typeof useSpeech>;
 }
 
-export function HomeScreen({ lang, onLangChange, onFile, speech }: Props) {
+export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Props) {
+  const [samples, setSamples] = useState<Sample[] | null>(null);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    api
+      .samples()
+      .then((s) => setSamples(s.filter((x) => x.id !== "control")))
+      .catch(() => setOffline(true));
+  }, []);
+
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
   const heading = useScreenFocus<HTMLHeadingElement>();
@@ -102,10 +115,42 @@ export function HomeScreen({ lang, onLangChange, onFile, speech }: Props) {
           {howToPlaying && <span className={styles.listenProgress} style={{ width: `${speech.pct}%` }} />}
         </button>
 
+        {offline && (
+          <p className={styles.hint} role="status">
+            {T.offline[lang]}
+          </p>
+        )}
+        {samples && samples.length > 0 && (
+          <section className={styles.samples} aria-labelledby="samples-title">
+            <h2 id="samples-title" className={styles.samplesTitle}>
+              {T.samplesTitle[lang]}
+            </h2>
+            <ul className={styles.sampleList}>
+              {samples.map((smp) => (
+                <li key={smp.id}>
+                  <button type="button" className={styles.sampleBtn} onClick={() => onSample(smp.id)}>
+                    <span className={styles.sampleIcon} aria-hidden="true">
+                      {smp.kind === "image" ? "📷" : "📄"}
+                    </span>
+                    <span className={styles.sampleText}>
+                      <span className={styles.sampleName}>{smp.title[lang]}</span>
+                      <span className={styles.sampleSub}>{smp.subtitle[lang]}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <p className={styles.homeFoot}>
           {T.privacy[lang]}
           <br />
           {T.disclaimer[lang]}
+          <br />
+          <Link href="/counsel" className={styles.counselLink}>
+            {T.counselLink[lang]}
+          </Link>
         </p>
       </div>
     </div>

@@ -61,7 +61,7 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
             for seat, role in SEATS
         )
     )
-    models = {role: (llm.resolve(role)[1] if llm.mode != "fake" else config.role(role).model) for _, role in SEATS}
+    models = {role: (llm.resolve(role)[1] if llm.mode != "fake" else f"{config.role(role).model} (offline stand-in)") for _, role in SEATS}
     opinions = [_clean(seat, models[role], op) for (seat, role), op in zip(SEATS, first)]
 
     async def review(i: int) -> dict:
@@ -84,7 +84,9 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
     majority_verdict, votes = verdicts.most_common(1)[0]
     severities = sorted((SEV.index(o.severity) for o in final))
     majority_severity = SEV[severities[1]]  # median of three
+    # a judge dissents if they differ from the majority on the verdict OR on severity
     dissenters = [o for o in final if o.verdict != majority_verdict or o.severity != majority_severity]
+    vote = f"{3 - len(dissenters)}–{len(dissenters)}"
 
     def fake_chair() -> dict:
         dissent = None
@@ -92,18 +94,20 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
             d = dissenters[0]
             dissent = f"{d.seat} dissents: verdict {d.verdict}, severity {d.severity}."
         return {
-            "majority_opinion": f"The bench holds by {votes}–{3 - votes} that the statute text {majority_verdict} the proposition; severity is {majority_severity}.",
+            "majority_opinion": f"The bench holds by {vote} that the statute text {majority_verdict} the proposition; severity is {majority_severity}.",
             "dissent": dissent,
         }
 
     ops = "\n".join(f"{o.seat}: verdict={o.verdict}, severity={o.severity}. {o.reasoning}" for o in final)
-    chair = await llm.json(role="chairman", system=CHAIR_SYSTEM, user=f"{case}\n\nFINAL OPINIONS:\n{ops}", task="bench_chair", agent="Virtual Bench · Chief Justice", fake=fake_chair)
+    chair = await llm.json(
+        role="chairman", system=CHAIR_SYSTEM, task="bench_chair", agent="Virtual Bench · Chief Justice", fake=fake_chair,
+        user=f"{case}\n\nFINAL OPINIONS:\n{ops}\n\nRESULT: {vote}; majority verdict {majority_verdict}, majority severity {majority_severity}.",
+    )
     dissent = chair.get("dissent")
     if isinstance(dissent, str) and dissent.strip().lower() in ("", "null", "none"):
         dissent = None
     if dissenters and not dissent:
         dissent = f"{dissenters[0].seat}: verdict {dissenters[0].verdict}, severity {dissenters[0].severity}."
-    vote = f"{votes}–{3 - votes}" if not dissenters else f"{3 - len(dissenters)}–{len(dissenters)}"
     return BenchResult(
         question=claim.proposition,
         opinions=final,
@@ -113,7 +117,7 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
         majority_opinion=str(chair.get("majority_opinion") or fake_chair()["majority_opinion"]),
         dissent=dissent if dissenters else None,
         human_review=bool(dissenters),
-        chairman_model=llm.resolve("chairman")[1] if llm.mode != "fake" else "fake",
+        chairman_model=llm.resolve("chairman")[1] if llm.mode != "fake" else f"{config.role('chairman').model} (offline stand-in)",
     )
 
 

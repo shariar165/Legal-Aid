@@ -37,8 +37,8 @@ async def heal(llm: LLM, corpus: Corpus, route: RouteDecision, risks: list[Risk]
             origin="critic",
         )
         nv = await verify_claim(llm, corpus, route, new, risk, use_bench=False)
-        nv.note = f"Critic re-anchored {v.claim.citation_id} (repealed) to {succ.citation_id} and re-verified."
-        v.note = f"Dropped: cites a repealed Act. Replaced by {succ.citation_id}."
+        nv.note = f"Critic re-anchored this claim from the repealed {sec.act_en} s.{sec.section} to the Act in force, and re-verified it."
+        v.note = f"Dropped: cites a repealed Act. The Critic replaced it with {succ.act_en} s.{succ.section}."
         added.append(nv)
         if risk:
             risk.claim_ids.append(new.id)

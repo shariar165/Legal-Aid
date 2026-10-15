@@ -22,6 +22,7 @@ from ain import config
 from ain.agents import bench as bench_mod
 from ain.llm import LLM
 from ain.models import Claim, GateResult, Risk, RouteDecision, Section, Verification
+from ain.naming import SHORT_EN
 from ain.retrieval import Corpus, nfc, tokenize
 
 ENTAIL_SYSTEM = """You verify legal citations. You get the text of ONE statute section and ONE proposition.
@@ -60,13 +61,23 @@ def gate_fidelity(claim: Claim, sec: Section) -> GateResult:
 
 def gate_currency(sec: Section) -> GateResult:
     if sec.status == "repealed":
-        succ = f" It was superseded by {sec.superseded_by}." if sec.superseded_by else ""
+        succ = f" It was superseded by the {SHORT_EN.get(sec.superseded_by, sec.superseded_by)} ({sec.superseded_by})." if sec.superseded_by else ""
         return GateResult(gate="currency", status="fail", detail=f"{sec.act_en} has been repealed.{succ}")
     if sec.status == "amended":
         note = sec.amendment_notes[0] if sec.amendment_notes else "amended"
         return GateResult(gate="currency", status="warn", detail=f"In force but amended: {note}")
     extra = f" Consolidated text includes {len(sec.amendment_notes)} amendment note(s)." if sec.amendment_notes else ""
     return GateResult(gate="currency", status="pass", detail=f"In force (text retrieved {sec.retrieved_at} from {sec.source}).{extra}")
+
+
+# Offline judge only: lets English propositions be matched against Bangla statute text.
+BN_GLOSSARY = {
+    "passport": "পাসপোর্ট", "visa": "ভিসা", "maternity": "প্রসূতি", "notice": "নোটিশ", "terminate": "অবসান",
+    "termination": "অবসান", "union": "ইউনিয়ন", "welfare": "কল্যাণ", "association": "সমিতি", "wage": "মজুরি", "wages": "মজুরী",
+    "deduction": "কর্তন", "deductions": "কর্তন", "consent": "সম্মতি", "forced": "জবরদস্তি", "debt": "ঋণ", "contract": "চুক্তি",
+    "compensation": "ক্ষতিপূরণ", "suit": "মামলা", "migrant": "অভিবাসী", "return": "ফেরত", "imprisonment": "কারাদণ্ড",
+    "fine": "অর্থদণ্ড", "clearance": "ছাড়পত্র", "withholding": "আটকাইয়া", "offence": "অপরাধ", "permanent": "স্থায়ী",
+}
 
 
 def fake_entailment(claim: Claim, sec: Section) -> str:
@@ -78,6 +89,10 @@ def fake_entailment(claim: Claim, sec: Section) -> str:
     if nums and len(nums & set(re.findall(r"\d+", text))) / len(nums) >= 0.5:
         return "supports"
     toks = set(tokenize(claim.proposition)) - {"act", "under", "s", "section", "art", "article"}
+    if sec.lang == "bn":
+        terms = [BN_GLOSSARY[t] for t in toks if t in BN_GLOSSARY]
+        hits = sum(1 for t in terms if t in text)
+        return "supports" if terms and hits >= max(2, len(terms) // 2) else "neutral"
     overlap = len(toks & set(tokenize(text))) / max(1, len(toks))
     return "supports" if overlap >= 0.35 else "neutral"
 

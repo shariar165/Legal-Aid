@@ -18,3 +18,4 @@ backend/runs/
 web/node_modules/
 web/.next/
 backend/corpus/processed/emb_*.npy
+backend/eval/last_eval.json

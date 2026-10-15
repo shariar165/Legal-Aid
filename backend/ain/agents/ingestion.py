@@ -82,7 +82,7 @@ def ocr_image(data: bytes) -> list[OcrLine]:
     out = []
     for line in lines:
         line.sort(key=lambda x: x[1])
-        out.append(OcrLine(text=" ".join(x[3] for x in line), conf=round(min(x[4] for x in line), 3)))
+        out.append(OcrLine(text=" ".join(x[3] for x in line), conf=round(float(min(x[4] for x in line)), 3)))
     config.OCR_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps([o.__dict__ for o in out], ensure_ascii=False, indent=1), encoding="utf-8")
     return out
@@ -256,7 +256,7 @@ def build_document(data: bytes, filename: str, source_kind: str | None = None) -
     if ex.ocr_lines and facts.salary_text:
         amount = facts.salary_text.split()[-1] if " " in facts.salary_text else facts.salary_text
         hits = [line.conf for line in ex.ocr_lines if amount.replace(",", "") in line.text.replace(",", "")]
-        facts.salary_confidence = min(hits) if hits else 0.5
+        facts.salary_confidence = float(min(hits)) if hits else 0.5
     doc = Document(
         name=filename,
         source_kind=source_kind or ex.kind,  # type: ignore[arg-type]

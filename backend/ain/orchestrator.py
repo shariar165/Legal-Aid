@@ -158,8 +158,6 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
             if await job.wait_confirm(confirm_timeout):
                 salary, confirmed = job.confirmed_salary, True
             job.status = "running"
-        elif facts.salary_amount is not None:
-            confirmed = True  # read from a digital text layer, nothing to confirm
         job.say("agent_start", "Wage Calculator", "Computing take-home pay")
         w = calculator.compute(facts, route, salary, confirmed)
         if w:

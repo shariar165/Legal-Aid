@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SAMPLE_OCR_CHECK, SAMPLE_RESULT } from "@/lib/citizen/analysis";
 import type { Lang } from "@/lib/citizen/i18n";
 import { useSpeech } from "@/lib/citizen/useSpeech";
+import { useAnalysis } from "@/lib/useAnalysis";
 import { AnalyzingScreen } from "./AnalyzingScreen";
 import { HomeScreen } from "./HomeScreen";
 import { ResultScreen } from "./ResultScreen";
@@ -14,9 +14,9 @@ type Screen = "home" | "analyzing" | "result";
 export function CitizenApp() {
   const [lang, setLang] = useState<Lang>("bn");
   const [screen, setScreen] = useState<Screen>("home");
-  const [fileName, setFileName] = useState<string | null>(null);
   const speech = useSpeech();
   const { stop } = speech;
+  const analysis = useAnalysis();
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -40,16 +40,37 @@ export function CitizenApp() {
           onLangChange={changeLang}
           speech={speech}
           onFile={(file) => {
-            setFileName(file?.name ?? null);
+            if (!file) return;
+            void analysis.start({ file });
+            go("analyzing");
+          }}
+          onSample={(sampleId) => {
+            void analysis.start({ sampleId });
             go("analyzing");
           }}
         />
       )}
       {screen === "analyzing" && (
-        <AnalyzingScreen lang={lang} fileName={fileName} ocrCheck={SAMPLE_OCR_CHECK} onResult={() => go("result")} />
+        <AnalyzingScreen
+          lang={lang}
+          analysis={analysis}
+          onResult={() => go("result")}
+          onRetry={() => {
+            analysis.reset();
+            go("home");
+          }}
+        />
       )}
-      {screen === "result" && (
-        <ResultScreen lang={lang} result={SAMPLE_RESULT} speech={speech} onBack={() => go("home")} />
+      {screen === "result" && analysis.result && (
+        <ResultScreen
+          lang={lang}
+          result={analysis.result}
+          speech={speech}
+          onBack={() => {
+            analysis.reset();
+            go("home");
+          }}
+        />
       )}
     </main>
   );
