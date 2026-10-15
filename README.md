@@ -118,3 +118,5 @@ The tests cover:
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
+#   L e g a l - A i d  
+ 
