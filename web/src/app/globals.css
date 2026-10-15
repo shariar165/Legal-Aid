@@ -1,0 +1,75 @@
+:root {
+  --font-sans: var(--font-hind-siliguri), system-ui, sans-serif;
+  --font-serif: var(--font-noto-serif-bengali), serif;
+
+  --backdrop: #e9e5da;
+  --surface: #f5f2ea;
+  --card: #fffdf8;
+  --ink: #17211c;
+  --ink-2: #2c3631;
+  --muted: #4a544e;
+  --muted-2: #5a625d;
+  --line: #dcd5c6;
+  --line-soft: #eee9dd;
+  --track: #e3ddcf;
+  --details-bg: #f1ede3;
+  --wait-border: #b5ae9f;
+
+  --green: #0f4c3a;
+  --green-dark: #0a3328;
+  --green-tint: #e4eee8;
+  --green-sub: #d3e2da;
+  --ok-ink: #0f5132;
+  --ok-tint: #e2eee6;
+
+  --red: #b42318;
+  --red-ink: #9b1c13;
+  --red-tint: #fce8e4;
+
+  --amber: #9a6700;
+  --amber-ink: #6e4a00;
+  --amber-2: #7a4f00;
+  --amber-btn: #8a5a00;
+  --amber-tint: #fbf0d2;
+  --ocr-hl: #fff4c9;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--backdrop);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--green-dark);
+}
+
+:focus-visible {
+  outline: 3px solid #1d6fd6;
+  outline-offset: 2px;
+}
+
+[tabindex="-1"]:focus {
+  outline: none;
+}
