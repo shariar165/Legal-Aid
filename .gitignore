@@ -17,3 +17,4 @@ backend/runs/
 # Node / Next (also in web/.gitignore)
 web/node_modules/
 web/.next/
+backend/corpus/processed/emb_*.npy

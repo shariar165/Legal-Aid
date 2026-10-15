@@ -1,0 +1,288 @@
+# Ain Copilot risk playbook.
+# Every anchor `citation_id` must exist in the corpus and every `quote` must be a verbatim
+# substring of that section (tests/test_corpus.py enforces both). Section numbers here were
+# taken from the scraped text, never typed from memory.
+#
+# trigger:
+#   regex:   any match in a clause makes it a candidate (case-insensitive)
+#   absent:  rule fires when NONE of these patterns appear anywhere in the document
+#   fact:    name of a deterministic check in agents/risk_analyst.py (uses extracted facts / wage calculator)
+# packs:     the rule runs only when the Jurisdiction Router selected at least one of these packs
+# anchors:   default legal propositions; anchors_by_pack overrides them per regime (Labour Act vs EPZ)
+
+- id: PB-PASSPORT
+  category: forced_labour
+  severity: critical
+  packs: [bd_migration]
+  title: {en: "Employer keeps the worker's passport", bn: "মালিক কর্মীর পাসপোর্ট নিজের কাছে রাখবে"}
+  trigger:
+    regex: ['passport.{0,80}(surrender|kept|keep|retain|custody|held|hold|deposit|safekeeping)', '(surrender|retain|keep|hold).{0,40}passport', 'পাসপোর্ট.{0,40}(জমা|রাখ|আটক)']
+  question: Does the clause allow the employer, agency or anyone other than the worker to keep the worker's passport?
+  anchors:
+    - citation_id: BD-OEMA-2013-s31
+      proposition: Under the Overseas Employment and Migrants Act 2013 s.31(গ), withholding a migrant worker's passport, visa or migration documents without lawful reason is an offence punishable with up to 5 years' imprisonment and a fine of not less than Tk 1 lakh.
+      quote: কোন অভিবাসী কর্মীর পাসপোর্ট, ভিসা বা অভিবাসন সংক্রান্ত কাগজপত্র বৈধ কারণ ব্যতীত আটকাইয়া রাখিলে
+    - citation_id: ILO-C029-a2
+      proposition: ILO Convention 29 Art. 2 defines forced or compulsory labour as all work or service exacted from a person under the menace of any penalty and for which the person has not offered himself voluntarily.
+      quote: all work or service which is exacted from any person under the menace of any penalty and for which the said person has not offered himself voluntarily
+  why_non_obvious: "'Safekeeping' language makes passport retention look like a favour to the worker; it is a criminal offence in Bangladesh and a recognised forced-labour indicator."
+  citizen_line: {bn: "মালিক আপনার পাসপোর্ট নিজের কাছে রেখে দেবে। এটা বেআইনি।", en: "Your employer will keep your passport. This is illegal."}
+  action: {bn: "পাসপোর্ট সবসময় নিজের কাছে রাখুন। এই শর্তটি কেটে দিতে বলুন।", en: "Always keep your passport yourself. Ask for this term to be removed."}
+  mitigation: "The Worker shall retain possession of his/her passport and travel documents at all times. The Employer may request the passport only for visa renewal or a lawful official purpose, against a written receipt, and shall return it within 7 days."
+
+- id: PB-RECRUIT-FEE
+  category: wage_deduction
+  severity: high
+  packs: [ilo, my_employment]
+  title: {en: "Recruitment costs are charged to the worker through salary deductions", bn: "নিয়োগের খরচ বেতন থেকে কাটা হবে"}
+  trigger:
+    regex: ['(recruit|agency|visa|processing|placement|levy).{0,80}(cost|fee|charge|expense).{0,120}(deduct|salary|wage)', 'deduct.{0,120}(recruit|agency|visa)', 'নিয়োগ.{0,40}খরচ']
+  question: Does the clause make the worker pay recruitment, visa or agency costs (directly or by deduction from wages)?
+  anchors:
+    - citation_id: ILO-C181-a7
+      proposition: Under ILO Convention 181 Art. 7(1), private employment agencies shall not charge, directly or indirectly, in whole or in part, any fees or costs to workers.
+      quote: Private employment agencies shall not charge directly or indirectly, in whole or in part, any fees or costs to workers.
+    - citation_id: ILO-C095-a9
+      proposition: ILO Convention 95 Art. 9 prohibits any deduction from wages made to ensure a direct or indirect payment for obtaining or retaining employment, paid to an employer, its representative or an intermediary such as a recruiter.
+      quote: Any deduction from wages with a view to ensuring a direct or indirect payment for the purpose of obtaining or retaining employment
+    - citation_id: MY-EA-1955-s24
+      proposition: Under the Malaysian Employment Act 1955 s.24(1), no deductions shall be made by an employer from an employee's wages otherwise than in accordance with the Act.
+      quote: No deductions shall be made by an employer from the wages of an employee otherwise than in accordance with this Act.
+  why_non_obvious: The fee is not called a fee; it is spread as small monthly 'recovery' deductions, so the worker effectively pays to get the job.
+  citizen_line: {bn: "নিয়োগের খরচ আপনার বেতন থেকে কাটা হবে।", en: "Recruitment costs will be cut from your salary."}
+  action: {bn: "সই করার আগে এজেন্সিকে এই কর্তন বাদ দিতে বলুন।", en: "Before signing, ask the agency to remove this deduction."}
+  mitigation: "All recruitment, visa, levy and processing costs shall be borne by the Employer. No such cost shall be recovered from the Worker directly or by deduction from wages."
+
+- id: PB-MIN-WAGE
+  category: wage
+  severity: high
+  packs: [my_employment]
+  title: {en: "Basic salary is below the Malaysian minimum wage", bn: "মূল বেতন মালয়েশিয়ার ন্যূনতম মজুরির চেয়ে কম"}
+  trigger:
+    fact: below_min_wage
+  question: Is the promised monthly basic wage below the applicable minimum wage?
+  anchors:
+    - citation_id: MY-MWO-2024-p3
+      proposition: Under Malaysia's Minimum Wages Order 2024 (P.U.(A) 376), from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
+      quote: Minimum Wages Rate Monthly Daily Hourly RM1,700
+  why_non_obvious: The salary looks like a normal figure in ringgit; only the 2024 gazette shows it is below the legal floor.
+  citizen_line: {bn: "আপনার বেতন মালয়েশিয়ার আইনে ন্যূনতম বেতনের চেয়ে কম।", en: "Your salary is less than Malaysia's legal minimum wage."}
+  action: {bn: "কমপক্ষে RM 1,700 মূল বেতন লিখে দিতে বলুন।", en: "Ask for a basic salary of at least RM 1,700 in writing."}
+  mitigation: "The Employer shall pay a basic monthly wage of not less than the minimum wage prescribed under the Minimum Wages Order in force from time to time (currently RM1,700)."
+
+- id: PB-DEDUCTION-CAP
+  category: wage_deduction
+  severity: high
+  packs: [my_employment]
+  title: {en: "Monthly deductions exceed the 50% legal cap", bn: "মাসিক কর্তন আইনের ৫০% সীমা ছাড়িয়ে যায়"}
+  trigger:
+    fact: deduction_over_cap
+  question: Do the total monthly deductions exceed half of the wages earned in that month?
+  anchors:
+    - citation_id: MY-EA-1955-s24
+      proposition: Under the Malaysian Employment Act 1955 s.24(8), the total deductions from an employee's wages in any one month shall not exceed fifty per cent of the wages earned in that month.
+      quote: shall not exceed fifty per centum of the wages earned by that employee in that month
+  why_non_obvious: Each deduction is small on its own; only the sum shows that more than half of the pay is taken.
+  citizen_line: {bn: "খরচ কাটার পর বেতন কথা দেওয়া বেতনের অর্ধেকেরও কম হবে।", en: "After the cuts, you will get less than half of the promised pay."}
+  action: {bn: "মোট কর্তন লিখিতভাবে কমাতে বলুন।", en: "Ask in writing for the total deductions to be reduced."}
+  mitigation: "Total deductions in any month shall not exceed 50% of the wages earned in that month, and shall be limited to deductions permitted by s.24 of the Employment Act 1955."
+
+- id: PB-CLAIM-WAIVER
+  category: access_to_justice
+  severity: high
+  packs: [bd_migration, bd_contract]
+  title: {en: "Worker gives up the right to complain or sue", bn: "অভিযোগ বা মামলা করার অধিকার কেড়ে নেওয়া হয়েছে"}
+  trigger:
+    regex: ['waive[sd]? (all )?(claims|rights)', 'shall not (file|bring|lodge|make) any (complaint|claim|case|suit)', 'not (be )?entitled to (claim|sue|complain)']
+  question: Does the clause bar the worker from complaining to authorities or courts, or make claims lapse after a short time?
+  clash: "Choice of foreign law cannot remove the statutory right of a Bangladeshi migrant worker to sue in Bangladesh, and an agreement restricting legal proceedings is void under the Contract Act."
+  anchors:
+    - citation_id: BD-OEMA-2013-s28
+      proposition: Under OEMA 2013 s.28, a migrant worker harmed by a breach of the Act or of the employment contract may file a civil suit for compensation, without prejudice to criminal proceedings.
+      quote: ক্ষতিপূরণের জন্য দেওয়ানী মামলা দায়ের করিতে পারিবে
+    - citation_id: BD-CONTRACT-1872-s28
+      proposition: Under Contract Act 1872 s.28, an agreement that absolutely restricts a party from enforcing his rights through the ordinary tribunals, or limits the time to enforce them, is void to that extent.
+      quote: Every agreement, by which any party thereto is restricted absolutely from enforcing his rights under or in respect of any contract, by the usual legal proceedings in the ordinary tribunals
+  why_non_obvious: The clause is framed as a 'complaint procedure', but it silently strips statutory remedies in Bangladesh.
+  citizen_line: {bn: "চুক্তি বলছে আপনি BMET বা আদালতে অভিযোগ করতে পারবেন না। এটা আইনে টেকে না।", en: "The contract says you cannot complain to BMET or a court. That does not hold up in law."}
+  action: {bn: "সমস্যা হলে BMET, দূতাবাস বা আদালতে যেতে পারবেন, এটা মনে রাখুন।", en: "Remember you can still go to BMET, the embassy or a court if there is a problem."}
+  mitigation: "Nothing in this Contract limits the Worker's right to complain to BMET, the Bangladesh Mission or any court, or to claim compensation under section 28 of the Overseas Employment and Migrants Act 2013."
+
+- id: PB-NONCOMPETE
+  exclude_packs: [bd_migration]
+  category: valid_abroad_void_bd
+  severity: high
+  packs: [bd_contract]
+  title: {en: "Post-termination non-compete is void in Bangladesh", bn: "চাকরি/চুক্তি শেষে প্রতিযোগিতা-নিষেধ বাংলাদেশে অকার্যকর"}
+  trigger:
+    regex: ['(after|following) (the )?(termination|leaving|expiry).{0,120}(shall not|not to|must not) (work|manufacture|supply|engage|compete)', 'non-?compete', 'shall not (work|manufacture|supply).{0,80}(competitor|other garment|any other).{0,60}(after|for (one|two|\d))', 'for (one|two|three|\(?\d\)?) \(?\d?\)? ?years? after (its )?(termination|leaving)']
+  question: Does the clause restrain a party from carrying on a trade, profession or business after the relationship ends?
+  clash: "Post-termination restraints are routinely enforced (if reasonable) under English and German law; Bangladesh's Contract Act voids them outright, save for the sale of goodwill."
+  anchors:
+    - citation_id: BD-CONTRACT-1872-s27
+      proposition: Under Contract Act 1872 s.27, every agreement by which anyone is restrained from exercising a lawful profession, trade or business of any kind is void to that extent, subject to the sale-of-goodwill exception.
+      quote: Every agreement by which any one is restrained from exercising a lawful profession, trade or business of any kind, is to that extent void.
+  why_non_obvious: Foreign templates make this look standard; the client relies on a protection a Bangladeshi court will not enforce.
+  citizen_line: {bn: "চাকরি ছাড়ার পর অন্য কারখানায় কাজ নিষেধ করার শর্ত আইনে বাতিল।", en: "The ban on working elsewhere after you leave is void under the law."}
+  action: {bn: "এই শর্ত বাদ দিতে বলুন; চাপ দিলে আইনজীবীর পরামর্শ নিন।", en: "Ask for this term to be removed; get legal advice if pressured."}
+  mitigation: "Replace with a confidentiality and non-solicitation-of-customer-data clause limited to the term of the Agreement; delete any post-termination restraint on trade."
+
+- id: PB-LIMITATION
+  exclude_packs: [bd_migration]
+  category: valid_abroad_void_bd
+  severity: medium
+  packs: [bd_contract]
+  title: {en: "Contract shortens the time to bring claims", bn: "দাবি করার সময়সীমা চুক্তিতে কমিয়ে দেওয়া হয়েছে"}
+  trigger:
+    regex: ['(claim|action|proceeding|complaint)s?.{0,80}(within|no later than) .{0,30}(days|months|weeks)', 'time-?barred']
+  question: Does the clause limit the time within which a party may enforce its rights?
+  anchors:
+    - citation_id: BD-CONTRACT-1872-s28
+      proposition: Under Contract Act 1872 s.28, an agreement which limits the time within which a party may enforce his rights through the ordinary tribunals is void to that extent.
+      quote: or which limits the time within which he may thus enforce his rights, is void to that extent
+  why_non_obvious: Short claim windows are normal in buyer terms; in Bangladesh the statutory limitation period cannot be contracted down.
+  citizen_line: {bn: "অভিযোগ করার সময় চুক্তিতে কমানো হয়েছে; আইন এটা মানে না।", en: "The contract shortens the time to make a claim; the law does not allow this."}
+  action: {bn: "সময়সীমার শর্ত বাদ দিতে বলুন।", en: "Ask for the time-limit clause to be removed."}
+  mitigation: "Delete the contractual time-bar; claims shall be subject to the Limitation Act 1908."
+
+- id: PB-PENALTY
+  exclude_packs: [bd_migration]
+  category: valid_abroad_void_bd
+  severity: medium
+  packs: [bd_contract]
+  title: {en: "Penalty / liquidated damages are not automatically recoverable", bn: "জরিমানা/নির্ধারিত ক্ষতিপূরণ স্বয়ংক্রিয়ভাবে আদায়যোগ্য নয়"}
+  trigger:
+    regex: ['liquidated damages', '\bpenalty\b', 'without .{0,30}prov(e|ing) any loss']
+  question: Does the clause impose a penalty or pre-agreed damages for breach?
+  anchors:
+    - citation_id: BD-CONTRACT-1872-s74
+      proposition: Under Contract Act 1872 s.74, where a contract names a sum or penalty for breach, the injured party is entitled only to reasonable compensation not exceeding the amount so named.
+      quote: reasonable compensation not exceeding the amount so named
+  why_non_obvious: The stated rate looks enforceable; courts award only reasonable compensation capped by it, and a punitive rate invites dispute.
+  citizen_line: {bn: "জরিমানার পুরো টাকা আইনত আদায় করা যায় না; কেবল যুক্তিসঙ্গত ক্ষতিপূরণ।", en: "The full penalty cannot be legally collected; only reasonable compensation."}
+  action: {bn: "জরিমানার শর্ত কমাতে বা বাদ দিতে বলুন।", en: "Ask for the penalty to be reduced or removed."}
+  mitigation: "In case of breach, the injured party may recover reasonable compensation for loss actually suffered, capped at [x]% of the affected order value."
+
+- id: PB-NOTICE
+  category: labour_standard
+  severity: high
+  packs: [bd_labour, bd_epz]
+  title: {en: "Termination notice is shorter than the statutory minimum", bn: "চাকরি শেষের নোটিশ আইনের চেয়ে কম"}
+  trigger:
+    fact: notice_short
+  question: Is the employer's notice period for terminating a permanent worker shorter than the statute requires?
+  anchors_by_pack:
+    bd_labour:
+      - citation_id: BD-LABOUR-2006-s26
+        proposition: Under Bangladesh Labour Act 2006 s.26(1), an employer may terminate a permanent monthly-rated worker only by giving 120 days' written notice (or wages in lieu).
+        quote: মাসিক মজুরীর ভিত্তিতে নিয়োজিত শ্রমিকের তেগত্রে, একশত বিশ দিনের
+    bd_epz:
+      - citation_id: BD-EPZLABOUR-2019-s22
+        proposition: Under the Bangladesh EPZ Labour Act 2019 s.22(1), an employer may terminate a permanent worker only by giving 120 days' written notice (or wages in lieu).
+        quote: কোনো স্থায়ী শ্রমিকের ক্ষেত্রে ১২০ (একশত বিশ) দিনের
+  why_non_obvious: Foreign HR templates use 30 days; Bangladeshi statutes require four times that for permanent workers.
+  citizen_line: {bn: "চাকরি থেকে বাদ দিতে আইনে ১২০ দিনের নোটিশ লাগে, চুক্তিতে কম লেখা।", en: "The law requires 120 days' notice to dismiss you; the contract says less."}
+  action: {bn: "নোটিশের মেয়াদ ১২০ দিন লিখে দিতে বলুন।", en: "Ask for the notice period to be written as 120 days."}
+  mitigation: "The Employer may terminate the employment of a permanent worker only by giving 120 days' written notice or wages in lieu, together with statutory compensation."
+
+- id: PB-MATERNITY
+  category: labour_standard
+  severity: high
+  packs: [bd_labour, bd_epz]
+  title: {en: "Maternity benefit is below the statutory entitlement", bn: "মাতৃত্বকালীন সুবিধা আইনের চেয়ে কম"}
+  trigger:
+    fact: maternity_short
+  question: Is the maternity leave/benefit shorter than the statute requires?
+  anchors_by_pack:
+    bd_labour:
+      - citation_id: BD-LABOUR-2006-s46
+        proposition: Under Bangladesh Labour Act 2006 s.46(1) as amended in 2026, a woman worker is entitled to maternity benefit for 60 days before and 60 days after the expected date of delivery.
+        quote: অব্যবহিত পূর্ববর্তী [৬০ (ষাট) দিন] এবং সন্তান প্রসবের অব্যবহিত পরবর্তী [৬০ (ষাট) দিনের]
+    bd_epz:
+      - citation_id: BD-EPZLABOUR-2019-s30
+        proposition: Under the Bangladesh EPZ Labour Act 2019 s.30(1), a woman worker is entitled to maternity benefit for 8 weeks before and 8 weeks after the expected date of delivery.
+        quote: অব্যবহিত পূর্ববর্তী ৮ (আট) সপ্তাহ এবং সন্তান প্রসবের অব্যবহিত পরবর্তী ৮ (আট) সপ্তাহের
+  why_non_obvious: The applicable regime decides the number (EPZ 16 weeks vs Labour Act 120 days after the 2026 amendment).
+  citizen_line: {bn: "মাতৃত্বকালীন ছুটি আইনের চেয়ে কম দেওয়া হয়েছে।", en: "Your maternity leave is less than the law gives you."}
+  action: {bn: "আইন অনুযায়ী পূর্ণ মাতৃত্বকালীন সুবিধা লিখে দিতে বলুন।", en: "Ask for full statutory maternity benefit in writing."}
+  mitigation: "Female workers shall receive maternity benefit for the full period prescribed by the applicable statute, paid in cash at the average wage rate."
+
+- id: PB-EXPORT-PROCEEDS
+  category: fx_regulatory
+  severity: critical
+  packs: [bd_fx]
+  title: {en: "Payment term exceeds Bangladesh Bank's export-proceeds repatriation period", bn: "রপ্তানি মূল্য দেশে আনার সময়সীমা পেরিয়ে যায়"}
+  trigger:
+    fact: payment_terms_long
+  question: Does the payment term allow export proceeds to arrive later than four months after shipment?
+  clash: "150-day open-account terms are commercially normal for EU buyers, but a Bangladeshi exporter must repatriate full proceeds within four months of shipment unless Bangladesh Bank authorises otherwise."
+  anchors:
+    - citation_id: BD-GFET-2018-ch8p13
+      proposition: Under Bangladesh Bank's GFET 2018 Chapter 8 para 13(a), the full foreign exchange proceeds of exports must be received within four months, and delay beyond this without Bangladesh Bank authorisation exposes the exporter to action under the FER Act 1947.
+      quote: The period prescribed by the Bangladesh Bank within which full foreign exchange proceeds of exports must be received by exporters is four months
+    - citation_id: BD-FENOTIF-1977-p2
+      proposition: Bangladesh Bank Notification FE 1/77-BB para 2 requires the full export value of goods exported to any country to be paid within four months from the date of shipment.
+      quote: shall be paid within four months from the date of shipment
+    - citation_id: BD-FERA-1947-s12
+      proposition: Under FER Act 1947 s.12(1), exports may be prohibited unless the exporter declares that the full export value has been or shall within the prescribed period be received in the prescribed manner.
+      quote: the full export value of the goods or services has been or shall within the prescribed period be, received in the prescribed manner
+  why_non_obvious: A purely commercial payment term silently puts the supplier in breach of foreign exchange regulation.
+  citizen_line: {bn: "১৫০ দিনের পেমেন্ট শর্ত বাংলাদেশ ব্যাংকের ৪ মাসের নিয়ম ভাঙে।", en: "150-day payment terms break Bangladesh Bank's four-month rule."}
+  action: {bn: "পেমেন্টের মেয়াদ ১২০ দিনের মধ্যে আনুন বা ব্যাংকের অনুমোদন নিন।", en: "Bring payment within 120 days or obtain Bangladesh Bank approval."}
+  mitigation: "The Buyer shall pay each invoice no later than 120 days after the bill of lading date. Any longer tenor is conditional on the Supplier obtaining prior approval of Bangladesh Bank through its Authorised Dealer."
+
+- id: PB-FOREIGN-COURT
+  exclude_packs: [bd_migration]
+  category: valid_abroad_void_bd
+  severity: medium
+  packs: [bd_contract]
+  title: {en: "Exclusive foreign-court jurisdiction may leave judgments unenforceable in Bangladesh", bn: "বিদেশি আদালতের রায় বাংলাদেশে সরাসরি কার্যকর নাও হতে পারে"}
+  trigger:
+    regex: ['courts? of (london|england|germany|hamburg|the netherlands|new york|singapore).{0,40}(exclusive )?jurisdiction', 'exclusive jurisdiction']
+  question: Does the clause give exclusive jurisdiction to foreign courts?
+  clash: "An English judgment is routinely enforceable across the EU/UK; in Bangladesh only decrees of superior courts of a notified 'reciprocating territory' are executable directly."
+  anchors:
+    - citation_id: BD-CPC-1908-s44A
+      proposition: Under Code of Civil Procedure 1908 s.44A, a certified copy of a decree of a superior court of a reciprocating territory filed in a District Court may be executed in Bangladesh as if it had been passed by that District Court.
+      quote: the decree may be executed in Bangladesh as if it had been passed by the District Court
+  why_non_obvious: The clause looks neutral; enforcement in Bangladesh may need a fresh suit, so the winning party's remedy is slower than expected.
+  citizen_line: {bn: "বিদেশি আদালতে মামলা হলে রায় বাংলাদেশে চালাতে সমস্যা হতে পারে।", en: "A foreign court's judgment may be hard to enforce in Bangladesh."}
+  action: {bn: "ঢাকায় সালিশ বা বাংলাদেশের আদালত রাখার প্রস্তাব দিন।", en: "Propose arbitration seated in Dhaka or Bangladeshi courts."}
+  mitigation: "Disputes shall be finally resolved by arbitration seated in Dhaka under the Arbitration Act 2001 (or a neutral seat whose awards are enforceable in Bangladesh under the New York Convention)."
+
+- id: PB-DD-COST-SHIFT
+  category: global_framework
+  severity: medium
+  packs: [eu_dd]
+  title: {en: "Buyer shifts all due-diligence costs onto the supplier", bn: "ক্রেতা সব যথাযথ-পরিশ্রম (due diligence) খরচ সরবরাহকারীর ঘাড়ে চাপিয়েছে"}
+  trigger:
+    regex: ['(supplier|vendor) shall bear (all )?(the )?costs?.{0,120}(audit|due diligence|remediation|corrective)', 'at its own cost']
+  question: Does the clause make the supplier bear all costs of the buyer's due diligence, audits or remediation?
+  anchors:
+    - citation_id: EU-CSDDD-2024-a10
+      proposition: Under CSDDD Art. 10(2)(e), in-scope companies are required, where relevant, to provide targeted and proportionate support to an SME business partner, including financial support where compliance with the code of conduct would jeopardise the SME's viability.
+      quote: provide targeted and proportionate support to an SME which is a business partner of the company
+  why_non_obvious: The directive the buyer invokes itself expects support for SME suppliers; a blanket cost-shift is a negotiation lever the supplier usually misses.
+  citizen_line: {bn: "ক্রেতার নিরীক্ষার সব খরচ কারখানার ওপর চাপানো হয়েছে।", en: "All of the buyer's audit costs are pushed onto the factory."}
+  action: {bn: "খরচ ভাগাভাগির শর্ত চান।", en: "Ask for a cost-sharing clause."}
+  mitigation: "The Buyer shall bear or share the reasonable costs of audits and remediation and provide capacity-building support, consistent with Article 10(2)(e) of Directive (EU) 2024/1760."
+
+- id: PB-WORKER-DATA
+  category: data_protection
+  severity: medium
+  packs: [bd_data, eu_data]
+  title: {en: "Worker personal data shared abroad without a consent basis", bn: "শ্রমিকের ব্যক্তিগত তথ্য সম্মতি ছাড়া বিদেশে পাঠানো"}
+  trigger:
+    regex: ['(share|transfer|disclose|provide).{0,60}personal data.{0,120}(buyer|auditor|european union|third part)', 'health records']
+  question: Does the clause require sharing workers' personal data with a foreign party?
+  anchors:
+    - citation_id: BD-PDP-2026-s5
+      proposition: Under the Personal Data Protection Act 2026 s.5, a data controller may process personal data with the data subject's consent, which must be voluntary, specific, clear and withdrawable, and given after being informed of the purpose, retention, transfer and withdrawal process.
+      quote: সম্মতি স্বেচ্ছাধীন, সুনির্দিষ্ট, স্পষ্ট ও প্রত্যাহারযোগ্য হইবে
+    - citation_id: EU-GDPR-2016-a44
+      proposition: Under GDPR Art. 44, any transfer of personal data to a third country may take place only if the conditions of Chapter V are complied with by the controller and processor, including for onward transfers.
+      quote: Any transfer of personal data which are undergoing processing or are intended for processing after transfer to a third country
+  why_non_obvious: Health and grievance records are sensitive; the supplier carries the Bangladeshi consent obligation while the EU side carries GDPR transfer rules.
+  citizen_line: {bn: "আপনার স্বাস্থ্য ও অভিযোগের তথ্য বিদেশে পাঠানো হতে পারে।", en: "Your health and complaint records may be sent abroad."}
+  action: {bn: "লিখিত সম্মতি ছাড়া তথ্য দিতে রাজি হবেন না।", en: "Do not agree to share data without written consent."}
+  mitigation: "Worker personal data shall be shared only in pseudonymised form, or with each worker's prior informed written consent under the Personal Data Protection Act 2026, and under a data transfer agreement."

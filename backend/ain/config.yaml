@@ -1,0 +1,23 @@
+# Model routing. Each role maps to a provider + model id.
+# Groq runs the fast main pipeline; OpenRouter runs the Virtual Bench (different model families).
+# Verify ids: Groq -> GET https://api.groq.com/openai/v1/models ; OpenRouter -> GET https://openrouter.ai/api/v1/models
+roles:
+  fast:      {provider: groq, model: llama-3.1-8b-instant}        # facts extraction, routing confirmation
+  reasoner:  {provider: groq, model: openai/gpt-oss-120b}         # risk analysis, adversarial counsel, drafting
+  judge:     {provider: groq, model: qwen/qwen3-32b}              # single-judge entailment (different family from drafter)
+  plain:     {provider: groq, model: llama-3.3-70b-versatile}     # ablation baseline: one prompt, no tools
+  bench_a:   {provider: openrouter, model: anthropic/claude-haiku-5.5}
+  bench_b:   {provider: openrouter, model: google/gemini-3.5-flash-lite}
+  bench_c:   {provider: openrouter, model: deepseek/deepseek-v4-flash}
+  chairman:  {provider: openrouter, model: openai/gpt-5.4-mini}
+
+providers:
+  groq:       {base_url: https://api.groq.com/openai/v1, key_env: GROQ_API_KEY}
+  openrouter: {base_url: https://openrouter.ai/api/v1, key_env: OPENROUTER_API_KEY}
+
+bench:
+  # The Virtual Bench sits on the entailment gate and severity adjudication for these severities only.
+  severities: [critical, high]
+
+verifier:
+  quote_fidelity_threshold: 90

@@ -1,0 +1,86 @@
+"""HTTP flow: analyze -> SSE trace -> (human salary check) -> result -> DOCX -> ablation."""
+
+import json
+import time
+
+import pytest
+from fastapi.testclient import TestClient
+
+from ain import api
+from ain.agents import ingestion
+
+
+@pytest.fixture
+def client():
+    with TestClient(api.app) as c:
+        yield c
+
+
+def _wait(client, job_id, timeout=60):
+    t = time.time()
+    while time.time() - t < timeout:
+        s = client.get(f"/api/jobs/{job_id}").json()
+        if s["status"] in ("done", "error", "waiting"):
+            return s
+        time.sleep(0.1)
+    raise AssertionError("job did not finish")
+
+
+def test_health_and_samples(client):
+    h = client.get("/api/health").json()
+    assert h["ok"] and h["corpus_sections"] > 1000 and h["llm_mode"] == "fake"
+    ids = {s["id"] for s in client.get("/api/samples").json()}
+    assert {"migrant_text", "rmg_epz", "control"} <= ids
+
+
+def test_sample_run_streams_trace_and_returns_result(client):
+    job = client.post("/api/analyze", data={"sample_id": "rmg_epz"}).json()
+    events = []
+    with client.stream("GET", f"/api/jobs/{job['job_id']}/events") as resp:
+        for line in resp.iter_lines():
+            if line.startswith("data:"):
+                events.append(json.loads(line[5:]))
+            if line.startswith("event: end"):
+                break
+    types = [e.get("type") for e in events if "type" in e]
+    assert "agent_start" in types and "claim_verified" in types and "done" in types
+    assert [e["data"]["step"] for e in events if e.get("type") == "step"] == ["read", "redact", "match", "verify"]
+
+    r = client.get(f"/api/jobs/{job['job_id']}/result").json()
+    assert len(r["risks"]) >= 3 and r["memo"]["issues"]
+    docx = client.get(f"/api/jobs/{job['job_id']}/memo.docx")
+    assert docx.status_code == 200 and docx.content[:2] == b"PK"
+    ab = client.post(f"/api/jobs/{job['job_id']}/ablation").json()
+    assert ab["citations_found"] > 0 and ab["supported"] < ab["citations_found"]
+    assert ab["ain_verified"] > 0
+
+
+def test_upload_and_bad_inputs(client, docs):
+    data = (docs / "control_clean.txt").read_bytes()
+    ok = client.post("/api/analyze", files={"file": ("contract.txt", data, "text/plain")})
+    assert ok.status_code == 200
+    assert _wait(client, ok.json()["job_id"])["status"] == "done"
+    assert client.post("/api/analyze", files={"file": ("x.exe", b"MZ", "application/octet-stream")}).status_code == 415
+    assert client.post("/api/analyze").status_code == 400
+    assert client.get("/api/jobs/nope/result").status_code == 404
+    assert client.get("/api/corpus/BD-CONTRACT-1872-s27").json()["section"] == "27"
+
+
+def test_blurry_salary_waits_for_human_confirmation(client, docs, monkeypatch):
+    real = ingestion.build_document
+
+    def blurry(data, filename, source_kind=None):
+        doc, facts, ex = real(data, filename, source_kind)
+        doc.ocr_used = True
+        facts.salary_confidence = 0.42
+        return doc, facts, ex
+
+    monkeypatch.setattr(ingestion, "build_document", blurry)
+    job = client.post("/api/analyze", data={"sample_id": "migrant_text"}).json()["job_id"]
+    assert _wait(client, job)["status"] == "waiting"
+    assert client.get(f"/api/jobs/{job}/result").status_code == 409
+    assert client.post(f"/api/jobs/{job}/confirm", json={"field": "salary", "value": "১,৮০০"}).json()["value"] == 1800
+    assert _wait(client, job)["status"] == "done"
+    r = client.get(f"/api/jobs/{job}/result").json()
+    assert r["wage"]["promised"] == 1800 and r["wage"]["confirmed_by_user"] is True
+    assert not r["wage"]["below_minimum"]
