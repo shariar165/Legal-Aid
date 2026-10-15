@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets
+.env
+!.env.example
+
+# Caches / runtime
+backend/.cache/
+backend/corpus/raw/
+backend/runs/
+*.log
+
+# Node / Next (also in web/.gitignore)
+web/node_modules/
+web/.next/

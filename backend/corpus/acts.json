@@ -1,0 +1,12 @@
+[
+  {"key": "BD-CONTRACT-1872", "bdlaws_id": 26, "title": "The Contract Act, 1872", "title_en": "The Contract Act, 1872", "year": 1872, "lang": "en", "packs": ["bd_contract"]},
+  {"key": "BD-LABOUR-2006", "bdlaws_id": 952, "title": "বাংলাদেশ শ্রম আইন, ২০০৬", "title_en": "Bangladesh Labour Act, 2006", "year": 2006, "lang": "bn", "packs": ["bd_labour"]},
+  {"key": "BD-EPZLABOUR-2019", "bdlaws_id": 1285, "title": "বাংলাদেশ ইপিজেড শ্রম আইন, ২০১৯", "title_en": "Bangladesh EPZ Labour Act, 2019", "year": 2019, "lang": "bn", "packs": ["bd_epz"]},
+  {"key": "BD-OEMA-2013", "bdlaws_id": 1131, "title": "বৈদেশিক কর্মসংস্থান ও অভিবাসী আইন, ২০১৩", "title_en": "Overseas Employment and Migrants Act, 2013", "year": 2013, "lang": "bn", "packs": ["bd_migration"]},
+  {"key": "BD-TRAFFICKING-2026", "bdlaws_id": 1684, "title": "মানব পাচার ও অভিবাসী চোরাচালান প্রতিরোধ ও দমন আইন, ২০২৬", "title_en": "Prevention and Suppression of Human Trafficking and Migrant Smuggling Act, 2026", "year": 2026, "lang": "bn", "packs": ["bd_migration"]},
+  {"key": "BD-TRAFFICKING-2012", "bdlaws_id": 1086, "title": "মানব পাচার প্রতিরোধ ও দমন আইন, ২০১২", "title_en": "Prevention and Suppression of Human Trafficking Act, 2012", "year": 2012, "lang": "bn", "packs": ["bd_migration"], "status": "repealed", "superseded_by": "BD-TRAFFICKING-2026"},
+  {"key": "BD-STAMP-1899", "bdlaws_id": 77, "title": "The Stamp Act, 1899", "title_en": "The Stamp Act, 1899", "year": 1899, "lang": "en", "packs": ["bd_contract"]},
+  {"key": "BD-FERA-1947", "bdlaws_id": 218, "title": "The Foreign Exchange Regulation Act, 1947", "title_en": "The Foreign Exchange Regulation Act, 1947", "year": 1947, "lang": "en", "packs": ["bd_fx"]},
+  {"key": "BD-CPC-1908", "bdlaws_id": 86, "title": "The Code of Civil Procedure, 1908", "title_en": "The Code of Civil Procedure, 1908", "year": 1908, "lang": "en", "packs": ["bd_contract"], "sections": ["13", "14", "44A"]},
+  {"key": "BD-PDP-2026", "bdlaws_id": 1692, "title": "ব্যক্তিগত উপাত্ত সুরক্ষা আইন, ২০২৬", "title_en": "Personal Data Protection Act, 2026", "year": 2026, "lang": "bn", "packs": ["bd_data"]}
+]
