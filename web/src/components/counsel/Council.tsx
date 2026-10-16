@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type AnalysisResult, type BenchOpinion, type BenchResult, type ChatTurn, type CouncilMember, type PersonaId, type Section } from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
+import { Icon, type IconName } from "./Icons";
 import styles from "./counsel.module.css";
 
 /* The three council members. Names and titles mirror backend/ain/agents/bench.py PERSONAS;
@@ -14,6 +15,10 @@ const FALLBACK: Record<PersonaId, CouncilMember> = {
   proud: { id: "proud", name: "Regal", title: "the Proud AI", tagline: "The text is clear. I have read it correctly.", seat: "Justice B", model: "" },
   gloomy: { id: "gloomy", name: "Grey", title: "the Gloomy AI", tagline: "Assume it will go wrong. It usually does.", seat: "Justice C", model: "" },
 };
+
+/* temperament in one word, shown under each name */
+const TEMPERAMENT: Record<PersonaId, string> = { happy: "Optimist", proud: "Textualist", gloomy: "Sceptic" };
+const GLYPH: Record<PersonaId, IconName> = { happy: "sun", proud: "shield", gloomy: "cloud" };
 
 export type CouncilTarget = PersonaId | "all";
 
@@ -32,48 +37,29 @@ export function memberName(id: PersonaId) {
 
 /* ------------------------------------------------------------------ Avatar */
 
+/* A monogram badge: initial on the persona's tint, with a small temperament glyph. */
 export function CouncilAvatar({ persona, size = 36 }: { persona: PersonaId; size?: number }) {
+  const m = FALLBACK[persona];
+  const glyph = Math.max(10, Math.round(size * 0.42));
   return (
-    <svg className={styles.avatar} data-persona={persona} width={size} height={size} viewBox="0 0 40 40" role="img" aria-label={`${FALLBACK[persona].name}, ${FALLBACK[persona].title}`}>
-      {persona === "proud" && <path d="M11 9 L14 3 L17 8 L20 2 L23 8 L26 3 L29 9 Z" className={styles.avCrown} />}
-      {persona === "gloomy" && (
-        <g className={styles.avCloud}>
-          <ellipse cx="15" cy="5.5" rx="5" ry="3.2" />
-          <ellipse cx="22" cy="4.5" rx="6" ry="3.8" />
-          <ellipse cx="27.5" cy="6" rx="4" ry="2.8" />
-          <path d="M14 10.5 l-1 2.5 M20 10.5 l-1 2.5 M26 10.5 l-1 2.5" className={styles.avRain} />
-        </g>
+    <span
+      className={styles.avatar}
+      data-persona={persona}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.44) }}
+      role="img"
+      aria-label={`${m.name}, ${m.title}`}
+    >
+      {m.name[0]}
+      {size >= 28 && (
+        <span className={styles.avGlyph} style={{ width: glyph, height: glyph }} aria-hidden="true">
+          <Icon name={GLYPH[persona]} size={glyph - 4} />
+        </span>
       )}
-      <circle cx="20" cy="24" r="14" className={styles.avFace} />
-      {persona === "happy" && (
-        <>
-          <path d="M13 21.5 q2.5 -3 5 0 M22 21.5 q2.5 -3 5 0" className={styles.avLine} />
-          <circle cx="12.5" cy="26" r="2" className={styles.avCheek} />
-          <circle cx="27.5" cy="26" r="2" className={styles.avCheek} />
-          <path d="M13.5 27 q6.5 7 13 0" className={styles.avLine} />
-        </>
-      )}
-      {persona === "proud" && (
-        <>
-          <path d="M12.5 20 l5 1 M27.5 20 l-5 1" className={styles.avLine} />
-          <path d="M13.5 23 h4 M22.5 23 h4" className={styles.avLine} />
-          <path d="M16 30 q5 2 9 -1.5" className={styles.avLine} />
-        </>
-      )}
-      {persona === "gloomy" && (
-        <>
-          <path d="M12.5 19.5 l5 -1.5 M27.5 19.5 l-5 -1.5" className={styles.avLine} />
-          <circle cx="15.5" cy="23" r="1.4" className={styles.avDot} />
-          <circle cx="24.5" cy="23" r="1.4" className={styles.avDot} />
-          <path d="M15 31 q5 -4 10 0" className={styles.avLine} />
-          <path d="M26.5 25.5 q-0.9 2 0 2.6 q0.9 -0.6 0 -2.6" className={styles.avTear} />
-        </>
-      )}
-    </svg>
+    </span>
   );
 }
 
-/* Three small faces, used in the toolbar and on risk cards. */
+/* Three overlapping badges, used in the toolbar and on risk cards. */
 export function CouncilFaces({ size = 22 }: { size?: number }) {
   return (
     <span className={styles.faces}>
@@ -113,7 +99,7 @@ interface Msg {
   citations?: string[];
 }
 
-const PROMPTS = ["Should I sign this?", "What should I negotiate first?", "Why do you disagree with the others?"];
+const PROMPTS = ["Should I sign this contract as it stands?", "What should I negotiate first?", "Where do you disagree with each other, and why?"];
 
 export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: CouncilNav }) {
   const [members, setMembers] = useState<CouncilMember[]>(PERSONA_IDS.map((p) => FALLBACK[p]));
@@ -121,6 +107,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
   const [pending, setPending] = useState<PersonaId[]>([]);
   const [draft, setDraft] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLTextAreaElement>(null);
   const nextId = useRef(0);
 
   useEffect(() => {
@@ -142,6 +129,15 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     if (log) log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
   }, [msgs, pending]);
 
+  useEffect(() => {
+    // grow the composer with its content, up to the CSS max-height
+    const box = boxRef.current;
+    if (!box) return;
+    box.style.height = "auto";
+    // measuring while the panel is hidden gives 0, so an empty box keeps its natural one-row height
+    if (draft && box.scrollHeight) box.style.height = `${box.scrollHeight}px`;
+  }, [draft]);
+
   const benched = result.risks.filter((r) => r.bench);
   const live = result.risks.filter((r) => r.status !== "dropped");
   const sections = useMemo(() => {
@@ -149,7 +145,6 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     for (const v of result.ledger) if (v.section) m.set(v.section.citation_id, v.section);
     return m;
   }, [result.ledger]);
-
 
   const send = async (text: string) => {
     const message = text.trim();
@@ -179,173 +174,254 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     }
   };
 
-  const who = nav.target === "all" ? "all three" : FALLBACK[nav.target].name;
+  const who = nav.target === "all" ? "the entire council" : FALLBACK[nav.target].name;
+  const topic = nav.riskId ? (live.find((r) => r.id === nav.riskId)?.title.en ?? "this risk") : "the whole contract";
   const model = (id: PersonaId) => members.find((m) => m.id === id)?.model;
 
   return (
     <div className={styles.council}>
-      <h1 className={styles.viewTitle}>Ask the council</h1>
-      <p className={styles.viewLead}>
-        Three AI reviewers with different temperaments. They only use the law that passed our checks, so their answers stay grounded.
-      </p>
+      <header className={styles.viewHead}>
+        <h1 className={styles.viewTitle}>Ask the council</h1>
+        <p className={styles.viewLead}>
+          Three AI reviewers with different temperaments discuss your contract. They may only cite law that passed verification, so every answer stays
+          grounded in the statute.
+        </p>
+      </header>
 
-      {/* ---------------- who answers: tap a face */}
-      <div className={styles.picker} role="radiogroup" aria-label="Who should answer">
-        <button type="button" role="radio" aria-checked={nav.target === "all"} className={styles.pick} onClick={() => nav.setTarget("all")}>
-          <CouncilFaces size={34} />
-          <b>All three</b>
-          <span>Hear every view</span>
-        </button>
-        {members.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            role="radio"
-            aria-checked={nav.target === m.id}
-            className={styles.pick}
-            data-persona={m.id}
-            title={m.model ? `Runs on ${m.model}` : undefined}
-            onClick={() => nav.setTarget(m.id)}
-          >
-            <CouncilAvatar persona={m.id} size={44} />
-            <b>{m.name}</b>
-            <span>{m.tagline}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ---------------- chat */}
-      <section id="council-chat" className={styles.chat} aria-label="Council chat">
-        <label className={styles.about}>
-          Talking about
-          <select value={nav.riskId ?? ""} onChange={(e) => nav.setRiskId(e.target.value || null)}>
-            <option value="">the whole contract</option>
-            {live.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.title.en}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div ref={logRef} className={styles.chatLog} aria-live="polite">
-          {msgs.length === 0 && (
-            <div className={styles.prompts}>
-              <span>Try asking:</span>
-              {PROMPTS.map((p) => (
-                <button key={p} type="button" className={styles.prompt} onClick={() => void send(p)}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
-          {msgs.map((m) =>
-            m.speaker === "user" ? (
-              <p key={m.id} className={styles.bubbleUser}>
-                {m.text}
-              </p>
-            ) : m.speaker === "error" ? (
-              <p key={m.id} className={styles.errorBox}>
-                {m.text}
-              </p>
-            ) : (
-              <div key={m.id} className={styles.bubbleRow}>
-                <CouncilAvatar persona={m.speaker} size={32} />
-                <div className={styles.bubble} data-persona={m.speaker}>
-                  <b className={styles.bubbleName}>
-                    {FALLBACK[m.speaker].name} <span>· {FALLBACK[m.speaker].title}</span>
+      <div className={styles.councilGrid}>
+        {/* ---------------- who answers and about what */}
+        <aside className={styles.rail} aria-label="Council settings">
+          <p className={styles.railLabel} id="council-who">
+            Who answers
+          </p>
+          <div className={styles.memberList} role="radiogroup" aria-labelledby="council-who">
+            <button type="button" role="radio" aria-checked={nav.target === "all"} className={styles.member} onClick={() => nav.setTarget("all")}>
+              <span className={styles.memberAll}>
+                <Icon name="users" size={18} />
+              </span>
+              <span className={styles.memberText}>
+                <b>Entire council</b>
+                <span>Hear all three views</span>
+              </span>
+            </button>
+            {members.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={nav.target === m.id}
+                className={styles.member}
+                data-persona={m.id}
+                onClick={() => nav.setTarget(m.id)}
+              >
+                <CouncilAvatar persona={m.id} size={36} />
+                <span className={styles.memberText}>
+                  <b>
+                    {m.name} <em>{TEMPERAMENT[m.id]}</em>
                   </b>
-                  <p>{m.text}</p>
-                  {!!m.citations?.length && (
-                    <span className={styles.bubbleCites}>
-                      {m.citations.map((c) => {
-                        const s = sections.get(c);
-                        return s ? (
-                          <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.chip}>
-                            {citeLabel(s)}
-                          </a>
-                        ) : (
-                          <code key={c}>{c}</code>
-                        );
-                      })}
-                    </span>
-                  )}
+                  <span>{m.tagline}</span>
+                  {m.model && <code>{m.model}</code>}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <label className={styles.topic}>
+            <span className={styles.railLabel}>Topic</span>
+            <select value={nav.riskId ?? ""} onChange={(e) => nav.setRiskId(e.target.value || null)}>
+              <option value="">The whole contract</option>
+              {live.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title.en}
+                </option>
+              ))}
+            </select>
+          </label>
+        </aside>
+
+        {/* ---------------- conversation */}
+        <section id="council-chat" className={styles.chat} aria-label="Council conversation">
+          <div className={styles.chatHead}>
+            <Icon name="message" size={16} />
+            <span>
+              Asking <b>{who}</b> about <b>{topic}</b>
+            </span>
+          </div>
+
+          <div ref={logRef} className={styles.chatLog} aria-live="polite">
+            {msgs.length === 0 && pending.length === 0 && (
+              <div className={styles.emptyChat}>
+                <CouncilFaces size={40} />
+                <p>Start with one of these, or write your own question below.</p>
+                <div className={styles.prompts}>
+                  {PROMPTS.map((p) => (
+                    <button key={p} type="button" className={styles.prompt} onClick={() => void send(p)}>
+                      <Icon name="sparkle" size={16} />
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ),
-          )}
-          {pending.map((p) => (
-            <div key={p} className={styles.bubbleRow}>
-              <CouncilAvatar persona={p} size={32} />
-              <span className={styles.typing} data-persona={p} aria-label={`${FALLBACK[p].name} is thinking`}>
-                <i />
-                <i />
-                <i />
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <form
-          className={styles.chatForm}
-          onSubmit={(e) => {
-            e.preventDefault();
-            void send(draft);
-          }}
-        >
-          <textarea
-            value={draft}
-            rows={2}
-            maxLength={1000}
-            placeholder={`Ask ${who} a question…`}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send(draft);
-              }
-            }}
-            aria-label="Your question to the council"
-          />
-          <button type="submit" className={styles.primaryBtn} disabled={!draft.trim() || pending.length > 0}>
-            Send
-          </button>
-        </form>
-        <p className={styles.paneNote}>Please don&apos;t type names, phone numbers or ID numbers. This is information, not formal legal advice.</p>
-      </section>
-
-      {/* ---------------- past votes, folded */}
-      {benched.length > 0 && (
-        <section className={styles.votes}>
-          <h2 className={styles.sectionTitle}>How the council voted on the serious risks</h2>
-          {benched.map((r) => {
-            const b = r.bench!;
-            const against = b.opinions.filter((o) => dissents(o, b) && o.name).map((o) => o.name);
-            return (
-              <details key={r.id} className={styles.voteCase}>
-                <summary>
-                  <span className={styles.voteTitle}>{r.title.en}</span>
-                  <MemberVotes bench={b} />
-                  <span className={styles.voteNote}>{against.length ? `${against.join(" and ")} disagreed` : "Everyone agreed"}</span>
-                </summary>
-                <p>{b.majority_opinion}</p>
-                {b.opinions.map((o) => (
-                  <div key={o.seat} className={styles.opinion}>
-                    {o.persona && <CouncilAvatar persona={o.persona} size={26} />}
-                    <div>
-                      <b>{o.name || o.seat}</b>: rated it {SEVERITY_LABEL[o.severity].toLowerCase()}
-                      {o.revised && " (changed their mind after hearing the others)"}
-                      <p>{o.reasoning}</p>
-                      <span className={styles.judgeModel}>{(o.persona && model(o.persona)) || o.model}</span>
-                    </div>
+            )}
+            {msgs.map((m) =>
+              m.speaker === "user" ? (
+                <p key={m.id} className={styles.msgUser}>
+                  {m.text}
+                </p>
+              ) : m.speaker === "error" ? (
+                <p key={m.id} className={styles.errorBox} role="alert">
+                  <Icon name="alert" size={16} />
+                  {m.text}
+                </p>
+              ) : (
+                <article key={m.id} className={styles.msg} data-persona={m.speaker}>
+                  <CouncilAvatar persona={m.speaker} size={32} />
+                  <div className={styles.msgBody}>
+                    <p className={styles.msgName}>
+                      {FALLBACK[m.speaker].name} <span>{TEMPERAMENT[m.speaker]}</span>
+                    </p>
+                    <p className={styles.msgText}>{m.text}</p>
+                    {!!m.citations?.length && (
+                      <div className={styles.msgCites}>
+                        {m.citations.map((c) => {
+                          const s = sections.get(c);
+                          return s ? (
+                            <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified">
+                              <Icon name="scale" size={13} />
+                              {citeLabel(s)}
+                            </a>
+                          ) : (
+                            <code key={c} className={styles.citeChip}>
+                              {c}
+                            </code>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                ))}
-                <button type="button" className={styles.askLink} onClick={() => nav.open("all", r.id)}>
-                  Ask the council about this →
-                </button>
-              </details>
-            );
-          })}
+                </article>
+              ),
+            )}
+            {pending.map((p) => (
+              <div key={p} className={styles.msg} data-persona={p}>
+                <CouncilAvatar persona={p} size={32} />
+                <span className={styles.typing} aria-label={`${FALLBACK[p].name} is thinking`}>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <form
+            className={styles.composer}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send(draft);
+            }}
+          >
+            <div className={styles.composerBox}>
+              <textarea
+                ref={boxRef}
+                value={draft}
+                rows={1}
+                maxLength={1000}
+                placeholder={`Ask ${who} a question…`}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send(draft);
+                  }
+                }}
+                aria-label="Your question to the council"
+              />
+              <button type="submit" className={styles.sendBtn} disabled={!draft.trim() || pending.length > 0} aria-label="Send question">
+                <Icon name="send" size={18} />
+              </button>
+            </div>
+            <p className={styles.composerNote}>
+              <Icon name="lock" size={13} />
+              Don&apos;t type names, phone numbers or ID numbers. Enter to send, Shift+Enter for a new line. Information only, not formal legal advice.
+            </p>
+          </form>
+        </section>
+      </div>
+
+      {/* ---------------- past votes */}
+      {benched.length > 0 && (
+        <section className={styles.votes} aria-labelledby="votes-title">
+          <div className={styles.sectionHead}>
+            <h2 id="votes-title" className={styles.sectionTitle}>
+              How the council voted
+            </h2>
+            <span className={styles.sectionMeta}>{benched.length} serious {benched.length === 1 ? "risk" : "risks"} reviewed</span>
+          </div>
+          <div className={styles.voteTable}>
+            <div className={styles.voteHeadRow} aria-hidden="true">
+              <span>Risk</span>
+              {PERSONA_IDS.map((p) => (
+                <span key={p}>{FALLBACK[p].name}</span>
+              ))}
+              <span>Outcome</span>
+            </div>
+            {benched.map((r) => {
+              const b = r.bench!;
+              const against = b.opinions.filter((o) => dissents(o, b) && o.name).map((o) => o.name);
+              return (
+                <details key={r.id} className={styles.voteCase}>
+                  <summary>
+                    <span className={styles.voteTitle}>
+                      <Icon name="chevronRight" size={16} className={styles.voteChevron} />
+                      {r.title.en}
+                    </span>
+                    {PERSONA_IDS.map((p) => {
+                      const o = b.opinions.find((x) => x.persona === p);
+                      return (
+                        <span key={p} className={styles.voteCell} data-dissent={o ? dissents(o, b) : undefined}>
+                          {o ? (
+                            <>
+                              <span className={styles.voteWho}>{FALLBACK[p].name}: </span>
+                              <span className={styles.sevDot} data-sev={o.severity} />
+                              {SEVERITY_LABEL[o.severity]}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </span>
+                      );
+                    })}
+                    <span className={styles.voteOutcome} data-split={against.length > 0}>
+                      {against.length ? `${against.join(" & ")} dissented` : "Unanimous"}
+                    </span>
+                  </summary>
+                  <div className={styles.voteBody}>
+                    <p className={styles.majority}>
+                      <b>Majority opinion.</b> {b.majority_opinion}
+                    </p>
+                    {b.opinions.map((o) => (
+                      <div key={o.seat} className={styles.opinion}>
+                        {o.persona && <CouncilAvatar persona={o.persona} size={28} />}
+                        <div>
+                          <p className={styles.opinionHead}>
+                            <b>{o.name || o.seat}</b> rated it <span className={styles.sevDot} data-sev={o.severity} />
+                            {SEVERITY_LABEL[o.severity].toLowerCase()}
+                            {o.revised && <span className={styles.revised}>Revised after deliberation</span>}
+                          </p>
+                          <p>{o.reasoning}</p>
+                          <code className={styles.judgeModel}>{(o.persona && model(o.persona)) || o.model}</code>
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" className={styles.linkBtn} onClick={() => nav.open("all", r.id)}>
+                      Discuss this risk with the council <Icon name="arrowRight" size={14} />
+                    </button>
+                  </div>
+                </details>
+              );
+            })}
+          </div>
         </section>
       )}
     </div>

@@ -2,22 +2,43 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { api, type AnalysisResult, type Severity } from "@/lib/api";
+import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
 import { STEP_ORDER, useAnalysis, type StepId } from "@/lib/useAnalysis";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
+import { Icon, type IconName } from "./Icons";
 import { AblationPanel, LedgerPanel, PrivacyPanel, TracePanel } from "./Panels";
 import { RiskCard } from "./RiskCard";
 import styles from "./counsel.module.css";
 
 type View = "report" | "contract" | "council" | "checks";
 
-const STEP_LABEL: Record<StepId, string> = {
-  read: "Reading the document",
-  redact: "Hiding personal details",
-  match: "Finding the law that applies and the risks",
-  verify: "Checking every legal claim against the statute",
+const STEP_LABEL: Record<StepId, { title: string; detail: string }> = {
+  read: { title: "Reading the document", detail: "Text extraction and clause splitting" },
+  redact: { title: "Hiding personal details", detail: "Names, phone and ID numbers are masked before any AI call" },
+  match: { title: "Finding the applicable law and risks", detail: "Jurisdiction routing, risk analysis and adversarial review" },
+  verify: { title: "Verifying every legal claim", detail: "Four checks against the statute book, then the council vote" },
 };
+
+const SEVERITIES: Severity[] = ["critical", "high", "medium", "low"];
+
+/* live risks, most serious first */
+function liveRisks(result: AnalysisResult) {
+  return result.risks.filter((r) => r.status !== "dropped").sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
+}
+
+/* clause id -> the most serious live risk that touches it */
+function clauseHeat(risks: Risk[]) {
+  const m = new Map<string, { sev: Severity; risk: string; title: string }>();
+  for (const r of risks) {
+    if (r.status === "dropped") continue;
+    for (const c of r.clause_ids) {
+      const cur = m.get(c);
+      if (!cur || SEVERITY_RANK[r.severity] < SEVERITY_RANK[cur.sev]) m.set(c, { sev: r.severity, risk: r.id, title: r.title.en });
+    }
+  }
+  return m;
+}
 
 export function CounselApp({ jobId }: { jobId: string }) {
   const analysis = useAnalysis(jobId);
@@ -31,7 +52,7 @@ export function CounselApp({ jobId }: { jobId: string }) {
     setView(v);
     requestAnimationFrame(() => {
       const el = anchor ? document.getElementById(anchor) : null;
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       else window.scrollTo({ top: 0 });
     });
   }, []);
@@ -51,48 +72,55 @@ export function CounselApp({ jobId }: { jobId: string }) {
     go("report", `risk-${id}`);
   };
 
+  const live = useMemo(() => (result ? liveRisks(result) : []), [result]);
+  const heat = useMemo(() => clauseHeat(result?.risks ?? []), [result]);
+
   return (
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/counsel" className={styles.brand}>
+          <Link href="/counsel" className={styles.brand} aria-label="Ain Copilot, start a new analysis">
             <span className={styles.brandMark}>আ</span>
-            <span>Ain Copilot</span>
+            <span className={styles.brandText}>
+              Ain Copilot <span>Counsel</span>
+            </span>
           </Link>
           {result && (
             <>
-              <span className={styles.docName} title={result.document.name}>
-                {result.document.name}
+              <span className={styles.docPill} title={result.document.name}>
+                <Icon name="file" size={15} />
+                <span className={styles.docName}>{result.document.name}</span>
+                {result.llm_mode !== "live" && (
+                  <span className={styles.chip} data-tone="warn" title="Answers come from saved or offline model responses">
+                    {result.llm_mode === "fake" ? "Offline demo" : "Replay"}
+                  </span>
+                )}
               </span>
-              {result.llm_mode !== "live" && (
-                <span className={styles.chip} data-tone="warn" title="Answers come from saved or offline model responses">
-                  {result.llm_mode === "fake" ? "Offline demo" : "Replay"}
-                </span>
-              )}
               <div className={styles.actions}>
-                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)}>
-                  Download memo
-                </a>
-                <button type="button" className={styles.ghostBtn} onClick={() => window.print()}>
-                  Print
+                <button type="button" className={styles.iconBtn} onClick={() => window.print()} aria-label="Print memo" title="Print memo">
+                  <Icon name="printer" size={18} />
                 </button>
+                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)}>
+                  <Icon name="download" size={16} />
+                  <span>Download memo</span>
+                </a>
               </div>
             </>
           )}
         </div>
         {result && (
           <nav className={styles.views} aria-label="Sections">
-            <ViewTab id="report" view={view} onClick={() => go("report")}>
+            <ViewTab id="report" view={view} icon="book" count={live.length} onClick={() => go("report")}>
               Report
             </ViewTab>
-            <ViewTab id="contract" view={view} onClick={() => go("contract")}>
+            <ViewTab id="contract" view={view} icon="file" count={heat.size} onClick={() => go("contract")}>
               Contract
             </ViewTab>
             <ViewTab id="council" view={view} onClick={() => go("council")}>
-              <CouncilFaces size={20} /> Ask the council
+              <CouncilFaces size={18} /> Council
             </ViewTab>
-            <ViewTab id="checks" view={view} onClick={() => go("checks")}>
-              How we checked
+            <ViewTab id="checks" view={view} icon="shieldCheck" count={`${result.stats.verified}/${result.stats.claims}`} onClick={() => go("checks")}>
+              Verification
             </ViewTab>
           </nav>
         )}
@@ -100,44 +128,35 @@ export function CounselApp({ jobId }: { jobId: string }) {
 
       {status === "error" && (
         <main className={styles.narrow}>
-          <p className={styles.errorBox}>{error === "offline" ? "The analysis server is not reachable." : error}</p>
-          <Link href="/counsel">← Start a new analysis</Link>
+          <div className={styles.stateCard} role="alert">
+            <span className={styles.stateIcon} data-tone="bad">
+              <Icon name="alert" size={22} />
+            </span>
+            <h1 className={styles.stateTitle}>The analysis could not be completed</h1>
+            <p className={styles.stateText}>{error === "offline" ? "The analysis server is not reachable. Check that the backend is running, then try again." : error}</p>
+            <Link href="/counsel" className={styles.primaryBtn}>
+              <Icon name="arrowLeft" size={16} />
+              Start a new analysis
+            </Link>
+          </div>
         </main>
       )}
 
-      {status !== "error" && !result && (
-        <main className={styles.narrow}>
-          <h1 className={styles.heroTitle}>Reviewing your contract…</h1>
-          <p className={styles.heroLead}>
-            {status === "waiting"
-              ? "Waiting for the salary to be confirmed on the citizen screen. The rest of the review carries on."
-              : "This usually takes under a minute."}
-          </p>
-          <ol className={styles.progress}>
-            {STEP_ORDER.map((s) => {
-              const done = stepsDone.includes(s);
-              const current = !done && STEP_ORDER.find((x) => !stepsDone.includes(x)) === s;
-              return (
-                <li key={s} data-state={done ? "done" : current ? "current" : "todo"}>
-                  <span className={styles.progressDot} aria-hidden="true">
-                    {done ? "✓" : ""}
-                  </span>
-                  {STEP_LABEL[s]}
-                </li>
-              );
-            })}
-          </ol>
-          <details className={styles.more}>
-            <summary>Show the live agent log</summary>
-            <TracePanel events={events} />
-          </details>
-        </main>
-      )}
+      {status !== "error" && !result && <Progress status={status} stepsDone={stepsDone} events={events} />}
 
       {result && view === "report" && (
-        <Report result={result} focusRisk={focusRisk} onAsk={(id) => open("all", id)} onChecks={() => go("checks")} onClause={(id) => go("contract", `clause-${id}`)} />
+        <Report
+          result={result}
+          live={live}
+          focusRisk={focusRisk}
+          onAsk={(id) => open("all", id)}
+          onCouncil={() => open("all", null)}
+          onChecks={() => go("checks")}
+          onJump={showRisk}
+          onClause={(id) => go("contract", `clause-${id}`)}
+        />
       )}
-      {result && view === "contract" && <Contract result={result} onRisk={showRisk} />}
+      {result && view === "contract" && <Contract result={result} heat={heat} onRisk={showRisk} />}
       {result && (
         <main className={styles.wide} hidden={view !== "council"}>
           <CouncilPanel result={result} nav={nav} />
@@ -148,11 +167,72 @@ export function CounselApp({ jobId }: { jobId: string }) {
   );
 }
 
-function ViewTab({ id, view, onClick, children }: { id: View; view: View; onClick: () => void; children: React.ReactNode }) {
+function ViewTab({
+  id,
+  view,
+  icon,
+  count,
+  onClick,
+  children,
+}: {
+  id: View;
+  view: View;
+  icon?: IconName;
+  count?: number | string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button type="button" className={styles.viewTab} aria-current={view === id ? "page" : undefined} onClick={onClick}>
+      {icon && <Icon name={icon} size={16} />}
       {children}
+      {count !== undefined && <span className={styles.count}>{count}</span>}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ Running */
+
+function Progress({ status, stepsDone, events }: { status: string; stepsDone: StepId[]; events: AnalysisResult["trace"] }) {
+  const current = STEP_ORDER.find((x) => !stepsDone.includes(x));
+  return (
+    <main className={styles.narrow}>
+      <div className={styles.stateCard}>
+        <p className={styles.kicker}>Analysis in progress</p>
+        <h1 className={styles.stateTitle}>Reviewing your contract</h1>
+        <p className={styles.stateText}>
+          {status === "waiting"
+            ? "Waiting for the salary to be confirmed on the citizen screen. The rest of the review carries on."
+            : "This usually takes under a minute. You can keep this tab open."}
+        </p>
+        <div className={styles.progressBar} role="progressbar" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
+          <span style={{ width: `${(100 * stepsDone.length) / STEP_ORDER.length}%` }} />
+        </div>
+        <ol className={styles.stepper}>
+          {STEP_ORDER.map((s, i) => {
+            const state = stepsDone.includes(s) ? "done" : current === s ? "current" : "todo";
+            return (
+              <li key={s} data-state={state} aria-current={state === "current" ? "step" : undefined}>
+                <span className={styles.stepDot} aria-hidden="true">
+                  {state === "done" ? <Icon name="check" size={14} /> : i + 1}
+                </span>
+                <span>
+                  <b>{STEP_LABEL[s].title}</b>
+                  <span>{STEP_LABEL[s].detail}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <details className={styles.more}>
+          <summary>
+            <Icon name="chevronRight" size={16} className={styles.summaryChevron} />
+            Live agent log
+          </summary>
+          <TracePanel events={events} />
+        </details>
+      </div>
+    </main>
   );
 }
 
@@ -160,182 +240,288 @@ function ViewTab({ id, view, onClick, children }: { id: View; view: View; onClic
 
 interface ReportProps {
   result: AnalysisResult;
+  live: Risk[];
   focusRisk: string | null;
   onAsk: (riskId: string) => void;
+  onCouncil: () => void;
   onChecks: () => void;
+  onJump: (riskId: string) => void;
   onClause: (clauseId: string) => void;
 }
 
-function Report({ result, focusRisk, onAsk, onChecks, onClause }: ReportProps) {
-  const live = useMemo(
-    () => result.risks.filter((r) => r.status !== "dropped").sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]),
-    [result.risks],
-  );
+function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, onClause }: ReportProps) {
   const withdrawn = result.risks.length - live.length;
-  const counts = (["critical", "high", "medium", "low"] as Severity[])
-    .map((s) => [s, live.filter((r) => r.severity === s).length] as const)
-    .filter(([, n]) => n);
+  const counts = SEVERITIES.map((s) => [s, live.filter((r) => r.severity === s).length] as const).filter(([, n]) => n);
   const w = result.wage;
+  const s = result.stats;
+  const scale = w ? Math.max(w.promised, w.minimum_wage ?? 0) : 1;
+  const pct = (n: number) => `${Math.max(0, Math.min(100, (100 * n) / scale))}%`;
 
   return (
-    <main className={styles.narrow}>
-      <section className={styles.overview}>
-        <p className={styles.kicker}>Legal risk memo · for {result.memo.prepared_for.toLowerCase()}</p>
-        <h1 className={styles.memoTitle}>
-          {live.length === 0 ? "No risks found" : `${live.length} ${live.length === 1 ? "risk needs" : "risks need"} your attention`}
-        </h1>
-        {counts.length > 0 && (
-          <div className={styles.sevCounts}>
-            {counts.map(([s, n]) => (
-              <span key={s} className={styles.sev} data-sev={s}>
-                {n} {SEVERITY_LABEL[s]}
+    <main className={styles.reportGrid}>
+      <div className={styles.reportMain}>
+        <section className={styles.card} aria-labelledby="memo-title">
+          <p className={styles.kicker}>Legal risk memo · Prepared for {result.memo.prepared_for}</p>
+          <h1 id="memo-title" className={styles.memoTitle}>
+            {live.length === 0 ? "No risks found" : `${live.length} ${live.length === 1 ? "risk needs" : "risks need"} your attention`}
+          </h1>
+          {counts.length > 0 && (
+            <div className={styles.sevCounts}>
+              {counts.map(([sv, n]) => (
+                <span key={sv} className={styles.sev} data-sev={sv}>
+                  <span className={styles.sevDot} data-sev={sv} />
+                  {n} {SEVERITY_LABEL[sv]}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className={styles.summary}>{result.memo.executive_summary}</p>
+          <div className={styles.summaryBn}>
+            <span className={styles.insetLabel}>বাংলা সারাংশ · Summary in Bangla</span>
+            <p lang="bn">{result.memo.summary_bn}</p>
+          </div>
+          <details className={styles.laws}>
+            <summary>
+              <Icon name="chevronRight" size={16} className={styles.summaryChevron} />
+              <span>
+                <b>Laws applied:</b> {result.route.packs.map((p) => p.label).join(" · ")}
               </span>
-            ))}
+            </summary>
+            <ul className={styles.packs}>
+              {result.route.packs.map((p) => (
+                <li key={p.pack} title={p.reason}>
+                  <Icon name="check" size={14} />
+                  <span>
+                    <b>{p.label}</b>
+                    <span>{p.reason}</span>
+                  </span>
+                </li>
+              ))}
+              {result.route.excluded.map((p) => (
+                <li key={p.pack} data-off title={p.reason}>
+                  <Icon name="minus" size={14} />
+                  <span>
+                    <b>{p.label}</b>
+                    <span>Not applied: {p.reason}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+
+        {w && (
+          <section className={styles.card} aria-labelledby="wage-title">
+            <div className={styles.sectionHead}>
+              <h2 id="wage-title" className={styles.cardTitle}>
+                What the worker actually takes home
+              </h2>
+              <span className={styles.sectionMeta}>Plain arithmetic, no AI</span>
+            </div>
+            <div className={styles.kpis}>
+              <div>
+                <span className={styles.kpiLabel}>Promised</span>
+                <span className={styles.kpiNum}>{money(w.currency, w.promised)}</span>
+              </div>
+              <div data-tone={w.over_cap ? "bad" : undefined}>
+                <span className={styles.kpiLabel}>Deducted monthly</span>
+                <span className={styles.kpiNum}>
+                  − {money(w.currency, w.monthly_deductions)} <small>{w.pct_deducted}%</small>
+                </span>
+              </div>
+              <div data-tone={w.below_minimum || w.over_cap ? "bad" : "ok"}>
+                <span className={styles.kpiLabel}>Take-home</span>
+                <span className={styles.kpiNum}>{money(w.currency, w.net)}</span>
+              </div>
+              {w.minimum_wage && (
+                <div>
+                  <span className={styles.kpiLabel}>Legal minimum</span>
+                  <span className={styles.kpiNum}>{money(w.currency, w.minimum_wage)}</span>
+                </div>
+              )}
+            </div>
+            <div className={styles.wageBar} aria-hidden="true">
+              <span className={styles.wageFill} data-bad={w.below_minimum || w.over_cap} style={{ width: pct(w.net) }} />
+              {w.minimum_wage && <span className={styles.wageMin} style={{ left: pct(w.minimum_wage) }} />}
+            </div>
+            <div className={styles.wageLegend} aria-hidden="true">
+              <span>
+                <i data-k="net" data-bad={w.below_minimum || w.over_cap} /> Take-home
+              </span>
+              {w.minimum_wage && (
+                <span>
+                  <i data-k="min" /> Legal minimum
+                </span>
+              )}
+            </div>
+            <p className={styles.note}>{w.confirmed_by_user ? "Salary confirmed by the user after reading the photo." : "Salary as written in the document."}</p>
+          </section>
+        )}
+
+        {live.length > 0 && (
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Risks, most serious first</h2>
+            <span className={styles.sectionMeta}>Each one is backed by verified law</span>
           </div>
         )}
-        <p className={styles.summary}>{result.memo.executive_summary}</p>
-        <p className={styles.summaryBn} lang="bn">
-          {result.memo.summary_bn}
-        </p>
-        <details className={styles.laws}>
+        {live.map((r, i) => (
+          <RiskCard
+            key={r.id}
+            index={i + 1}
+            risk={r}
+            issue={result.memo.issues.find((x) => x.risk_id === r.id)}
+            rows={result.ledger.filter((v) => v.claim.risk_id === r.id)}
+            clauses={result.document.clauses.filter((c) => r.clause_ids.includes(c.id))}
+            active={focusRisk === r.id}
+            onAskCouncil={() => onAsk(r.id)}
+            onClause={onClause}
+          />
+        ))}
+
+        {withdrawn > 0 && (
+          <p className={styles.notice}>
+            <Icon name="info" size={16} />
+            <span>
+              {withdrawn} more possible {withdrawn === 1 ? "risk was" : "risks were"} left out because the law behind {withdrawn === 1 ? "it" : "them"} could
+              not be verified.{" "}
+              <button type="button" className={styles.linkBtn} onClick={onChecks}>
+                See how we checked <Icon name="arrowRight" size={14} />
+              </button>
+            </span>
+          </p>
+        )}
+
+        <details className={styles.more}>
           <summary>
-            <b>Laws applied:</b> {result.route.packs.map((p) => p.label).join(" · ")}
+            <Icon name="chevronRight" size={16} className={styles.summaryChevron} />
+            Limits of this memo
           </summary>
-          <ul className={styles.packs}>
-            {result.route.packs.map((p) => (
-              <li key={p.pack} className={styles.pack}>
-                <b>{p.label}</b>
-                <span>{p.reason}</span>
-              </li>
-            ))}
-            {result.route.excluded.map((p) => (
-              <li key={p.pack} className={styles.pack} data-off>
-                <b>{p.label}</b>
-                <span>Not applied: {p.reason}</span>
-              </li>
+          <ul className={styles.caveatList}>
+            {result.memo.caveats.map((c) => (
+              <li key={c}>{c}</li>
             ))}
           </ul>
         </details>
-      </section>
+      </div>
 
-      {w && (
-        <section className={styles.wage} aria-label="Wage check">
-          <h2 className={styles.sectionTitle}>What the worker actually takes home</h2>
-          <div className={styles.wageRow}>
-            <div>
-              <span className={styles.wageLabel}>Promised</span>
-              <span className={styles.wageNum}>{money(w.currency, w.promised)}</span>
-            </div>
-            <div>
-              <span className={styles.wageLabel}>Deducted each month</span>
-              <span className={styles.wageNum} data-bad={w.over_cap}>
-                − {money(w.currency, w.monthly_deductions)} ({w.pct_deducted}%)
-              </span>
-            </div>
-            <div>
-              <span className={styles.wageLabel}>Take-home</span>
-              <span className={styles.wageNum} data-bad={w.below_minimum || w.over_cap}>
-                {money(w.currency, w.net)}
-              </span>
-            </div>
-            {w.minimum_wage && (
-              <div>
-                <span className={styles.wageLabel}>Legal minimum</span>
-                <span className={styles.wageNum}>{money(w.currency, w.minimum_wage)}</span>
+      {/* ---------------- at a glance */}
+      <aside className={styles.aside} aria-label="At a glance">
+        <section className={styles.asideCard}>
+          <h2 className={styles.asideTitle}>At a glance</h2>
+          {live.length > 0 && (
+            <>
+              <div className={styles.sevBar} aria-hidden="true">
+                {counts.map(([sv, n]) => (
+                  <span key={sv} data-sev={sv} style={{ flexGrow: n }} />
+                ))}
               </div>
-            )}
-          </div>
-          <div className={styles.wageBar} aria-hidden="true">
-            <span style={{ width: `${Math.max(0, Math.min(100, (100 * w.net) / Math.max(w.promised, w.minimum_wage ?? 0)))}%` }} />
-          </div>
-          <p className={styles.paneNote}>
-            {w.confirmed_by_user ? "Salary confirmed by the user after reading the photo." : "Salary as written in the document."} Plain arithmetic, no AI
-            involved.
-          </p>
-        </section>
-      )}
-
-      {live.length > 0 && <h2 className={styles.sectionTitle}>Risks, most serious first</h2>}
-      {live.map((r) => (
-        <RiskCard
-          key={r.id}
-          risk={r}
-          issue={result.memo.issues.find((i) => i.risk_id === r.id)}
-          rows={result.ledger.filter((v) => v.claim.risk_id === r.id)}
-          clauses={result.document.clauses.filter((c) => r.clause_ids.includes(c.id))}
-          active={focusRisk === r.id}
-          onAskCouncil={() => onAsk(r.id)}
-          onClause={onClause}
-        />
-      ))}
-
-      {withdrawn > 0 && (
-        <p className={styles.paneNote}>
-          {withdrawn} more possible {withdrawn === 1 ? "risk was" : "risks were"} left out because the law behind {withdrawn === 1 ? "it" : "them"} could not be
-          verified.{" "}
-          <button type="button" className={styles.askLink} onClick={onChecks}>
-            See how we checked →
+              <ul className={styles.sevLegend}>
+                {counts.map(([sv, n]) => (
+                  <li key={sv}>
+                    <span className={styles.sevDot} data-sev={sv} />
+                    {SEVERITY_LABEL[sv]}
+                    <b>{n}</b>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <button type="button" className={styles.verifiedStat} onClick={onChecks}>
+            <Icon name="shieldCheck" size={20} />
+            <span>
+              <b>
+                {s.verified} of {s.claims}
+              </b>{" "}
+              legal claims passed every check
+            </span>
+            <Icon name="chevronRight" size={16} />
           </button>
-        </p>
-      )}
+        </section>
 
-      <details className={styles.more}>
-        <summary>Limits of this memo</summary>
-        <ul className={styles.caveatList}>
-          {result.memo.caveats.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
-      </details>
+        {live.length > 0 && (
+          <nav className={styles.asideCard} aria-label="Jump to a risk">
+            <h2 className={styles.asideTitle}>Risks</h2>
+            <ol className={styles.jumpList}>
+              {live.map((r, i) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => onJump(r.id)}>
+                    <span className={styles.jumpNum} data-sev={r.severity}>
+                      {i + 1}
+                    </span>
+                    <span>{r.title.en}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+
+
+        <button type="button" className={styles.councilCta} onClick={onCouncil}>
+          <CouncilFaces size={28} />
+          <span className={styles.ctaText}>
+            <b>Ask the council</b>
+            <span>Three AI reviewers, grounded in verified law</span>
+          </span>
+          <Icon name="arrowRight" size={16} />
+        </button>
+      </aside>
     </main>
   );
 }
 
 /* ------------------------------------------------------------------ Contract */
 
-function Contract({ result, onRisk }: { result: AnalysisResult; onRisk: (riskId: string) => void }) {
+function Contract({ result, heat, onRisk }: { result: AnalysisResult; heat: ReturnType<typeof clauseHeat>; onRisk: (riskId: string) => void }) {
   const [onlyFlagged, setOnlyFlagged] = useState(false);
-  const heat = useMemo(() => {
-    const m = new Map<string, { sev: Severity; risk: string; title: string }>();
-    for (const r of result.risks) {
-      if (r.status === "dropped") continue;
-      for (const c of r.clause_ids) {
-        const cur = m.get(c);
-        if (!cur || SEVERITY_RANK[r.severity] < SEVERITY_RANK[cur.sev]) m.set(c, { sev: r.severity, risk: r.id, title: r.title.en });
-      }
-    }
-    return m;
-  }, [result.risks]);
-  const clauses = result.document.clauses.filter((c) => !onlyFlagged || heat.has(c.id));
+  const all = result.document.clauses;
+  const clauses = all.filter((c) => !onlyFlagged || heat.has(c.id));
 
   return (
     <main className={styles.narrow}>
-      <h1 className={styles.viewTitle}>The contract</h1>
-      <p className={styles.viewLead}>
-        This is the copy the AI saw: names, phone numbers and ID numbers are hidden. Coloured clauses have a risk. Click one to read about it.
-      </p>
+      <header className={styles.viewHead}>
+        <h1 className={styles.viewTitle}>The contract</h1>
+        <p className={styles.viewLead}>
+          This is the exact copy the AI saw. Names, phone numbers and ID numbers are hidden. Highlighted clauses carry a risk; select one to read the
+          analysis.
+        </p>
+      </header>
       <div className={styles.contractBar}>
+        <div className={styles.segmented} role="group" aria-label="Which clauses to show">
+          <button type="button" aria-pressed={!onlyFlagged} onClick={() => setOnlyFlagged(false)}>
+            All clauses <span className={styles.count}>{all.length}</span>
+          </button>
+          <button type="button" aria-pressed={onlyFlagged} onClick={() => setOnlyFlagged(true)}>
+            Flagged only <span className={styles.count}>{heat.size}</span>
+          </button>
+        </div>
         <span className={styles.legend}>
-          {(["critical", "high", "medium"] as Severity[]).map((s) => (
-            <span key={s} className={styles.legendItem} data-sev={s}>
+          {(["critical", "high", "medium", "low"] as Severity[]).map((s) => (
+            <span key={s}>
+              <span className={styles.sevDot} data-sev={s} />
               {SEVERITY_LABEL[s]}
             </span>
           ))}
         </span>
-        <label className={styles.toggle}>
-          <input type="checkbox" checked={onlyFlagged} onChange={(e) => setOnlyFlagged(e.target.checked)} /> Only show risky clauses
-        </label>
       </div>
-      <ol className={styles.clauses}>
+      <ol className={styles.sheet}>
         {clauses.map((c) => {
           const h = heat.get(c.id);
           return (
-            <li key={c.id} id={`clause-${c.id}`}>
+            <li key={c.id} id={`clause-${c.id}`} className={styles.clauseItem}>
+              <span className={styles.clauseNum} aria-hidden="true">
+                {c.index + 1}
+              </span>
               {h ? (
                 <button type="button" className={styles.clause} data-sev={h.sev} onClick={() => onRisk(h.risk)}>
                   <span className={styles.clauseText}>{c.text}</span>
                   <span className={styles.clauseRisk}>
-                    {SEVERITY_LABEL[h.sev]} risk: {h.title} →
+                    <span className={styles.sev} data-sev={h.sev}>
+                      <span className={styles.sevDot} data-sev={h.sev} />
+                      {SEVERITY_LABEL[h.sev]}
+                    </span>
+                    {h.title}
+                    <Icon name="arrowRight" size={14} />
                   </span>
                 </button>
               ) : (
@@ -351,14 +537,14 @@ function Contract({ result, onRisk }: { result: AnalysisResult; onRisk: (riskId:
   );
 }
 
-/* ------------------------------------------------------------------ How we checked */
+/* ------------------------------------------------------------------ Verification */
 
 type CheckTab = "ledger" | "trace" | "ablation" | "privacy";
-const CHECK_TABS: { id: CheckTab; label: string }[] = [
-  { id: "ledger", label: "Every legal claim" },
-  { id: "trace", label: "Agent activity" },
-  { id: "ablation", label: "Compare with a plain chatbot" },
-  { id: "privacy", label: "Privacy" },
+const CHECK_TABS: { id: CheckTab; label: string; icon: IconName }[] = [
+  { id: "ledger", label: "Every legal claim", icon: "list" },
+  { id: "trace", label: "Agent activity", icon: "activity" },
+  { id: "ablation", label: "Compare with a plain chatbot", icon: "scale" },
+  { id: "privacy", label: "Privacy", icon: "lock" },
 ];
 
 function Checks({ result, events }: { result: AnalysisResult; events: AnalysisResult["trace"] }) {
@@ -366,11 +552,14 @@ function Checks({ result, events }: { result: AnalysisResult; events: AnalysisRe
   const s = result.stats;
   return (
     <main className={styles.wide}>
-      <h1 className={styles.viewTitle}>How we checked this memo</h1>
-      <p className={styles.viewLead}>
-        AI agents suggested legal points, and each one had to pass four checks before it could go in the memo. The section must exist and apply to this
-        contract. The quote must match the statute. Independent AI judges must agree the law says what we claim. The law must still be in force.
-      </p>
+      <header className={styles.viewHead}>
+        <h1 className={styles.viewTitle}>How we checked this memo</h1>
+        <p className={styles.viewLead}>
+          AI agents proposed legal points, and each one had to pass four checks before it could appear in the memo: the section must exist and apply to
+          this contract, the quote must match the statute, independent AI judges must agree the law says what we claim, and the law must still be in
+          force.
+        </p>
+      </header>
       <div className={styles.statRow}>
         <div>
           <span className={styles.statNum}>{s.claims}</span>
@@ -393,14 +582,24 @@ function Checks({ result, events }: { result: AnalysisResult; events: AnalysisRe
           <span className={styles.statLabel}>{s.llm_calls} AI model calls</span>
         </div>
       </div>
-      <div className={styles.subTabs} role="tablist">
+      <div className={styles.subTabs} role="tablist" aria-label="Verification details">
         {CHECK_TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={styles.subTab} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            id={`check-tab-${t.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls="check-panel"
+            className={styles.subTab}
+            onClick={() => setTab(t.id)}
+          >
+            <Icon name={t.icon} size={15} />
             {t.label}
           </button>
         ))}
       </div>
-      <div role="tabpanel">
+      <div id="check-panel" role="tabpanel" aria-labelledby={`check-tab-${tab}`} className={styles.card}>
         {tab === "ledger" && <LedgerPanel result={result} />}
         {tab === "trace" && <TracePanel events={events} />}
         {tab === "ablation" && <AblationPanel result={result} />}

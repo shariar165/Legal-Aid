@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { api, type Ablation, type AnalysisResult, type TraceEvent, type Verdict } from "@/lib/api";
-import { citeLabel, GATE_SYMBOL, GATES, OUTCOME, VERDICT_LABEL } from "./format";
+import { citeLabel, GATE_ICON, GATE_STATUS_LABEL, GATES, ORIGIN_LABEL, OUTCOME, VERDICT_ICON, VERDICT_LABEL } from "./format";
+import { Icon } from "./Icons";
 import styles from "./counsel.module.css";
 
 /* ------------------------------------------------------------------ Ledger */
@@ -15,22 +16,26 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
   return (
     <div className={styles.panel}>
       <p className={styles.panelLead}>
-        Every legal proposition the agents produced, and what the four gates decided. Dropped claims stay here and never reach
-        the memo.
+        Every legal proposition the agents produced, and what the four checks decided. Rejected claims stay on this list but never
+        reach the memo.
       </p>
-      <div className={styles.filters} role="group" aria-label="Filter ledger">
-        {(["all", "verified", "partial", "dropped"] as const).map((f) => (
-          <button key={f} type="button" aria-pressed={filter === f} className={styles.filterBtn} data-f={f} onClick={() => setFilter(f)}>
-            {f === "all" ? `All ${result.ledger.length}` : `${VERDICT_LABEL[f]} ${count(f)}`}
-          </button>
-        ))}
-      </div>
-      <div className={styles.gateLegend}>
-        {GATES.map((g) => (
-          <span key={g.id}>
-            <b>{g.short}</b> {g.name}
-          </span>
-        ))}
+      <div className={styles.panelBar}>
+        <div className={styles.segmented} role="group" aria-label="Filter claims">
+          {(["all", "verified", "partial", "dropped"] as const).map((f) => (
+            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {f === "all" ? "All" : VERDICT_LABEL[f]}
+              <span className={styles.count}>{f === "all" ? result.ledger.length : count(f)}</span>
+            </button>
+          ))}
+        </div>
+        <dl className={styles.gateLegend}>
+          {GATES.map((g) => (
+            <div key={g.id}>
+              <dt>{g.short}</dt>
+              <dd>{g.name}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
       <ol className={styles.ledger}>
         {rows.map((v) => (
@@ -45,6 +50,7 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
                 <code>{v.claim.citation_id}</code>
               )}
               <span className={styles.verdictPill} data-verdict={v.verdict}>
+                <Icon name={VERDICT_ICON[v.verdict]} size={13} />
                 {VERDICT_LABEL[v.verdict]}
               </span>
             </div>
@@ -54,12 +60,19 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
                 const gate = v.gates.find((x) => x.gate === g.id);
                 const st = gate?.status ?? "skip";
                 return (
-                  <span key={g.id} className={styles.gate} data-status={st} title={`${g.name}: ${gate?.detail ?? ""}`}>
-                    {g.short} {GATE_SYMBOL[st]}
+                  <span
+                    key={g.id}
+                    className={styles.gate}
+                    data-status={st}
+                    title={`${g.name}: ${gate?.detail ?? GATE_STATUS_LABEL[st]}`}
+                    aria-label={`${g.name}: ${GATE_STATUS_LABEL[st]}`}
+                  >
+                    <Icon name={GATE_ICON[st]} size={12} />
+                    {g.short}
                   </span>
                 );
               })}
-              <span className={styles.originTag}>{v.claim.origin}</span>
+              <span className={styles.originTag}>from {ORIGIN_LABEL[v.claim.origin]}</span>
             </div>
             {v.gates
               .filter((g) => g.status === "fail" || g.status === "warn")
@@ -110,13 +123,16 @@ export function TracePanel({ events }: { events: TraceEvent[] }) {
       <div className={styles.agentGrid}>
         {agents.map((a) => (
           <div key={a.name} className={styles.agentCell} data-state={a.end !== undefined ? "done" : "run"}>
-            <b>{a.name}</b>
+            <b>
+              <Icon name={a.end !== undefined ? "checkCircle" : "activity"} size={14} />
+              {a.name}
+            </b>
             <span>{a.end !== undefined ? a.msg : "working…"}</span>
           </div>
         ))}
       </div>
       <label className={styles.toggle}>
-        <input type="checkbox" checked={showCalls} onChange={(e) => setShowCalls(e.target.checked)} /> Show {calls.length} model calls
+        <input type="checkbox" checked={showCalls} onChange={(e) => setShowCalls(e.target.checked)} /> Include the {calls.length} individual model calls
       </label>
       <ol className={styles.trace}>
         {shown.map((e, i) => (
@@ -158,6 +174,7 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
           same gates and compare.
         </p>
         <button type="button" className={styles.primaryBtn} onClick={run} disabled={busy}>
+          <Icon name="activity" size={16} />
           {busy ? "Running the baseline…" : "Run plain-LLM baseline"}
         </button>
         {error && <p className={styles.errorBox}>{error}</p>}
@@ -192,7 +209,8 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
               <span className={styles.claimId}>{r.risk}</span>
               <span className={styles.citeLink}>{r.cited}</span>
               <span className={styles.verdictPill} data-verdict={OUTCOME[r.outcome].ok ? "verified" : "dropped"}>
-                {OUTCOME[r.outcome].ok ? "✓" : "✕"} {OUTCOME[r.outcome].label}
+                <Icon name={OUTCOME[r.outcome].ok ? "checkCircle" : "xCircle"} size={13} />
+                {OUTCOME[r.outcome].label}
               </span>
             </div>
             <p className={styles.prop}>{r.claim}</p>
@@ -223,18 +241,18 @@ export function PrivacyPanel({ result }: { result: AnalysisResult }) {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.privacyStats}>
+      <div className={styles.statRow}>
         <div>
-          <span className={styles.vsBig}>{p.redactions.length}</span>
-          <span className={styles.vsSub}>identifiers redacted</span>
+          <span className={styles.statNum}>{p.redactions.length}</span>
+          <span className={styles.statLabel}>identifiers redacted</span>
+        </div>
+        <div data-tone={p.image_left_device ? "warn" : "ok"}>
+          <span className={styles.statNum}>{p.image_left_device ? "Yes" : "No"}</span>
+          <span className={styles.statLabel}>photo sent to any server</span>
         </div>
         <div>
-          <span className={styles.vsBig}>{p.image_left_device ? "Yes" : "No"}</span>
-          <span className={styles.vsSub}>photo sent to any server</span>
-        </div>
-        <div>
-          <span className={styles.vsBig}>{p.pii_leaks_blocked}</span>
-          <span className={styles.vsSub}>outbound calls blocked by the PII guard</span>
+          <span className={styles.statNum}>{p.pii_leaks_blocked}</span>
+          <span className={styles.statLabel}>outbound calls blocked by the PII guard</span>
         </div>
       </div>
       <div className={styles.kinds}>
