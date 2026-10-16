@@ -84,3 +84,29 @@ def test_blurry_salary_waits_for_human_confirmation(client, docs, monkeypatch):
     r = client.get(f"/api/jobs/{job}/result").json()
     assert r["wage"]["promised"] == 1800 and r["wage"]["confirmed_by_user"] is True
     assert not r["wage"]["below_minimum"]
+
+
+def test_council_members_and_chat(client):
+    ms = client.get("/api/council").json()
+    assert [m["name"] for m in ms] == ["Sunny", "Regal", "Grey"]
+
+    job = client.post("/api/analyze", data={"sample_id": "rmg_epz"}).json()["job_id"]
+    assert _wait(client, job)["status"] == "done"
+    r = client.get(f"/api/jobs/{job}/result").json()
+    benched = next(k for k in r["risks"] if k["bench"])
+    assert {o["persona"] for o in benched["bench"]["opinions"]} == {"happy", "proud", "gloomy"}
+    calls_before = len(r["privacy"]["outbound_calls"])
+
+    url = f"/api/jobs/{job}/council/chat"
+    all3 = client.post(url, json={"message": "Should I sign?", "members": ["happy", "proud", "gloomy"], "risk_id": benched["id"]})
+    assert all3.status_code == 200 and [x["name"] for x in all3.json()["replies"]] == ["Sunny", "Regal", "Grey"]
+    one = client.post(url, json={"message": "And you?", "members": ["proud"], "history": [{"speaker": "user", "text": "Should I sign?"}]})
+    assert one.status_code == 200 and len(one.json()["replies"]) == 1
+    after = client.get(f"/api/jobs/{job}/result").json()["privacy"]["outbound_calls"]
+    assert len(after) == calls_before + 4 and all(c["agent"].startswith("LLM Council") for c in after[calls_before:])
+
+    pii = client.post(url, json={"message": "Call me on 01712345678", "members": ["happy"]})
+    assert pii.status_code == 422 and "personal identifiers" in pii.json()["detail"]
+    assert client.post(url, json={"message": "hi", "members": ["angry"]}).status_code == 422
+    assert client.post(url, json={"message": "hi", "members": ["happy"], "risk_id": "R99"}).status_code == 404
+    assert client.post("/api/jobs/nope/council/chat", json={"message": "hi", "members": ["happy"]}).status_code == 404

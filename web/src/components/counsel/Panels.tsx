@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, type Ablation, type AnalysisResult, type TraceEvent, type Verdict } from "@/lib/api";
-import { citeLabel, GATE_SYMBOL, GATES, OUTCOME, SEVERITY_LABEL, VERDICT_LABEL } from "./format";
+import { citeLabel, GATE_SYMBOL, GATES, OUTCOME, VERDICT_LABEL } from "./format";
 import styles from "./counsel.module.css";
 
 /* ------------------------------------------------------------------ Ledger */
@@ -77,55 +77,6 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
           </li>
         ))}
       </ol>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ Bench */
-
-export function BenchPanel({ result }: { result: AnalysisResult }) {
-  const benched = result.risks.filter((r) => r.bench);
-  if (!benched.length) return <p className={styles.panelLead}>No claim reached the Virtual Bench (only high and critical risks do).</p>;
-  return (
-    <div className={styles.panel}>
-      <p className={styles.panelLead}>
-        Three judges from different model families rule independently from the statute text alone, review each other&apos;s anonymised
-        opinions, and a Chief Justice writes the ruling. Any dissent is surfaced for human review.
-      </p>
-      {benched.map((r) => {
-        const b = r.bench!;
-        return (
-          <section key={r.id} className={styles.benchCase} data-review={b.human_review}>
-            <h4 className={styles.benchTitle}>
-              {r.id} · {r.title.en}
-            </h4>
-            <p className={styles.benchQ}>{b.question}</p>
-            <div className={styles.judges}>
-              {b.opinions.map((o) => (
-                <div key={o.seat} className={styles.judge} data-verdict={o.verdict}>
-                  <div className={styles.judgeHead}>
-                    <b>{o.seat}</b>
-                    <span className={styles.judgeModel}>{o.model}</span>
-                  </div>
-                  <div className={styles.judgeVerdict}>
-                    {o.verdict} · {SEVERITY_LABEL[o.severity]}
-                    {o.revised && <span className={styles.revised}> (revised after review)</span>}
-                  </div>
-                  <p className={styles.judgeReason}>{o.reasoning}</p>
-                </div>
-              ))}
-            </div>
-            <div className={styles.ruling}>
-              <span className={styles.benchVote}>
-                Ruling {b.vote}: {b.majority_verdict}, severity {SEVERITY_LABEL[b.majority_severity]}
-              </span>
-              <p>{b.majority_opinion}</p>
-              {b.dissent && <p className={styles.dissent}>⚠ {b.dissent}</p>}
-              <span className={styles.judgeModel}>Chief Justice: {b.chairman_model}</span>
-            </div>
-          </section>
-        );
-      })}
     </div>
   );
 }

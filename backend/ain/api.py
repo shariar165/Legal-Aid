@@ -17,10 +17,10 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from ain import config
-from ain.agents import ablation
+from ain.agents import ablation, council
 from ain.export import memo_docx
-from ain.llm import LLM
-from ain.models import AblationResult, AnalysisResult, Section
+from ain.llm import LLM, PIILeakError
+from ain.models import AblationResult, AnalysisResult, CouncilChatRequest, CouncilChatResponse, CouncilMember, Section
 from ain.orchestrator import JOBS, load_result, new_job, run_pipeline
 from ain.retrieval import get_corpus
 
@@ -209,6 +209,34 @@ async def run_ablation(job_id: str) -> AblationResult:
         r.ablation = await ablation.run(LLM(mode=r.llm_mode), get_corpus(), r)
         (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
     return r.ablation
+
+
+@app.get("/api/council", response_model=list[CouncilMember])
+def council_members() -> list[CouncilMember]:
+    return council.members(LLM(mode=council.chat_mode(config.llm_mode())))
+
+
+@app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse)
+async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResponse:
+    r = _result_or_409(job_id)
+    unknown = [m for m in body.members if m not in council.BY_ID]
+    if unknown:
+        raise HTTPException(422, f"Unknown council member: {', '.join(unknown)}")
+    risk = None
+    if body.risk_id:
+        risk = next((k for k in r.risks if k.id == body.risk_id), None)
+        if risk is None:
+            raise HTTPException(404, "Unknown risk")
+    llm = LLM(mode=council.chat_mode(r.llm_mode))
+    try:
+        replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history)
+    except PIILeakError:
+        raise HTTPException(
+            422, "Your message contains personal identifiers (a phone number, NID, passport, account or name). Please remove them and ask again."
+        ) from None
+    r.privacy.outbound_calls.extend(llm.calls)
+    (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
+    return CouncilChatResponse(replies=replies)
 
 
 @app.get("/api/corpus/{citation_id}", response_model=Section)

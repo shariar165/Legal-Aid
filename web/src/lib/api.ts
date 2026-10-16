@@ -56,9 +56,13 @@ export interface Gate {
   detail: string;
 }
 
+export type PersonaId = "happy" | "proud" | "gloomy";
+
 export interface BenchOpinion {
   seat: string;
   model: string;
+  persona: PersonaId | "";
+  name: string;
   verdict: "supports" | "neutral" | "contradicts";
   severity: Severity;
   reasoning: string;
@@ -254,12 +258,41 @@ export interface AnalysisResult {
   ablation: Ablation | null;
 }
 
+export interface CouncilMember {
+  id: PersonaId;
+  name: string;
+  title: string;
+  tagline: string;
+  seat: string;
+  model: string;
+}
+
+export interface ChatTurn {
+  speaker: "user" | PersonaId;
+  text: string;
+}
+
+export interface CouncilReply {
+  member: PersonaId;
+  name: string;
+  model: string;
+  text: string;
+  citations: string[];
+}
+
+export interface CouncilChatBody {
+  message: string;
+  members: PersonaId[];
+  risk_id?: string | null;
+  history?: ChatTurn[];
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail ?? detail;
+      detail = typeof body.detail === "string" ? body.detail : (body.detail?.[0]?.msg ?? detail);
     } catch {
       /* not JSON */
     }
@@ -290,6 +323,13 @@ export const api = {
   status: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}`).then((r) => json<{ status: string; error: string | null }>(r)),
   result: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}/result`).then((r) => json<AnalysisResult>(r)),
   ablation: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}/ablation`, { method: "POST" }).then((r) => json<Ablation>(r)),
+  council: () => fetch(`${API_URL}/api/council`).then((r) => json<CouncilMember[]>(r)),
+  councilChat: (jobId: string, body: CouncilChatBody) =>
+    fetch(`${API_URL}/api/jobs/${jobId}/council/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => json<{ replies: CouncilReply[] }>(r)),
   memoUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/memo.docx`,
   eventsUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/events`,
 };

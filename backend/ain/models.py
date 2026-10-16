@@ -163,6 +163,8 @@ class GateResult(BaseModel):
 class BenchOpinion(BaseModel):
     seat: str  # "Justice A" - anonymised label shown during peer review
     model: str
+    persona: str = ""  # council personality id: happy | proud | gloomy
+    name: str = ""  # the persona's display name, e.g. "Sunny"
     verdict: Literal["supports", "neutral", "contradicts"]
     severity: Severity
     reasoning: str
@@ -321,3 +323,39 @@ class AnalysisResult(BaseModel):
     trace: list[TraceEvent]
     stats: Stats
     ablation: AblationResult | None = None
+
+
+# ---------------------------------------------------------------- council chat
+
+
+class CouncilMember(BaseModel):
+    id: str  # happy | proud | gloomy
+    name: str
+    title: str  # e.g. "the Happy AI"
+    tagline: str
+    seat: str
+    model: str
+
+
+class ChatTurn(BaseModel):
+    speaker: str  # "user" or a council member id
+    text: str = Field(max_length=2000)
+
+
+class CouncilChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=1000)
+    members: list[str] = Field(min_length=1, max_length=3)
+    risk_id: str | None = None
+    history: list[ChatTurn] = Field(default_factory=list)
+
+
+class CouncilReply(BaseModel):
+    member: str
+    name: str
+    model: str
+    text: str
+    citations: list[str] = Field(default_factory=list)
+
+
+class CouncilChatResponse(BaseModel):
+    replies: list[CouncilReply]
