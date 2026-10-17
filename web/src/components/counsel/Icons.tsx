@@ -98,6 +98,33 @@ const PATHS = {
       <path d="M12 11v5M12 8h.01" />
     </>
   ),
+  gavel: (
+    <>
+      <path d="m14 13-7.5 7.5a2.1 2.1 0 0 1-3-3L11 10" />
+      <path d="m16 16 6-6M8 8l6-6M9 7l8 8M21 11l-8-8" />
+    </>
+  ),
+  repeat: (
+    <>
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </>
+  ),
+  flag: (
+    <>
+      <path d="M4 22V4" />
+      <path d="M4 4h12l-2 4 2 4H4" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  cornerDownRight: <path d="M4 4v7a4 4 0 0 0 4 4h12m0 0-4-4m4 4-4 4" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;

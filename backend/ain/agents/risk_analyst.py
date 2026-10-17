@@ -155,8 +155,10 @@ async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact) -> tuple[bo
     body = "\n\n".join(f"[{c.id}] {redact(c.text)}" for c in hits)
     first = redact(hits[0].text).replace("\n", " ")
 
+    excerpt = first if len(first) <= 220 else first[:217].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
     def fake() -> dict:
-        return {"applies": True, "clause_ids": [c.id for c in hits], "finding": f"Clause {hits[0].id}: “{first[:220]}”"}
+        return {"applies": True, "clause_ids": [c.id for c in hits], "finding": f"Clause {hits[0].id}: “{excerpt}”"}
 
     data = await llm.json(
         role="reasoner",

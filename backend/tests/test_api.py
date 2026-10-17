@@ -110,3 +110,18 @@ def test_council_members_and_chat(client):
     assert client.post(url, json={"message": "hi", "members": ["angry"]}).status_code == 422
     assert client.post(url, json={"message": "hi", "members": ["happy"], "risk_id": "R99"}).status_code == 404
     assert client.post("/api/jobs/nope/council/chat", json={"message": "hi", "members": ["happy"]}).status_code == 404
+
+    # deliberation: round 2 + Chief Justice ruling, in Bangla
+    first = all3.json()["replies"]
+    d = client.post(
+        f"/api/jobs/{job}/council/deliberate",
+        json={"message": "Should I sign?", "replies": first, "risk_id": benched["id"], "language": "bn"},
+    )
+    assert d.status_code == 200
+    body = d.json()
+    assert [x["member"] for x in body["rebuttals"]] == ["happy", "proud", "gloomy"] and all(x["round"] == 2 for x in body["rebuttals"])
+    assert body["ruling"]["agreement"] in ("unanimous", "majority", "split") and body["ruling"]["next_step"]
+    deliberate = f"/api/jobs/{job}/council/deliberate"
+    assert client.post(deliberate, json={"message": "x", "replies": first[:1]}).status_code == 422
+    leak = [dict(first[0], text="Call 01712345678"), *first[1:]]
+    assert client.post(deliberate, json={"message": "x", "replies": leak}).status_code == 422

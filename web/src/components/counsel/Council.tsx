@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, type AnalysisResult, type BenchOpinion, type BenchResult, type ChatTurn, type CouncilMember, type PersonaId, type Section } from "@/lib/api";
+import {
+  api,
+  type AnalysisResult,
+  type BenchOpinion,
+  type BenchResult,
+  type ChatTurn,
+  type CouncilLanguage,
+  type CouncilMember,
+  type CouncilReply,
+  type CouncilRuling,
+  type PersonaId,
+  type Section,
+} from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
 import { Icon, type IconName } from "./Icons";
 import styles from "./counsel.module.css";
@@ -18,6 +30,11 @@ const FALLBACK: Record<PersonaId, CouncilMember> = {
 
 /* temperament in one word, shown under each name */
 const TEMPERAMENT: Record<PersonaId, string> = { happy: "Optimist", proud: "Textualist", gloomy: "Sceptic" };
+const ROLE_LINE: Record<PersonaId, string> = {
+  happy: "Looks for the fix",
+  proud: "Reads the statute strictly",
+  gloomy: "Asks what can go wrong",
+};
 const GLYPH: Record<PersonaId, IconName> = { happy: "sun", proud: "shield", gloomy: "cloud" };
 
 export type CouncilTarget = PersonaId | "all";
@@ -90,22 +107,67 @@ export function MemberVotes({ bench }: { bench: BenchResult }) {
   );
 }
 
-/* ------------------------------------------------------------------ Panel */
+/* ------------------------------------------------------------------ copy */
 
-interface Msg {
+const COPY = {
+  en: {
+    whole: ["Should I sign this contract as it stands?", "What should I negotiate first?", "Where do you disagree with each other, and why?"],
+    risk: ["How do I fix this clause?", "What happens if I sign it anyway?", "How serious is this, really?"],
+    placeholder: (who: string) => `Ask ${who} a question…`,
+  },
+  bn: {
+    whole: ["এই চুক্তিতে কি এখনই সই করা উচিত?", "আগে কোন শর্ত নিয়ে দর-কষাকষি করব?", "আপনারা কোথায় একমত নন, আর কেন?"],
+    risk: ["এই শর্তটি কীভাবে ঠিক করব?", "তবুও সই করলে কী হতে পারে?", "এটা আসলে কতটা গুরুতর?"],
+    placeholder: () => "কাউন্সিলকে বাংলায় প্রশ্ন করুন…",
+  },
+} as const;
+
+const AGREEMENT: Record<CouncilRuling["agreement"], { label: string; detail: string; votes: number }> = {
+  unanimous: { label: "Unanimous", detail: "All three members agree", votes: 3 },
+  majority: { label: "Majority", detail: "Two of three members agree", votes: 2 },
+  split: { label: "Split", detail: "The members did not agree", votes: 1 },
+};
+
+const CONFIDENCE_LABEL = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" } as const;
+
+/* ------------------------------------------------------------------ state */
+
+interface Exchange {
   id: number;
-  speaker: "user" | PersonaId | "error";
-  text: string;
-  citations?: string[];
+  question: string;
+  members: PersonaId[];
+  riskId: string | null;
+  topic: string;
+  language: CouncilLanguage;
+  round1: CouncilReply[];
+  round2: CouncilReply[];
+  ruling: CouncilRuling | null;
+  status: "asking" | "answered" | "deliberating" | "ruled";
 }
 
-const PROMPTS = ["Should I sign this contract as it stands?", "What should I negotiate first?", "Where do you disagree with each other, and why?"];
+function historyOf(exchanges: Exchange[]): ChatTurn[] {
+  const turns: ChatTurn[] = [];
+  for (const x of exchanges) {
+    if (x.status === "asking") continue;
+    turns.push({ speaker: "user", text: x.question });
+    for (const r of [...x.round1, ...x.round2]) turns.push({ speaker: r.member, text: (r.position ? `${r.position}. ` : "") + r.text });
+  }
+  return turns.slice(-8);
+}
+
+function errorText(e: unknown) {
+  const err = (e as Error).message.replace(/^\d+: /, "");
+  return err === "Failed to fetch" ? "The analysis server is not reachable." : err;
+}
+
+/* ------------------------------------------------------------------ Panel */
 
 export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: CouncilNav }) {
   const [members, setMembers] = useState<CouncilMember[]>(PERSONA_IDS.map((p) => FALLBACK[p]));
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [pending, setPending] = useState<PersonaId[]>([]);
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [language, setLanguage] = useState<CouncilLanguage>("en");
   const logRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const nextId = useRef(0);
@@ -127,7 +189,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     // scroll the log box itself, never the page (the panel stays mounted while other views show)
     const log = logRef.current;
     if (log) log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
-  }, [msgs, pending]);
+  }, [exchanges, error]);
 
   useEffect(() => {
     // grow the composer with its content, up to the CSS max-height
@@ -146,45 +208,68 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     return m;
   }, [result.ledger]);
 
-  const send = async (text: string) => {
-    const message = text.trim();
-    if (!message || pending.length) return;
-    const targets = nav.target === "all" ? PERSONA_IDS : [nav.target];
-    const history: ChatTurn[] = msgs
-      .filter((m): m is Msg & { speaker: ChatTurn["speaker"] } => m.speaker !== "error")
-      .slice(-8)
-      .map((m) => ({ speaker: m.speaker, text: m.text }));
-    const userId = nextId.current++;
-    setMsgs((cur) => [...cur.filter((m) => m.speaker !== "error"), { id: userId, speaker: "user", text: message }]);
-    setDraft("");
-    setPending(targets);
-    try {
-      const { replies } = await api.councilChat(result.job_id, { message, members: targets, risk_id: nav.riskId, history });
-      setMsgs((cur) => [...cur, ...replies.map((r) => ({ id: nextId.current++, speaker: r.member, text: r.text, citations: r.citations }))]);
-    } catch (e) {
-      const err = (e as Error).message.replace(/^\d+: /, "");
-      // a rejected question (e.g. it contained an identifier) must not stay in the history sent with the next one
-      setMsgs((cur) => [
-        ...cur.filter((m) => m.id !== userId),
-        { id: nextId.current++, speaker: "error", text: err === "Failed to fetch" ? "The analysis server is not reachable." : err },
-      ]);
-      setDraft(message);
-    } finally {
-      setPending([]);
-    }
-  };
-
+  const busy = exchanges.some((x) => x.status === "asking" || x.status === "deliberating");
   const who = nav.target === "all" ? "the entire council" : FALLBACK[nav.target].name;
   const topic = nav.riskId ? (live.find((r) => r.id === nav.riskId)?.title.en ?? "this risk") : "the whole contract";
   const model = (id: PersonaId) => members.find((m) => m.id === id)?.model;
+  const prompts = nav.riskId ? COPY[language].risk : COPY[language].whole;
+
+  const patch = (id: number, p: Partial<Exchange>) => setExchanges((cur) => cur.map((x) => (x.id === id ? { ...x, ...p } : x)));
+
+  const send = async (text: string) => {
+    const message = text.trim();
+    if (!message || busy) return;
+    const targets = nav.target === "all" ? PERSONA_IDS : [nav.target];
+    const id = nextId.current++;
+    const history = historyOf(exchanges);
+    setError(null);
+    setExchanges((cur) => [
+      ...cur,
+      { id, question: message, members: targets, riskId: nav.riskId, topic, language, round1: [], round2: [], ruling: null, status: "asking" },
+    ]);
+    setDraft("");
+    try {
+      const { replies } = await api.councilChat(result.job_id, { message, members: targets, risk_id: nav.riskId, history, language });
+      patch(id, { round1: replies, status: "answered" });
+    } catch (e) {
+      // a rejected question (e.g. it contained an identifier) must not stay in the history sent with the next one
+      setExchanges((cur) => cur.filter((x) => x.id !== id));
+      setError(errorText(e));
+      setDraft(message);
+    }
+  };
+
+  const deliberate = async (x: Exchange) => {
+    if (busy) return;
+    setError(null);
+    patch(x.id, { status: "deliberating" });
+    try {
+      const history = historyOf(exchanges.filter((e) => e.id < x.id));
+      const { rebuttals, ruling } = await api.councilDeliberate(result.job_id, {
+        message: x.question,
+        replies: x.round1,
+        risk_id: x.riskId,
+        history,
+        language: x.language,
+      });
+      patch(x.id, { round2: rebuttals, ruling, status: "ruled" });
+    } catch (e) {
+      patch(x.id, { status: "answered" });
+      setError(errorText(e));
+    }
+  };
+
+  const reviewed = benched.length;
+  const unanimous = benched.filter((r) => !r.bench!.opinions.some((o) => dissents(o, r.bench!))).length;
+  const flagged = benched.filter((r) => r.bench!.human_review).length;
 
   return (
     <div className={styles.council}>
       <header className={styles.viewHead}>
         <h1 className={styles.viewTitle}>Ask the council</h1>
         <p className={styles.viewLead}>
-          Three AI reviewers with different temperaments discuss your contract. They may only cite law that passed verification, so every answer stays
-          grounded in the statute.
+          Three AI reviewers from different model families, each with a different temperament. Ask a question, then let them deliberate: they answer
+          each other and the Chief Justice writes a ruling. They may only cite law that passed verification.
         </p>
       </header>
 
@@ -201,7 +286,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
               </span>
               <span className={styles.memberText}>
                 <b>Entire council</b>
-                <span>Hear all three views</span>
+                <span>All three answer, then they can deliberate</span>
               </span>
             </button>
             {members.map((m) => (
@@ -219,8 +304,8 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                   <b>
                     {m.name} <em>{TEMPERAMENT[m.id]}</em>
                   </b>
-                  <span>{m.tagline}</span>
-                  {m.model && <code>{m.model}</code>}
+                  <span>{ROLE_LINE[m.id]}</span>
+                  {m.model && <code title={m.model}>{m.model}</code>}
                 </span>
               </button>
             ))}
@@ -237,6 +322,40 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
               ))}
             </select>
           </label>
+
+          <div className={styles.topic}>
+            <span className={styles.railLabel} id="council-lang">
+              Answer language
+            </span>
+            <div className={styles.langSwitch} role="radiogroup" aria-labelledby="council-lang">
+              <button type="button" role="radio" aria-checked={language === "en"} onClick={() => setLanguage("en")}>
+                English
+              </button>
+              <button type="button" role="radio" aria-checked={language === "bn"} lang="bn" onClick={() => setLanguage("bn")}>
+                বাংলা
+              </button>
+            </div>
+          </div>
+
+          {reviewed > 0 && (
+            <div className={styles.railRecord}>
+              <span className={styles.railLabel}>Council record</span>
+              <dl>
+                <div>
+                  <dt>Serious risks reviewed</dt>
+                  <dd>{reviewed}</dd>
+                </div>
+                <div>
+                  <dt>Unanimous</dt>
+                  <dd>{unanimous}</dd>
+                </div>
+                <div data-tone={flagged ? "warn" : undefined}>
+                  <dt>Flagged for human review</dt>
+                  <dd>{flagged}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
         </aside>
 
         {/* ---------------- conversation */}
@@ -245,17 +364,23 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
             <Icon name="message" size={16} />
             <span>
               Asking <b>{who}</b> about <b>{topic}</b>
+              {language === "bn" && (
+                <span className={styles.chatLang} lang="bn">
+                  বাংলায় উত্তর
+                </span>
+              )}
             </span>
           </div>
 
           <div ref={logRef} className={styles.chatLog} aria-live="polite">
-            {msgs.length === 0 && pending.length === 0 && (
+            {exchanges.length === 0 && (
               <div className={styles.emptyChat}>
                 <CouncilFaces size={40} />
-                <p>Start with one of these, or write your own question below.</p>
+                <p className={styles.emptyTitle}>The council is ready</p>
+                <p>Pick a starting question, or write your own below. With the entire council, you can then ask them to deliberate.</p>
                 <div className={styles.prompts}>
-                  {PROMPTS.map((p) => (
-                    <button key={p} type="button" className={styles.prompt} onClick={() => void send(p)}>
+                  {prompts.map((p) => (
+                    <button key={p} type="button" className={styles.prompt} lang={language} onClick={() => void send(p)}>
                       <Icon name="sparkle" size={16} />
                       {p}
                     </button>
@@ -263,55 +388,17 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                 </div>
               </div>
             )}
-            {msgs.map((m) =>
-              m.speaker === "user" ? (
-                <p key={m.id} className={styles.msgUser}>
-                  {m.text}
-                </p>
-              ) : m.speaker === "error" ? (
-                <p key={m.id} className={styles.errorBox} role="alert">
-                  <Icon name="alert" size={16} />
-                  {m.text}
-                </p>
-              ) : (
-                <article key={m.id} className={styles.msg} data-persona={m.speaker}>
-                  <CouncilAvatar persona={m.speaker} size={32} />
-                  <div className={styles.msgBody}>
-                    <p className={styles.msgName}>
-                      {FALLBACK[m.speaker].name} <span>{TEMPERAMENT[m.speaker]}</span>
-                    </p>
-                    <p className={styles.msgText}>{m.text}</p>
-                    {!!m.citations?.length && (
-                      <div className={styles.msgCites}>
-                        {m.citations.map((c) => {
-                          const s = sections.get(c);
-                          return s ? (
-                            <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified">
-                              <Icon name="scale" size={13} />
-                              {citeLabel(s)}
-                            </a>
-                          ) : (
-                            <code key={c} className={styles.citeChip}>
-                              {c}
-                            </code>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ),
-            )}
-            {pending.map((p) => (
-              <div key={p} className={styles.msg} data-persona={p}>
-                <CouncilAvatar persona={p} size={32} />
-                <span className={styles.typing} aria-label={`${FALLBACK[p].name} is thinking`}>
-                  <i />
-                  <i />
-                  <i />
-                </span>
-              </div>
+
+            {exchanges.map((x) => (
+              <ExchangeView key={x.id} x={x} sections={sections} busy={busy} onDeliberate={() => void deliberate(x)} />
             ))}
+
+            {error && (
+              <p className={styles.errorBox} role="alert">
+                <Icon name="alert" size={16} />
+                {error}
+              </p>
+            )}
           </div>
 
           <form
@@ -321,13 +408,23 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
               void send(draft);
             }}
           >
+            {exchanges.length > 0 && (
+              <div className={styles.quickRow} aria-label="Suggested questions">
+                {prompts.map((p) => (
+                  <button key={p} type="button" className={styles.quick} lang={language} disabled={busy} onClick={() => void send(p)}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className={styles.composerBox}>
               <textarea
                 ref={boxRef}
                 value={draft}
                 rows={1}
                 maxLength={1000}
-                placeholder={`Ask ${who} a question…`}
+                lang={language}
+                placeholder={COPY[language].placeholder(who)}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -337,7 +434,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                 }}
                 aria-label="Your question to the council"
               />
-              <button type="submit" className={styles.sendBtn} disabled={!draft.trim() || pending.length > 0} aria-label="Send question">
+              <button type="submit" className={styles.sendBtn} disabled={!draft.trim() || busy} aria-label="Send question">
                 <Icon name="send" size={18} />
               </button>
             </div>
@@ -354,15 +451,20 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
         <section className={styles.votes} aria-labelledby="votes-title">
           <div className={styles.sectionHead}>
             <h2 id="votes-title" className={styles.sectionTitle}>
-              How the council voted
+              How the council voted on each serious risk
             </h2>
-            <span className={styles.sectionMeta}>{benched.length} serious {benched.length === 1 ? "risk" : "risks"} reviewed</span>
+            <span className={styles.sectionMeta}>
+              {unanimous} of {reviewed} unanimous{flagged ? ` · ${flagged} flagged for human review` : ""}
+            </span>
           </div>
           <div className={styles.voteTable}>
             <div className={styles.voteHeadRow} aria-hidden="true">
               <span>Risk</span>
               {PERSONA_IDS.map((p) => (
-                <span key={p}>{FALLBACK[p].name}</span>
+                <span key={p} className={styles.voteHeadMember} data-persona={p}>
+                  <CouncilAvatar persona={p} size={20} />
+                  {FALLBACK[p].name}
+                </span>
               ))}
               <span>Outcome</span>
             </div>
@@ -381,11 +483,10 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                       return (
                         <span key={p} className={styles.voteCell} data-dissent={o ? dissents(o, b) : undefined}>
                           {o ? (
-                            <>
+                            <span className={styles.sevPill} data-sev={o.severity}>
                               <span className={styles.voteWho}>{FALLBACK[p].name}: </span>
-                              <span className={styles.sevDot} data-sev={o.severity} />
                               {SEVERITY_LABEL[o.severity]}
-                            </>
+                            </span>
                           ) : (
                             "—"
                           )}
@@ -393,13 +494,31 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                       );
                     })}
                     <span className={styles.voteOutcome} data-split={against.length > 0}>
-                      {against.length ? `${against.join(" & ")} dissented` : "Unanimous"}
+                      {against.length ? (
+                        <>
+                          <Icon name="flag" size={13} />
+                          {b.vote} · {against.join(" & ")} dissented
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="check" size={13} />
+                          Unanimous {b.vote}
+                        </>
+                      )}
                     </span>
                   </summary>
                   <div className={styles.voteBody}>
                     <p className={styles.majority}>
                       <b>Majority opinion.</b> {b.majority_opinion}
                     </p>
+                    {b.dissent && (
+                      <p className={styles.dissentNote}>
+                        <Icon name="flag" size={14} />
+                        <span>
+                          <b>Dissent.</b> {b.dissent} This risk is flagged for a human lawyer to review.
+                        </span>
+                      </p>
+                    )}
                     {b.opinions.map((o) => (
                       <div key={o.seat} className={styles.opinion}>
                         {o.persona && <CouncilAvatar persona={o.persona} size={28} />}
@@ -425,5 +544,221 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
         </section>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ one question and its answers */
+
+function ExchangeView({ x, sections, busy, onDeliberate }: { x: Exchange; sections: Map<string, Section>; busy: boolean; onDeliberate: () => void }) {
+  const many = x.members.length > 1;
+  return (
+    <div className={styles.exchange}>
+      <div className={styles.msgUserWrap}>
+        <p className={styles.msgUser} lang={x.language}>
+          {x.question}
+        </p>
+        {x.riskId && <span className={styles.msgTopic}>About: {x.topic}</span>}
+      </div>
+
+      {many && x.status !== "asking" && <RoundLabel n={1} text="First answers" />}
+      {x.status === "asking" ? (
+        <Thinking members={x.members} />
+      ) : (
+        x.round1.map((r) => <ReplyCard key={`1-${r.member}`} r={r} sections={sections} lang={x.language} />)
+      )}
+
+      {many && x.status === "answered" && (
+        <div className={styles.deliberateBar}>
+          <span>
+            <b>Want a single answer?</b> Let the members respond to each other, then the Chief Justice writes the council&apos;s ruling.
+          </span>
+          <button type="button" className={styles.primaryBtn} disabled={busy} onClick={onDeliberate}>
+            <Icon name="gavel" size={16} />
+            Hold a deliberation
+          </button>
+        </div>
+      )}
+
+      {(x.status === "deliberating" || x.status === "ruled") && <RoundLabel n={2} text="Deliberation · the members answer each other" />}
+      {x.status === "deliberating" && <Thinking members={x.members} />}
+      {x.status === "ruled" && (
+        <>
+          {x.round2.map((r) => (
+            <ReplyCard key={`2-${r.member}`} r={r} sections={sections} lang={x.language} />
+          ))}
+          {x.ruling && <RulingCard ruling={x.ruling} sections={sections} lang={x.language} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RoundLabel({ n, text }: { n: number; text: string }) {
+  return (
+    <div className={styles.roundLabel}>
+      <span>Round {n}</span>
+      {text}
+    </div>
+  );
+}
+
+function Thinking({ members }: { members: PersonaId[] }) {
+  return (
+    <>
+      {members.map((p) => (
+        <div key={p} className={styles.msg} data-persona={p}>
+          <CouncilAvatar persona={p} size={32} />
+          <span className={styles.typing} aria-label={`${FALLBACK[p].name} is thinking`}>
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section> }) {
+  if (!ids.length) return null;
+  return (
+    <div className={styles.msgCites}>
+      {ids.map((c) => {
+        const s = sections.get(c);
+        return s ? (
+          <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified" title="Verified section · opens the official text">
+            <Icon name="scale" size={13} />
+            {citeLabel(s)}
+            <Icon name="external" size={12} />
+          </a>
+        ) : (
+          <code key={c} className={styles.citeChip}>
+            {c}
+          </code>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<string, Section>; lang: CouncilLanguage }) {
+  return (
+    <article className={styles.msg} data-persona={r.member}>
+      <CouncilAvatar persona={r.member} size={32} />
+      <div className={styles.msgBody}>
+        <div className={styles.msgMeta}>
+          <p className={styles.msgName}>
+            {FALLBACK[r.member].name} <span>{TEMPERAMENT[r.member]}</span>
+          </p>
+          {r.round === 2 && r.responds_to && (
+            <span className={styles.respondsTo}>
+              <Icon name="cornerDownRight" size={13} />
+              to {FALLBACK[r.responds_to].name}
+            </span>
+          )}
+          {r.round === 2 && (
+            <span className={styles.stanceTag} data-revised={r.revised}>
+              {r.revised ? "Changed position" : "Kept position"}
+            </span>
+          )}
+          <span className={styles.confidence} data-level={r.confidence} title={CONFIDENCE_LABEL[r.confidence]}>
+            <i />
+            <i />
+            <i />
+            <span>{CONFIDENCE_LABEL[r.confidence]}</span>
+          </span>
+        </div>
+        {r.position && (
+          <p className={styles.msgPosition} lang={lang}>
+            {r.position}
+          </p>
+        )}
+        <p className={styles.msgText} lang={lang}>
+          {r.text}
+        </p>
+        <Cites ids={r.citations} sections={sections} />
+      </div>
+    </article>
+  );
+}
+
+function RulingCard({ ruling, sections, lang }: { ruling: CouncilRuling; sections: Map<string, Section>; lang: CouncilLanguage }) {
+  const [copied, setCopied] = useState(false);
+  const a = AGREEMENT[ruling.agreement];
+  const copy = async () => {
+    const lines = [
+      `Council ruling (${a.label})`,
+      ruling.consensus,
+      ...ruling.disagreements.map((d) => `In dispute: ${d.point}`),
+      `Next step: ${ruling.next_step}`,
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* clipboard blocked; nothing to do */
+    }
+  };
+  return (
+    <section className={styles.ruling} data-agreement={ruling.agreement} aria-label="The Chief Justice's ruling">
+      <header className={styles.rulingHead}>
+        <span className={styles.rulingSeal} aria-hidden="true">
+          <Icon name="gavel" size={18} />
+        </span>
+        <span className={styles.rulingTitle}>
+          <b>The council&apos;s ruling</b>
+          <span>Written by the Chief Justice from both rounds</span>
+        </span>
+        <span className={styles.agreement} data-agreement={ruling.agreement} title={a.detail}>
+          <span className={styles.agreementDots} aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <i key={i} data-on={i < a.votes} />
+            ))}
+          </span>
+          {a.label}
+        </span>
+      </header>
+
+      <p className={styles.rulingConsensus} lang={lang}>
+        {ruling.consensus}
+      </p>
+
+      {ruling.disagreements.length > 0 && (
+        <div className={styles.rulingBlock}>
+          <span className={styles.insetLabel}>Still in dispute</span>
+          <ul className={styles.disputes}>
+            {ruling.disagreements.map((d) => (
+              <li key={d.point}>
+                <span className={styles.disputeWho}>
+                  {d.members.map((m) => (
+                    <CouncilAvatar key={m} persona={m} size={20} />
+                  ))}
+                </span>
+                <span lang={lang}>{d.point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className={styles.nextStep}>
+        <Icon name="arrowRight" size={16} />
+        <span>
+          <b>Next step</b>
+          <span lang={lang}>{ruling.next_step}</span>
+        </span>
+      </div>
+
+      <Cites ids={ruling.citations} sections={sections} />
+
+      <footer className={styles.rulingFoot}>
+        {ruling.model && <code className={styles.judgeModel}>Chief Justice · {ruling.model}</code>}
+        <button type="button" className={styles.linkBtn} onClick={() => void copy()}>
+          <Icon name={copied ? "check" : "copy"} size={14} />
+          {copied ? "Copied" : "Copy ruling"}
+        </button>
+      </footer>
+    </section>
   );
 }

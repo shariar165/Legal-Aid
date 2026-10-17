@@ -20,7 +20,17 @@ from ain import config
 from ain.agents import ablation, council
 from ain.export import memo_docx
 from ain.llm import LLM, PIILeakError
-from ain.models import AblationResult, AnalysisResult, CouncilChatRequest, CouncilChatResponse, CouncilMember, Section
+from ain.models import (
+    AblationResult,
+    AnalysisResult,
+    CouncilChatRequest,
+    CouncilChatResponse,
+    CouncilDeliberateRequest,
+    CouncilDeliberateResponse,
+    CouncilMember,
+    Risk,
+    Section,
+)
 from ain.orchestrator import JOBS, load_result, new_job, run_pipeline
 from ain.retrieval import get_corpus
 
@@ -216,27 +226,53 @@ def council_members() -> list[CouncilMember]:
     return council.members(LLM(mode=council.chat_mode(config.llm_mode())))
 
 
+PII_MESSAGE = "Your message contains personal identifiers (a phone number, NID, passport, account or name). Please remove them and ask again."
+
+
+def _council_risk(r: AnalysisResult, risk_id: str | None) -> Risk | None:
+    if not risk_id:
+        return None
+    risk = next((k for k in r.risks if k.id == risk_id), None)
+    if risk is None:
+        raise HTTPException(404, "Unknown risk")
+    return risk
+
+
+def _save_council_calls(job_id: str, r: AnalysisResult, llm: LLM) -> None:
+    r.privacy.outbound_calls.extend(llm.calls)
+    (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
+
+
 @app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse)
 async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResponse:
     r = _result_or_409(job_id)
     unknown = [m for m in body.members if m not in council.BY_ID]
     if unknown:
         raise HTTPException(422, f"Unknown council member: {', '.join(unknown)}")
-    risk = None
-    if body.risk_id:
-        risk = next((k for k in r.risks if k.id == body.risk_id), None)
-        if risk is None:
-            raise HTTPException(404, "Unknown risk")
+    risk = _council_risk(r, body.risk_id)
     llm = LLM(mode=council.chat_mode(r.llm_mode))
     try:
-        replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history)
+        replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history, body.language)
     except PIILeakError:
-        raise HTTPException(
-            422, "Your message contains personal identifiers (a phone number, NID, passport, account or name). Please remove them and ask again."
-        ) from None
-    r.privacy.outbound_calls.extend(llm.calls)
-    (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
+        raise HTTPException(422, PII_MESSAGE) from None
+    _save_council_calls(job_id, r, llm)
     return CouncilChatResponse(replies=replies)
+
+
+@app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse)
+async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> CouncilDeliberateResponse:
+    """Round 2: the members respond to each other's first answers, then the Chief Justice rules."""
+    r = _result_or_409(job_id)
+    if len({x.member for x in body.replies if x.member in council.BY_ID}) < 2:
+        raise HTTPException(422, "Deliberation needs first answers from at least two council members.")
+    risk = _council_risk(r, body.risk_id)
+    llm = LLM(mode=council.chat_mode(r.llm_mode))
+    try:
+        rebuttals, ruling = await council.deliberate(llm, r, body.message.strip(), body.replies, risk, body.history, body.language)
+    except PIILeakError:
+        raise HTTPException(422, PII_MESSAGE) from None
+    _save_council_calls(job_id, r, llm)
+    return CouncilDeliberateResponse(rebuttals=rebuttals, ruling=ruling)
 
 
 @app.get("/api/corpus/{citation_id}", response_model=Section)

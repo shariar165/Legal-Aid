@@ -272,12 +272,21 @@ export interface ChatTurn {
   text: string;
 }
 
+export type CouncilLanguage = "en" | "bn";
+
 export interface CouncilReply {
   member: PersonaId;
   name: string;
   model: string;
   text: string;
   citations: string[];
+  /** one-line stance shown as the reply's headline */
+  position: string;
+  confidence: "high" | "medium" | "low";
+  /** 1 = first answer, 2 = response to colleagues during deliberation */
+  round: number;
+  revised: boolean;
+  responds_to: PersonaId | null;
 }
 
 export interface CouncilChatBody {
@@ -285,6 +294,24 @@ export interface CouncilChatBody {
   members: PersonaId[];
   risk_id?: string | null;
   history?: ChatTurn[];
+  language?: CouncilLanguage;
+}
+
+export interface CouncilDeliberateBody {
+  message: string;
+  replies: CouncilReply[];
+  risk_id?: string | null;
+  history?: ChatTurn[];
+  language?: CouncilLanguage;
+}
+
+export interface CouncilRuling {
+  agreement: "unanimous" | "majority" | "split";
+  consensus: string;
+  disagreements: { point: string; members: PersonaId[] }[];
+  next_step: string;
+  citations: string[];
+  model: string;
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -330,6 +357,12 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => json<{ replies: CouncilReply[] }>(r)),
+  councilDeliberate: (jobId: string, body: CouncilDeliberateBody) =>
+    fetch(`${API_URL}/api/jobs/${jobId}/council/deliberate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => json<{ rebuttals: CouncilReply[]; ruling: CouncilRuling }>(r)),
   memoUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/memo.docx`,
   eventsUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/events`,
 };

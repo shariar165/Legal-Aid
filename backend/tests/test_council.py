@@ -64,3 +64,73 @@ def test_replay_jobs_chat_live_only_when_keys_exist(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     assert council.chat_mode("replay") == "fake"
+
+
+# ------------------------------------------------------------------ structured replies, Bangla, deliberation
+
+
+async def test_replies_carry_a_position_and_confidence(result):
+    risk = _benched(result)
+    replies = await council.chat(RecordingLLM(), result, "Should I sign?", ["happy", "proud", "gloomy"], risk, [])
+    assert all(x.position and x.confidence in ("high", "medium", "low") and x.round == 1 for x in replies)
+
+
+async def test_bangla_answers_are_requested_and_returned(result):
+    risk = _benched(result)
+    llm = RecordingLLM()
+    [reply] = await council.chat(llm, result, "সই করব?", ["gloomy"], risk, [], language="bn")
+    [p] = [x for x in llm.payloads if x["task"] == "council_chat"]
+    assert "Bangla" in p["system"]
+    assert any("ঀ" <= ch <= "৿" for ch in reply.text + reply.position)
+
+
+async def test_citation_ids_pasted_into_prose_are_removed(result):
+    risk = _benched(result)
+    _, allowed = council.build_context(result, risk, council.BY_ID["proud"])
+    llm = RecordingLLM(overrides={"council_chat": {"position": "Clear", "reply": f"The text ({allowed[0]}) is plain.", "citations": [allowed[0]]}})
+    [reply] = await council.chat(llm, result, "Cite it.", ["proud"], risk, [])
+    assert allowed[0] not in reply.text and reply.text == "The text is plain." and reply.citations == [allowed[0]]
+
+
+async def test_deliberation_round_two_and_chief_justice_ruling(result):
+    risk = _benched(result)
+    first = await council.chat(RecordingLLM(), result, "Should I sign?", ["happy", "proud", "gloomy"], risk, [])
+    llm = RecordingLLM()
+    rebuttals, ruling = await council.deliberate(llm, result, "Should I sign?", first, risk, [])
+    assert [x.member for x in rebuttals] == ["happy", "proud", "gloomy"]
+    assert all(x.round == 2 and x.responds_to in council.BY_ID and x.responds_to != x.member for x in rebuttals)
+    assert ruling.agreement in ("unanimous", "majority", "split") and ruling.consensus and ruling.next_step
+    tasks = [p["task"] for p in llm.payloads]
+    assert tasks.count("council_rebuttal") == 3 and tasks.count("council_ruling") == 1
+    # each member sees the colleagues' answers but is not shown its own as a colleague
+    sunny = next(p for p in llm.payloads if p["task"] == "council_rebuttal" and "Sunny, the Happy AI" in p["system"])
+    colleagues = sunny["user"].split("COLLEAGUES' ANSWERS:")[1]
+    assert "Regal (proud)" in colleagues and "Grey (gloomy)" in colleagues and "Sunny (happy)" not in colleagues
+    # the Chief Justice gets a neutral context (no member's "YOUR OPINION") and both rounds
+    chair = next(p for p in llm.payloads if p["task"] == "council_ruling")
+    assert "YOUR OPINION" not in chair["user"] and "ROUND 1" in chair["user"] and "ROUND 2" in chair["user"]
+    assert all(find_pii(p["system"] + p["user"]) == [] for p in llm.payloads)
+
+
+async def test_ruling_is_grounded_and_sanitised(result):
+    risk = _benched(result)
+    _, allowed = council.build_context(result, risk, None)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    llm = RecordingLLM(
+        overrides={
+            "council_ruling": {
+                "agreement": "unanimous",
+                "consensus": f"All agree ({allowed[0]}).",
+                "disagreements": [{"point": "x", "members": ["happy"]}],
+                "next_step": "Ask for a change.",
+                "citations": ["BD-MADEUP-2099-s1", allowed[0]],
+            },
+            "council_rebuttal": {"position": "p", "reply": "r", "revised": True, "responds_to": "happy", "citations": ["BD-MADEUP-2099-s1"]},
+        }
+    )
+    rebuttals, ruling = await council.deliberate(llm, result, "Sign?", first, risk, [])
+    assert ruling.citations == [allowed[0]] and allowed[0] not in ruling.consensus
+    assert ruling.disagreements == []  # unanimous rulings carry no dispute list
+    assert all(x.citations == [] for x in rebuttals)
+    sunny = next(x for x in rebuttals if x.member == "happy")
+    assert sunny.responds_to is None and sunny.revised  # a member cannot "respond to" itself

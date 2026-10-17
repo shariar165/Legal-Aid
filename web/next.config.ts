@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
+  // demos are often run with `npm run dev`; keep the floating dev badge off the screen
+  devIndicators: false,
   partialPrefetching: true,
 };
 

@@ -6,7 +6,7 @@
 - **Counsel mode** (`/counsel`) is for a lawyer, NGO caseworker or factory compliance team. It is a workspace with four views:
   - **Report**: an IRAC memo with risk cards (what is wrong, what to do, the checked law), an at-a-glance summary and a DOCX download.
   - **Contract**: the document as a paper sheet, with each clause tinted by the severity of its risk.
-  - **Council**: chat with the three LLM Council members and see how each one voted.
+  - **Council**: question the three LLM Council members (in English or Bangla), let them deliberate, read the Chief Justice's ruling, and see how each one voted.
   - **Verification**: the Verification Ledger, the live agent activity, a comparison against a plain chatbot, and a privacy receipt.
 
 > Decision support, not legal advice.
@@ -20,7 +20,7 @@
 | **Citations can't be made up** | The agents may cite only `citation_id`s returned by retrieval over our own corpus. A citation produced any other way is rejected before verification. |
 | **4-gate verifier** | Every claim passes four gates. **G1** checks that the section exists *and applies* to this document. **G2** checks quote fidelity. **G3** checks entailment, judged by a different model family that sees only the section text. **G4** checks that the law is still in force. Dropped claims stay visible in the ledger. |
 | **Virtual Bench** | High and critical claims go to 3 judges from different model families (Claude, Gemini, DeepSeek via OpenRouter). They review each other anonymously, and a Chief Justice (GPT) writes a majority opinion and records any dissent. A dissent raises a ⚠ human-review flag. |
-| **LLM Council** | The three judges have personalities: **Sunny** (happy, leans lenient on borderline severity), **Regal** (proud, holds its view) and **Grey** (gloomy, leans harsh). Personality changes tone and borderline severity only, never how the statute is read. In Counsel mode you can question them in English; they answer in character, only from the redacted analysis, and may cite only sections that passed verification. |
+| **LLM Council** | The three judges have personalities: **Sunny** (happy, leans lenient on borderline severity), **Regal** (proud, holds its view) and **Grey** (gloomy, leans harsh). Personality changes tone and borderline severity only, never how the statute is read. In Counsel mode you can question them in English or Bangla; each answers in character with a one-line position and a confidence level, only from the redacted analysis, and may cite only sections that passed verification. **Deliberation:** after the first answers, the members respond to each other (agree, challenge or change position), then the Chief Justice writes a ruling: unanimous / majority / split, the consensus, the points still in dispute, and one next step. |
 | **Real-world currency** | The corpus is the consolidated text as of Oct 2026. The 2012 Trafficking Act is **repealed**; the Critic re-anchors a stale citation to the 2026 Act and re-verifies it. Labour Act s.46 maternity leave now reads **60 + 60 days**, from the 2026 amendment. |
 | **Regime switch** | For a factory inside an EPZ, the Router turns **off** the Labour Act 2006 and applies the BEPZ Labour Act 2019 (s.3 gives it overriding effect). A Labour Act citation in an EPZ document fails G1. |
 | **Valid abroad, void in BD** | A clash badge marks clauses that are normal under English or EU law but void in Bangladesh: non-competes (Contract Act s.27), shortened limitation periods (s.28), 150-day payment terms (Bangladesh Bank's four-month repatriation rule). |
@@ -41,8 +41,11 @@ upload ─► Ingestion (PyMuPDF · python-docx · EasyOCR bn+en, cached) → cl
        ─► Memo Drafter (cites only verified ids) → memo · citizen cards · letter · DOCX
 
 after the run:
-  Council chat ─► one member answers in character from the redacted result + verified ledger rows;
-                  any citation_id outside that context is stripped from the reply
+  Council chat ─► round 1: each chosen member answers in character (position · confidence · reply)
+               ─► round 2 (deliberation): members read each other's answers and respond
+               ─► Chief Justice ruling: agreement · consensus · disputes · next step
+                  all from the redacted result + verified ledger rows; any citation_id outside
+                  that context is stripped, in every round
 ```
 
 The orchestrator emits each step as an SSE event, so the UI progress and the agent activity log show what is actually happening rather than a timer.
@@ -127,14 +130,15 @@ Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each
 | `GET` | `/api/jobs/{id}/memo.docx` | memo export |
 | `POST` | `/api/jobs/{id}/ablation` | run the plain-chatbot comparison |
 | `GET` | `/api/council` | the three council members and their models |
-| `POST` | `/api/jobs/{id}/council/chat` | ask a council member a question |
+| `POST` | `/api/jobs/{id}/council/chat` | ask one or more council members a question (`language`: `en` or `bn`) |
+| `POST` | `/api/jobs/{id}/council/deliberate` | round 2: members answer each other, then the Chief Justice rules |
 | `GET` | `/api/corpus/{citation_id}` | statute text of one section |
 
 ## Tests and evaluation
 
 ```bash
 cd backend
-..\.venv\Scripts\python -m pytest -q            # 54 offline tests
+..\.venv\Scripts\python -m pytest -q            # 59 offline tests
 ..\.venv\Scripts\python -m eval.run_eval        # recall / precision / citation validity / drop rate / ablation
 ..\.venv\Scripts\python -m scripts.smoke_live   # live keys: model check + hero docs + cache warm-up
 cd ..\web && npm run lint && npm run build
@@ -148,7 +152,8 @@ The tests cover:
 - each verifier gate failing on its own bad case;
 - the Critic's repeal healing;
 - Bench majority/dissent, the three personas, and that judges see only the statute and the claim;
-- council chat: replies stay grounded in the analysis, citations outside the verified ledger are stripped, and PII in a question is refused;
+- council chat: replies stay grounded in the analysis, citations outside the verified ledger are stripped (also from the prose), and PII in a question is refused;
+- council deliberation: each member sees only its colleagues' answers, the Chief Justice gets a neutral context and both rounds, rulings are sanitised, and Bangla answers are requested and returned;
 - wage arithmetic;
 - the drafter stripping unverified citations;
 - end-to-end runs on both hero documents: ≥3 risks, 100% of memo citations verified, ≥1 claim dropped, ≥1 off-playbook risk;
@@ -164,7 +169,7 @@ The tests cover:
    - **Report** lists the risks by severity; **Contract** shows which clauses carry them.
    - In **Verification**, filter the ledger to ✕ Dropped: the 2012 Trafficking Act citation fails the currency gate, and the Critic's re-anchored 2026 citation passes ✓.
    - Open the *Dhaka EPZ* sample. The Router shows the Labour Act struck through. Labour Act s.176 (trade unions) is ✕ dropped as inapplicable inside an EPZ, and the off-playbook multi-union risk is flagged *Valid abroad · void in BD*.
-   - In **Council**, show each member's vote, any dissent and its ⚠ human-review flag, then ask Sunny for a fix and Grey for the worst case.
+   - In **Council**, show each member's vote, any dissent and its ⚠ human-review flag. Ask the entire council "Should I sign this contract as it stands?", then press **Hold a deliberation**: the members answer each other and the Chief Justice's ruling appears. Switch the answer language to বাংলা to show the same in Bangla.
 3. **Proof, 30 s.** Open **Verification → Compare with a plain chatbot**: the plain prompt's citations mostly fail (invented sections, repealed Acts, the wrong regime), while the memo's citations are 100% verified. Download the DOCX.
 
 ## Honest limitations
@@ -172,4 +177,4 @@ The tests cover:
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
-- Council chat is English only, and members can discuss only what the analysis already verified; they cannot research new law.
+- Council members can discuss only what the analysis already verified; they cannot research new law. Deliberation adds four model calls per question (three responses and the ruling).

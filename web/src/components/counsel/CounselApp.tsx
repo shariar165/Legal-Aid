@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
-import { STEP_ORDER, useAnalysis, type StepId } from "@/lib/useAnalysis";
+import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAnalysis";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "./Icons";
@@ -97,6 +97,10 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 )}
               </span>
               <div className={styles.actions}>
+                <Link href="/counsel" className={styles.quietBtn} title="Analyse another contract">
+                  <Icon name="plus" size={16} />
+                  <span className={styles.hideSm}>New analysis</span>
+                </Link>
                 <button type="button" className={styles.iconBtn} onClick={() => window.print()} aria-label="Print memo" title="Print memo">
                   <Icon name="printer" size={18} />
                 </button>
@@ -142,7 +146,16 @@ export function CounselApp({ jobId }: { jobId: string }) {
         </main>
       )}
 
-      {status !== "error" && !result && <Progress status={status} stepsDone={stepsDone} events={events} />}
+      {status !== "error" && !result && (
+        <Progress
+          status={status}
+          stepsDone={stepsDone}
+          events={events}
+          ocrCheck={analysis.ocrCheck}
+          confirmed={analysis.confirmed}
+          onConfirm={analysis.confirm}
+        />
+      )}
 
       {result && view === "report" && (
         <Report
@@ -193,18 +206,34 @@ function ViewTab({
 
 /* ------------------------------------------------------------------ Running */
 
-function Progress({ status, stepsDone, events }: { status: string; stepsDone: StepId[]; events: AnalysisResult["trace"] }) {
+function Progress({
+  status,
+  stepsDone,
+  events,
+  ocrCheck,
+  confirmed,
+  onConfirm,
+}: {
+  status: string;
+  stepsDone: StepId[];
+  events: AnalysisResult["trace"];
+  ocrCheck: OcrCheck | null;
+  confirmed: boolean;
+  onConfirm: (value: string) => Promise<void>;
+}) {
   const current = STEP_ORDER.find((x) => !stepsDone.includes(x));
+  const needsCheck = !!ocrCheck && !confirmed;
   return (
     <main className={styles.narrow}>
       <div className={styles.stateCard}>
         <p className={styles.kicker}>Analysis in progress</p>
         <h1 className={styles.stateTitle}>Reviewing your contract</h1>
         <p className={styles.stateText}>
-          {status === "waiting"
-            ? "Waiting for the salary to be confirmed on the citizen screen. The rest of the review carries on."
+          {needsCheck
+            ? "One figure in the photo is hard to read. Please confirm it below; the rest of the review carries on meanwhile."
             : "This usually takes under a minute. You can keep this tab open."}
         </p>
+        {needsCheck && <SalaryCheck check={ocrCheck} onConfirm={onConfirm} />}
         <div className={styles.progressBar} role="progressbar" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
           <span style={{ width: `${(100 * stepsDone.length) / STEP_ORDER.length}%` }} />
         </div>
@@ -218,7 +247,7 @@ function Progress({ status, stepsDone, events }: { status: string; stepsDone: St
                 </span>
                 <span>
                   <b>{STEP_LABEL[s].title}</b>
-                  <span>{STEP_LABEL[s].detail}</span>
+                  <span>{s === "match" && status === "waiting" && needsCheck ? "Waiting for the salary figure to be confirmed" : STEP_LABEL[s].detail}</span>
                 </span>
               </li>
             );
@@ -236,6 +265,72 @@ function Progress({ status, stepsDone, events }: { status: string; stepsDone: St
   );
 }
 
+/* The photo's salary was read with low confidence: a human confirms or corrects it before the wage maths runs. */
+function SalaryCheck({ check, onConfirm }: { check: OcrCheck; onConfirm: (value: string) => Promise<void> }) {
+  const [value, setValue] = useState(check.value);
+  const [editing, setEditing] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!value.trim()) return;
+    setSending(true);
+    setErr(null);
+    try {
+      await onConfirm(value.trim());
+    } catch (x) {
+      setErr((x as Error).message.replace(/^\d+: /, ""));
+      setSending(false);
+    }
+  };
+  return (
+    <form className={styles.salaryCheck} onSubmit={submit} aria-labelledby="salary-check-title">
+      <span className={styles.salaryIcon} aria-hidden="true">
+        <Icon name="camera" size={18} />
+      </span>
+      <div className={styles.salaryBody}>
+        <p id="salary-check-title" className={styles.salaryTitle}>
+          Check the monthly salary
+          <span className={styles.chip} data-tone="warn">
+            Read with {Math.round(check.confidence * 100)}% confidence
+          </span>
+        </p>
+        <p className={styles.salaryText}>The wage calculation uses this number, so it must match the contract.</p>
+        {editing ? (
+          <div className={styles.salaryRow}>
+            <label className={styles.salaryInput}>
+              <span>{check.currency}</span>
+              <input value={value} inputMode="numeric" autoFocus onChange={(e) => setValue(e.target.value)} aria-label="Monthly salary" />
+            </label>
+            <button type="submit" className={styles.primaryBtn} disabled={sending}>
+              {sending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        ) : (
+          <div className={styles.salaryRow}>
+            <span className={styles.salaryValue}>
+              {check.currency} {value}
+            </span>
+            <button type="submit" className={styles.primaryBtn} disabled={sending}>
+              <Icon name="check" size={16} />
+              {sending ? "Confirming…" : "Yes, this is correct"}
+            </button>
+            <button type="button" className={styles.secondaryBtn} disabled={sending} onClick={() => setEditing(true)}>
+              Correct it
+            </button>
+          </div>
+        )}
+        {err && (
+          <p className={styles.errorBox} role="alert">
+            <Icon name="alert" size={16} />
+            {err}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
 /* ------------------------------------------------------------------ Report */
 
 interface ReportProps {
@@ -250,8 +345,10 @@ interface ReportProps {
 }
 
 function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, onClause }: ReportProps) {
+  const [sevFilter, setSevFilter] = useState<Severity | "all">("all");
   const withdrawn = result.risks.length - live.length;
   const counts = SEVERITIES.map((s) => [s, live.filter((r) => r.severity === s).length] as const).filter(([, n]) => n);
+  const shown = sevFilter === "all" ? live : live.filter((r) => r.severity === sevFilter);
   const w = result.wage;
   const s = result.stats;
   const scale = w ? Math.max(w.promised, w.minimum_wage ?? 0) : 1;
@@ -361,13 +458,27 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
         {live.length > 0 && (
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Risks, most serious first</h2>
-            <span className={styles.sectionMeta}>Each one is backed by verified law</span>
+            {counts.length > 1 ? (
+              <div className={styles.filterChips} role="group" aria-label="Filter risks by severity">
+                <button type="button" aria-pressed={sevFilter === "all"} onClick={() => setSevFilter("all")}>
+                  All <span className={styles.count}>{live.length}</span>
+                </button>
+                {counts.map(([sv, n]) => (
+                  <button key={sv} type="button" data-sev={sv} aria-pressed={sevFilter === sv} onClick={() => setSevFilter(sv)}>
+                    <span className={styles.sevDot} data-sev={sv} />
+                    {SEVERITY_LABEL[sv]} <span className={styles.count}>{n}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className={styles.sectionMeta}>Each one is backed by verified law</span>
+            )}
           </div>
         )}
-        {live.map((r, i) => (
+        {shown.map((r) => (
           <RiskCard
             key={r.id}
-            index={i + 1}
+            index={live.indexOf(r) + 1}
             risk={r}
             issue={result.memo.issues.find((x) => x.risk_id === r.id)}
             rows={result.ledger.filter((v) => v.claim.risk_id === r.id)}
@@ -444,7 +555,13 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
             <ol className={styles.jumpList}>
               {live.map((r, i) => (
                 <li key={r.id}>
-                  <button type="button" onClick={() => onJump(r.id)}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sevFilter !== "all" && sevFilter !== r.severity) setSevFilter("all");
+                      onJump(r.id);
+                    }}
+                  >
                     <span className={styles.jumpNum} data-sev={r.severity}>
                       {i + 1}
                     </span>

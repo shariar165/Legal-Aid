@@ -836,7 +836,14 @@
 }
 
 .sampleIcon {
-  font-size: 22px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--green-tint);
+  color: var(--green);
 }
 
 .sampleText {

@@ -342,11 +342,16 @@ class ChatTurn(BaseModel):
     text: str = Field(max_length=2000)
 
 
+CouncilLanguage = Literal["en", "bn"]
+Confidence = Literal["high", "medium", "low"]
+
+
 class CouncilChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     members: list[str] = Field(min_length=1, max_length=3)
     risk_id: str | None = None
     history: list[ChatTurn] = Field(default_factory=list)
+    language: CouncilLanguage = "en"
 
 
 class CouncilReply(BaseModel):
@@ -355,7 +360,41 @@ class CouncilReply(BaseModel):
     model: str
     text: str
     citations: list[str] = Field(default_factory=list)
+    position: str = ""  # one-line stance shown as the reply's headline
+    confidence: Confidence = "medium"
+    round: int = 1  # 1 = first answer, 2 = response to colleagues during deliberation
+    revised: bool = False  # round 2 only: the member changed their position
+    responds_to: str | None = None  # round 2 only: the colleague (member id) mainly addressed
 
 
 class CouncilChatResponse(BaseModel):
     replies: list[CouncilReply]
+
+
+class CouncilDeliberateRequest(BaseModel):
+    """Round 2: every member reads the others' first answers, then the Chief Justice rules."""
+
+    message: str = Field(min_length=1, max_length=1000)
+    replies: list[CouncilReply] = Field(min_length=2, max_length=3)
+    risk_id: str | None = None
+    history: list[ChatTurn] = Field(default_factory=list)
+    language: CouncilLanguage = "en"
+
+
+class CouncilDisagreement(BaseModel):
+    point: str
+    members: list[str] = Field(default_factory=list)  # member ids on the minority / differing side
+
+
+class CouncilRuling(BaseModel):
+    agreement: Literal["unanimous", "majority", "split"]
+    consensus: str
+    disagreements: list[CouncilDisagreement] = Field(default_factory=list)
+    next_step: str
+    citations: list[str] = Field(default_factory=list)
+    model: str = ""
+
+
+class CouncilDeliberateResponse(BaseModel):
+    rebuttals: list[CouncilReply]
+    ruling: CouncilRuling
