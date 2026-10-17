@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   api,
   type AnalysisResult,
@@ -113,14 +113,29 @@ const COPY = {
   en: {
     whole: ["Should I sign this contract as it stands?", "What should I negotiate first?", "Where do you disagree with each other, and why?"],
     risk: ["How do I fix this clause?", "What happens if I sign it anyway?", "How serious is this, really?"],
-    placeholder: (who: string) => `Ask ${who} a question…`,
+    placeholder: (who: string, phone: boolean) => (phone ? `Ask ${who}…` : `Ask ${who} a question…`),
   },
   bn: {
     whole: ["এই চুক্তিতে কি এখনই সই করা উচিত?", "আগে কোন শর্ত নিয়ে দর-কষাকষি করব?", "আপনারা কোথায় একমত নন, আর কেন?"],
     risk: ["এই শর্তটি কীভাবে ঠিক করব?", "তবুও সই করলে কী হতে পারে?", "এটা আসলে কতটা গুরুতর?"],
-    placeholder: () => "কাউন্সিলকে বাংলায় প্রশ্ন করুন…",
+    placeholder: (_who: string, phone: boolean) => (phone ? "বাংলায় প্রশ্ন করুন…" : "কাউন্সিলকে বাংলায় প্রশ্ন করুন…"),
   },
 } as const;
+
+/* the phone breakpoint from counsel.module.css: the composer is one short line there, so its placeholder must be too */
+const PHONE = "(max-width: 640px)";
+
+function useIsPhone() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(PHONE);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+}
 
 const AGREEMENT: Record<CouncilRuling["agreement"], { label: string; detail: string; votes: number }> = {
   unanimous: { label: "Unanimous", detail: "All three members agree", votes: 3 },
@@ -168,6 +183,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [language, setLanguage] = useState<CouncilLanguage>("en");
+  const phone = useIsPhone();
   const logRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLTextAreaElement>(null);
   const nextId = useRef(0);
@@ -436,7 +452,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                 rows={1}
                 maxLength={1000}
                 lang={language}
-                placeholder={COPY[language].placeholder(who)}
+                placeholder={COPY[language].placeholder(who, phone)}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
