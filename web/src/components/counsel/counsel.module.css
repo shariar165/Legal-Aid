@@ -745,6 +745,18 @@ a.citeChip:hover {
 }
 
 
+
+/* short/long label pairs and phone-only pieces (swapped in the phone media query) */
+.shortOnly,
+.metaAvatar {
+  display: none;
+}
+
+.msgAvatar {
+  display: flex;
+  flex: none;
+}
+
 /* ---------------------------------------------------------------- filter chips & salary check */
 
 .filterChips {
@@ -3914,5 +3926,252 @@ button.clause:hover {
   .verdictPill,
   .originTag {
     margin-left: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- phones: council as a mobile chat */
+
+@media (max-width: 640px) {
+  .longOnly {
+    display: none !important;
+  }
+
+  .shortOnly {
+    display: inline;
+  }
+
+  /* visually hidden, still read by screen readers */
+  .labelSm {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .viewTab .faces {
+    display: none;
+  }
+
+  .council {
+    gap: 12px;
+  }
+
+  .council .viewHead {
+    gap: 4px;
+  }
+
+  .council .viewTitle {
+    font-size: 24px;
+  }
+
+  .council .viewLead {
+    font-size: 14px;
+  }
+
+  /* controls: one compact bar - who answers, then topic + language */
+  .councilGrid {
+    gap: 12px;
+  }
+
+  .rail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .memberList {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+  }
+
+  .member {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 8px 2px 7px;
+    text-align: center;
+  }
+
+  .member[aria-checked="true"] {
+    box-shadow: inset 0 -3px 0 var(--acc);
+  }
+
+  .memberText {
+    align-items: center;
+  }
+
+  .memberText b {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .topic {
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    border-top: none;
+  }
+
+  .topic select {
+    min-height: 40px;
+    font-size: 16px; /* 16px stops iOS from zooming into the field */
+  }
+
+  .langSwitch button {
+    min-height: 34px;
+    padding: 6px 12px;
+  }
+
+  /* conversation flows with the page; the composer sticks to the bottom of the screen */
+  .chat {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .chatHead {
+    display: none;
+  }
+
+  .chatLog {
+    gap: 14px;
+    padding: 14px 10px 18px;
+    overflow: visible;
+  }
+
+  .emptyChat {
+    padding: 8px 4px;
+  }
+
+  .composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 6;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+    box-shadow: 0 -10px 18px -14px rgba(16, 24, 20, 0.35);
+  }
+
+  .composerBox textarea {
+    font-size: 16px;
+  }
+
+  .composerNote {
+    font-size: 11.5px;
+  }
+
+  .quickRow {
+    margin: 0 -10px 10px;
+    padding: 0 10px;
+  }
+
+  /* replies use the full width: the avatar moves into the card's header row */
+  .msgAvatar {
+    display: none;
+  }
+
+  .metaAvatar {
+    display: inline-flex;
+  }
+
+  .msg {
+    max-width: none;
+  }
+
+  .msgBody {
+    padding: 12px 12px 12px;
+    border-radius: 12px;
+  }
+
+  .msgMeta {
+    gap: 4px 8px;
+  }
+
+  .msgPosition {
+    font-size: 16px;
+  }
+
+  .msgText {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .msgUser {
+    font-size: 15px;
+  }
+
+  .exchange + .exchange {
+    padding-top: 16px;
+  }
+
+  .deliberateBar {
+    padding: 12px;
+  }
+
+  .deliberateBar .primaryBtn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .rulingTitle {
+    flex: 1 1 calc(100% - 60px);
+  }
+
+  .rulingTitle b {
+    font-size: 17px;
+  }
+
+  .agreement {
+    margin-left: 50px;
+  }
+
+  /* auto-scroll lands content above the sticky composer, not behind it */
+  .exchange > * {
+    scroll-margin-bottom: 170px;
+  }
+
+  /* once the chat has started, the privacy note gives its room to the conversation */
+  .quickRow ~ .composerNote {
+    display: none;
+  }
+
+  .views .count {
+    display: none;
+  }
+
+  .rulingConsensus {
+    font-size: 15.5px;
+  }
+
+  /* vote list: avatar + severity pills instead of a table */
+  .voteCase > summary {
+    gap: 8px 6px;
+    padding: 12px 14px;
+  }
+
+  .voteWho {
+    display: inline-flex;
+  }
+
+  .sevPill:has(.voteWho) {
+    padding-left: 2px;
+  }
+
+  .voteOutcome {
+    font-size: 12px;
+  }
+
+  .votes .sectionHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 }

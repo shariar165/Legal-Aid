@@ -124,7 +124,8 @@ export function CounselApp({ jobId }: { jobId: string }) {
               <CouncilFaces size={18} /> Council
             </ViewTab>
             <ViewTab id="checks" view={view} icon="shieldCheck" count={`${result.stats.verified}/${result.stats.claims}`} onClick={() => go("checks")}>
-              Verification
+              <span className={styles.longOnly}>Verification</span>
+              <span className={styles.shortOnly}>Checks</span>
             </ViewTab>
           </nav>
         )}

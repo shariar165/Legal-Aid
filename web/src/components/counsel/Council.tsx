@@ -186,9 +186,16 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
   }, []);
 
   useEffect(() => {
-    // scroll the log box itself, never the page (the panel stays mounted while other views show)
     const log = logRef.current;
-    if (log) log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+    if (!log || log.offsetParent === null) return; // the panel stays mounted (hidden) while other views show
+    if (log.scrollHeight > log.clientHeight + 4) {
+      // desktop: the log is its own scroll box; scroll it, never the page
+      log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+    } else if (exchanges.length) {
+      // phone: the conversation flows with the page; bring the newest part into view above the composer
+      const last = log.lastElementChild?.lastElementChild;
+      last?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }, [exchanges, error]);
 
   useEffect(() => {
@@ -267,16 +274,17 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
     <div className={styles.council}>
       <header className={styles.viewHead}>
         <h1 className={styles.viewTitle}>Ask the council</h1>
-        <p className={styles.viewLead}>
+        <p className={`${styles.viewLead} ${styles.longOnly}`}>
           Three AI reviewers from different model families, each with a different temperament. Ask a question, then let them deliberate: they answer
           each other and the Chief Justice writes a ruling. They may only cite law that passed verification.
         </p>
+        <p className={`${styles.viewLead} ${styles.shortOnly}`}>Ask a question, then let the three members deliberate. They cite only verified law.</p>
       </header>
 
       <div className={styles.councilGrid}>
         {/* ---------------- who answers and about what */}
         <aside className={styles.rail} aria-label="Council settings">
-          <p className={styles.railLabel} id="council-who">
+          <p className={`${styles.railLabel} ${styles.labelSm}`} id="council-who">
             Who answers
           </p>
           <div className={styles.memberList} role="radiogroup" aria-labelledby="council-who">
@@ -285,7 +293,10 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                 <Icon name="users" size={18} />
               </span>
               <span className={styles.memberText}>
-                <b>Entire council</b>
+                <b>
+                  <span className={styles.longOnly}>Entire council</span>
+                  <span className={styles.shortOnly}>All</span>
+                </b>
                 <span>All three answer, then they can deliberate</span>
               </span>
             </button>
@@ -312,7 +323,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
           </div>
 
           <label className={styles.topic}>
-            <span className={styles.railLabel}>Topic</span>
+            <span className={`${styles.railLabel} ${styles.labelSm}`}>Topic</span>
             <select value={nav.riskId ?? ""} onChange={(e) => nav.setRiskId(e.target.value || null)}>
               <option value="">The whole contract</option>
               {live.map((r) => (
@@ -323,15 +334,16 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
             </select>
           </label>
 
-          <div className={styles.topic}>
-            <span className={styles.railLabel} id="council-lang">
+          <div className={`${styles.topic} ${styles.langBox}`}>
+            <span className={`${styles.railLabel} ${styles.labelSm}`} id="council-lang">
               Answer language
             </span>
             <div className={styles.langSwitch} role="radiogroup" aria-labelledby="council-lang">
-              <button type="button" role="radio" aria-checked={language === "en"} onClick={() => setLanguage("en")}>
-                English
+              <button type="button" role="radio" aria-checked={language === "en"} aria-label="English" onClick={() => setLanguage("en")}>
+                <span className={styles.longOnly}>English</span>
+                <span className={styles.shortOnly}>EN</span>
               </button>
-              <button type="button" role="radio" aria-checked={language === "bn"} lang="bn" onClick={() => setLanguage("bn")}>
+              <button type="button" role="radio" aria-checked={language === "bn"} lang="bn" aria-label="বাংলা" onClick={() => setLanguage("bn")}>
                 বাংলা
               </button>
             </div>
@@ -440,7 +452,10 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
             </div>
             <p className={styles.composerNote}>
               <Icon name="lock" size={13} />
-              Don&apos;t type names, phone numbers or ID numbers. Enter to send, Shift+Enter for a new line. Information only, not formal legal advice.
+              <span>
+                Don&apos;t type names, phone numbers or ID numbers.<span className={styles.longOnly}> Enter to send, Shift+Enter for a new line.</span>{" "}
+                Information only, not formal legal advice.
+              </span>
             </p>
           </form>
         </section>
@@ -483,8 +498,10 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                       return (
                         <span key={p} className={styles.voteCell} data-dissent={o ? dissents(o, b) : undefined}>
                           {o ? (
-                            <span className={styles.sevPill} data-sev={o.severity}>
-                              <span className={styles.voteWho}>{FALLBACK[p].name}: </span>
+                            <span className={styles.sevPill} data-sev={o.severity} title={`${FALLBACK[p].name}: ${SEVERITY_LABEL[o.severity]}`}>
+                              <span className={styles.voteWho}>
+                                <CouncilAvatar persona={p} size={18} />
+                              </span>
                               {SEVERITY_LABEL[o.severity]}
                             </span>
                           ) : (
@@ -644,9 +661,14 @@ function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section
 function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<string, Section>; lang: CouncilLanguage }) {
   return (
     <article className={styles.msg} data-persona={r.member}>
-      <CouncilAvatar persona={r.member} size={32} />
+      <span className={styles.msgAvatar}>
+        <CouncilAvatar persona={r.member} size={32} />
+      </span>
       <div className={styles.msgBody}>
         <div className={styles.msgMeta}>
+          <span className={styles.metaAvatar}>
+            <CouncilAvatar persona={r.member} size={24} />
+          </span>
           <p className={styles.msgName}>
             {FALLBACK[r.member].name} <span>{TEMPERAMENT[r.member]}</span>
           </p>
