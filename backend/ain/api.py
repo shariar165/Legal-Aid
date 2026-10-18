@@ -10,14 +10,15 @@ import json
 import os
 import re
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ain import config
+from ain import auth, config
 from ain.agents import ablation, council
+from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
 from ain.llm import LLM, PIILeakError
 from ain.models import (
@@ -28,10 +29,13 @@ from ain.models import (
     CouncilDeliberateRequest,
     CouncilDeliberateResponse,
     CouncilMember,
+    Credentials,
+    JobSummary,
+    Me,
     Risk,
     Section,
 )
-from ain.orchestrator import JOBS, load_result, new_job, run_pipeline
+from ain.orchestrator import JOBS, delete_result, load_result, new_job, run_pipeline, save_result
 from ain.retrieval import get_corpus
 
 MAX_BYTES = 15 * 1024 * 1024
@@ -68,14 +72,30 @@ SAMPLES = [
     },
 ]
 
+PURGE_EVERY_S = 3600
+
 app = FastAPI(title="Ain Copilot API", version="1.0")
+# added first so CORS stays outermost: preflights are answered and a 403 still carries CORS headers
+app.add_middleware(auth.SecurityMiddleware, origins=config.cors_origins())
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("AIN_CORS", "http://localhost:3000,http://127.0.0.1:3000").split(","),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=config.cors_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "Last-Event-ID"],
 )
 _tasks: set[asyncio.Task] = set()
+
+
+def _background(coro) -> None:
+    t = asyncio.create_task(coro)
+    _tasks.add(t)
+    t.add_done_callback(_tasks.discard)
+
+
+def _delete_job_files(job_ids: list[str]) -> None:
+    for job_id in job_ids:
+        delete_result(job_id)
 
 
 @app.on_event("startup")
@@ -85,9 +105,91 @@ async def warm() -> None:
         if corpus.dense_ready:
             await asyncio.to_thread(corpus.search, "warm up", None, 1)
 
-    t = asyncio.create_task(_warm())
-    _tasks.add(t)
-    t.add_done_callback(_tasks.discard)
+    async def _purge():
+        while True:
+            _delete_job_files(await asyncio.to_thread(auth.purge_expired))
+            await asyncio.sleep(PURGE_EVERY_S)
+
+    _background(_warm())
+    _background(_purge())
+
+
+# ---------------------------------------------------------------- accounts
+
+
+def _start_session(response: Response, p: Principal, token: str) -> Me:
+    auth.set_cookie(response, token, p.expires_at)
+    return Me(kind="account", email=p.email)
+
+
+@app.post("/api/auth/signup", response_model=Me)
+def signup(body: Credentials, request: Request, response: Response) -> Me:
+    key = f"signup:{auth.client_ip(request)}"
+    if auth.LIMITER.blocked(key, auth.SIGNUP_LIMIT, auth.SIGNUP_WINDOW):
+        raise HTTPException(429, "Too many sign-up attempts. Try again later.")
+    auth.LIMITER.hit(key)
+    p, token = auth.signup(body.email, body.password, auth.principal(request))
+    return _start_session(response, p, token)
+
+
+@app.post("/api/auth/login", response_model=Me)
+def login(body: Credentials, request: Request, response: Response) -> Me:
+    keys = [f"login-ip:{auth.client_ip(request)}", f"login-email:{body.email.strip().lower()}"]
+    if any(auth.LIMITER.blocked(k, auth.LOGIN_LIMIT, auth.LOGIN_WINDOW) for k in keys):
+        raise HTTPException(429, "Too many failed sign-in attempts. Try again in 15 minutes.")
+    try:
+        p, token = auth.login(body.email, body.password, auth.principal(request))
+    except HTTPException:
+        for k in keys:
+            auth.LIMITER.hit(k)
+        raise
+    return _start_session(response, p, token)
+
+
+@app.post("/api/auth/logout")
+def logout(request: Request, response: Response) -> dict:
+    p = auth.principal(request)
+    if p is not None:
+        auth.logout(p)
+    auth.clear_cookie(response)
+    return {"ok": True}
+
+
+@app.get("/api/auth/me", response_model=Me)
+def me(request: Request, response: Response) -> Me:
+    p = auth.principal(request)
+    if p is None:
+        return Me(kind=None)
+    if not p.is_guest:
+        auth.set_cookie(response, request.cookies[auth.COOKIE], p.expires_at)  # keep the browser cookie in step with the sliding expiry
+    return Me(kind=p.kind, email=p.email)
+
+
+@app.delete("/api/auth/me")
+def delete_account(response: Response, p: Principal = Depends(require_account)) -> dict:
+    """Right to erasure: the account, its sessions, and every analysis it owns."""
+    _delete_job_files(auth.delete_user(p.user_id))
+    auth.clear_cookie(response)
+    return {"ok": True}
+
+
+@app.get("/api/jobs", response_model=list[JobSummary])
+def my_jobs(request: Request) -> list[JobSummary]:
+    p = auth.principal(request)
+    return [JobSummary(**j) for j in auth.list_jobs(p.user_id)] if p else []
+
+
+@app.delete("/api/jobs/{job_id}", dependencies=[Depends(owned_job)])
+def delete_job(job_id: str) -> dict:
+    job = JOBS.get(job_id)
+    if job and job.status in ("running", "waiting"):
+        raise HTTPException(409, "The analysis is still running.")
+    auth.forget_job(job_id)
+    delete_result(job_id)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- analysis
 
 
 @app.get("/api/health")
@@ -109,7 +211,12 @@ def samples() -> list[dict]:
 
 
 @app.post("/api/analyze")
-async def analyze(file: UploadFile | None = File(None), sample_id: str | None = Form(None), llm_mode: str | None = Form(None)) -> dict:
+async def analyze(
+    file: UploadFile | None = File(None),
+    sample_id: str | None = Form(None),
+    llm_mode: str | None = Form(None),
+    owner: Principal = Depends(require_principal),
+) -> dict:
     if file is not None:
         name = os.path.basename(file.filename or "upload")
         ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
@@ -132,13 +239,14 @@ async def analyze(file: UploadFile | None = File(None), sample_id: str | None = 
         raise HTTPException(400, "llm_mode must be live, replay or fake")
 
     job = new_job(name)
+    auth.record_job(owner.user_id, job.id, name)
     task = asyncio.create_task(run_pipeline(job, data, name, kind, llm_mode))
     _tasks.add(task)
     task.add_done_callback(lambda t: (_tasks.discard(t), t.exception() if not t.cancelled() else None))
     return {"job_id": job.id, "name": name}
 
 
-@app.get("/api/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}", dependencies=[Depends(owned_job)])
 def job_status(job_id: str) -> dict:
     job = JOBS.get(job_id)
     if not job:
@@ -148,7 +256,7 @@ def job_status(job_id: str) -> dict:
     return {"job_id": job.id, "status": job.status, "events": len(job.events), "error": job.error}
 
 
-@app.get("/api/jobs/{job_id}/events")
+@app.get("/api/jobs/{job_id}/events", dependencies=[Depends(owned_job)])
 async def job_events(job_id: str, last_event_id: int | None = None):
     job = JOBS.get(job_id)
     if not job:
@@ -171,7 +279,7 @@ class ConfirmBody(BaseModel):
     value: str
 
 
-@app.post("/api/jobs/{job_id}/confirm")
+@app.post("/api/jobs/{job_id}/confirm", dependencies=[Depends(owned_job)])
 def confirm(job_id: str, body: ConfirmBody) -> dict:
     job = JOBS.get(job_id)
     if not job:
@@ -197,12 +305,12 @@ def _result_or_409(job_id: str) -> AnalysisResult:
     return r
 
 
-@app.get("/api/jobs/{job_id}/result", response_model=AnalysisResult)
+@app.get("/api/jobs/{job_id}/result", response_model=AnalysisResult, dependencies=[Depends(owned_job)])
 def result(job_id: str) -> AnalysisResult:
     return _result_or_409(job_id)
 
 
-@app.get("/api/jobs/{job_id}/memo.docx")
+@app.get("/api/jobs/{job_id}/memo.docx", dependencies=[Depends(owned_job)])
 def memo(job_id: str) -> Response:
     r = _result_or_409(job_id)
     return Response(
@@ -212,12 +320,12 @@ def memo(job_id: str) -> Response:
     )
 
 
-@app.post("/api/jobs/{job_id}/ablation", response_model=AblationResult)
+@app.post("/api/jobs/{job_id}/ablation", response_model=AblationResult, dependencies=[Depends(owned_job)])
 async def run_ablation(job_id: str) -> AblationResult:
     r = _result_or_409(job_id)
     if r.ablation is None:
         r.ablation = await ablation.run(LLM(mode=r.llm_mode), get_corpus(), r)
-        (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
+        save_result(r)
     return r.ablation
 
 
@@ -238,12 +346,12 @@ def _council_risk(r: AnalysisResult, risk_id: str | None) -> Risk | None:
     return risk
 
 
-def _save_council_calls(job_id: str, r: AnalysisResult, llm: LLM) -> None:
+def _save_council_calls(r: AnalysisResult, llm: LLM) -> None:
     r.privacy.outbound_calls.extend(llm.calls)
-    (config.RUNS_DIR / f"{job_id}.json").write_text(r.model_dump_json(indent=1), encoding="utf-8")
+    save_result(r)
 
 
-@app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse)
+@app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse, dependencies=[Depends(owned_job)])
 async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResponse:
     r = _result_or_409(job_id)
     unknown = [m for m in body.members if m not in council.BY_ID]
@@ -255,11 +363,11 @@ async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResp
         replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history, body.language)
     except PIILeakError:
         raise HTTPException(422, PII_MESSAGE) from None
-    _save_council_calls(job_id, r, llm)
+    _save_council_calls(r, llm)
     return CouncilChatResponse(replies=replies)
 
 
-@app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse)
+@app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse, dependencies=[Depends(owned_job)])
 async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> CouncilDeliberateResponse:
     """Round 2: the members respond to each other's first answers, then the Chief Justice rules."""
     r = _result_or_409(job_id)
@@ -271,7 +379,7 @@ async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> Cou
         rebuttals, ruling = await council.deliberate(llm, r, body.message.strip(), body.replies, risk, body.history, body.language)
     except PIILeakError:
         raise HTTPException(422, PII_MESSAGE) from None
-    _save_council_calls(job_id, r, llm)
+    _save_council_calls(r, llm)
     return CouncilDeliberateResponse(rebuttals=rebuttals, ruling=ruling)
 
 

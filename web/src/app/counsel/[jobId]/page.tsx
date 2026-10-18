@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AccountGate } from "@/components/counsel/Account";
 import { CounselApp } from "@/components/counsel/CounselApp";
 
 export const metadata: Metadata = {
@@ -11,7 +12,9 @@ export default function CounselJob({ params }: PageProps<"/counsel/[jobId]">) {
   return (
     <Suspense fallback={null}>
       {params.then(({ jobId }) => (
-        <CounselApp jobId={jobId} />
+        <AccountGate>
+          <CounselApp jobId={jobId} />
+        </AccountGate>
       ))}
     </Suspense>
   );

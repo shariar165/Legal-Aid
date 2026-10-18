@@ -3660,6 +3660,398 @@ button.clause:hover {
   overflow: auto;
 }
 
+/* ================================================================ account */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.gateNote {
+  margin: 48px 0 0;
+  color: var(--c-muted);
+  text-align: center;
+}
+
+.account {
+  position: relative;
+}
+
+.accountBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 0 6px 0 4px;
+  border-radius: 999px;
+  border: 1px solid var(--c-line);
+  background: var(--c-card);
+  color: var(--c-ink-2);
+  cursor: pointer;
+}
+
+.accountBtn:hover {
+  background: var(--c-subtle);
+}
+
+.accountBtn[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.accountPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  box-shadow: var(--shadow-2);
+}
+
+.accountEmail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c-line);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+.accountEmail span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.accountMuted {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--c-muted);
+}
+
+.accountJobs {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  margin: 0 -6px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.accountJobs li {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.accountJobs li:hover {
+  background: var(--c-subtle);
+}
+
+.accountJobs a {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 6px;
+  color: var(--c-ink-2) !important;
+  font-size: 13.5px;
+  text-decoration: none !important;
+}
+
+.accountJobs a[aria-current="page"] {
+  font-weight: 650;
+  color: var(--c-accent) !important;
+}
+
+.accountJobName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountJobs time {
+  flex: none;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.accountRemove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-right: 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--c-muted);
+  cursor: pointer;
+}
+
+.accountRemove:hover {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.accountActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-line);
+}
+
+.dangerLink {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bad);
+  cursor: pointer;
+}
+
+.dangerLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.accountConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r);
+  background: var(--bad-tint);
+  border: 1px solid #f5c7c1;
+  font-size: 13.5px;
+  color: var(--bad-ink);
+}
+
+.accountConfirm p {
+  margin: 0;
+}
+
+.accountConfirm div {
+  display: flex;
+  gap: 8px;
+}
+
+.dangerBtn {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bad);
+  background: var(--bad);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dangerBtn:hover {
+  background: var(--bad-ink);
+}
+
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.authMain {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px 72px;
+}
+
+.authCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(440px, 100%);
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  box-shadow: var(--shadow-2);
+}
+
+.authCard .stateText {
+  margin: 0;
+}
+
+.authIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+}
+
+.authNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+  font-size: 13.5px;
+}
+
+.authNote svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.authField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-ink-2);
+}
+
+.authField input,
+.authPassword {
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--c-line-strong);
+  background: var(--c-card);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--c-ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.authField > input {
+  padding: 0 12px;
+}
+
+.authField > input:focus,
+.authPassword:focus-within {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-accent-ring);
+}
+
+.authPassword {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.authPassword input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  outline: none !important;
+  box-shadow: none;
+}
+
+.authPassword .linkBtn {
+  align-self: center;
+}
+
+.authHint {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--c-muted);
+}
+
+.authSubmit {
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.authSwitch {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--c-muted);
+}
+
+.authSwitch a {
+  font-weight: 600;
+}
+
+.authSmall {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-line);
+  font-size: 12.5px;
+  color: var(--c-muted);
+}
+
+.authSmall svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .authMain {
+    padding-top: 20px;
+  }
+
+  .authCard {
+    padding: 22px 18px;
+  }
+}
+
 /* ================================================================ motion */
 
 @media (prefers-reduced-motion: reduce) {

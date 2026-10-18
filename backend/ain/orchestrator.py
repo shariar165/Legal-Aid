@@ -10,12 +10,11 @@ Every step emits TraceEvents onto the job, which the API streams to the UI over 
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 import uuid
 from dataclasses import dataclass, field
 
-from ain import config
+from ain import config, vault
 from ain.agents import adversary, calculator, critic, drafter, ingestion, risk_analyst, router, verifier
 from ain.agents.pii import redact
 from ain.llm import LLM
@@ -265,20 +264,30 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
     job.status = "done"
     job.say("done", None, f"{stats.risks_confirmed} risks · {stats.verified} verified claims · {stats.dropped} dropped", stats=stats.model_dump())
     result.trace = list(job.events)
-    _persist(result)
+    save_result(result)
     return result
 
 
-def _persist(result: AnalysisResult) -> None:
+def _run_path(job_id: str):
+    return config.RUNS_DIR / f"{job_id}.json.enc"
+
+
+def save_result(result: AnalysisResult) -> None:
+    """The only way results reach disk: encrypted (see ain/vault.py)."""
     config.RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    (config.RUNS_DIR / f"{result.job_id}.json").write_text(result.model_dump_json(indent=1), encoding="utf-8")
+    _run_path(result.job_id).write_bytes(vault.encrypt(result.model_dump_json().encode("utf-8")))
 
 
 def load_result(job_id: str) -> AnalysisResult | None:
     job = JOBS.get(job_id)
     if job and job.result:
         return job.result
-    path = config.RUNS_DIR / f"{job_id}.json"
+    path = _run_path(job_id)
     if path.exists():
-        return AnalysisResult(**json.loads(path.read_text(encoding="utf-8")))
+        return AnalysisResult.model_validate_json(vault.decrypt(path.read_bytes()))
     return None
+
+
+def delete_result(job_id: str) -> None:
+    JOBS.pop(job_id, None)
+    _run_path(job_id).unlink(missing_ok=True)

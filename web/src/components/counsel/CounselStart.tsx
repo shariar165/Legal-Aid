@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, type Health, type Sample } from "@/lib/api";
+import { AccountMenu } from "./Account";
 import { Icon, type IconName } from "./Icons";
 import styles from "./counsel.module.css";
 
@@ -72,6 +73,7 @@ export function CounselStart() {
             <Link href="/" className={styles.quietBtn}>
               Citizen app
             </Link>
+            <AccountMenu />
           </div>
         </div>
       </header>

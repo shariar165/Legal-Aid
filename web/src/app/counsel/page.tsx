@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AccountGate } from "@/components/counsel/Account";
 import { CounselStart } from "@/components/counsel/CounselStart";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function CounselIndex() {
-  return <CounselStart />;
+  return (
+    <AccountGate>
+      <CounselStart />
+    </AccountGate>
+  );
 }

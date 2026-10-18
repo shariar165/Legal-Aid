@@ -398,3 +398,22 @@ class CouncilRuling(BaseModel):
 class CouncilDeliberateResponse(BaseModel):
     rebuttals: list[CouncilReply]
     ruling: CouncilRuling
+
+
+# ---------------------------------------------------------------- accounts
+
+
+class Credentials(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=1024)  # length policy is enforced (with a clear message) in ain/auth.py
+
+
+class Me(BaseModel):
+    kind: Literal["guest", "account"] | None
+    email: str | None = None
+
+
+class JobSummary(BaseModel):
+    job_id: str
+    name: str
+    created_at: float

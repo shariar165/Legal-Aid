@@ -314,6 +314,22 @@ export interface CouncilRuling {
   model: string;
 }
 
+export interface Me {
+  /** guest = this device only (no signup, kept 7 days); account = signed in */
+  kind: "guest" | "account" | null;
+  email: string | null;
+}
+
+export interface JobSummary {
+  job_id: string;
+  name: string;
+  /** unix seconds */
+  created_at: number;
+}
+
+/** The backend answered 401: there is no signed-in account for this request. */
+export class AuthError extends Error {}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
@@ -323,46 +339,47 @@ async function json<T>(res: Response): Promise<T> {
     } catch {
       /* not JSON */
     }
+    if (res.status === 401) throw new AuthError(detail);
     throw new Error(`${res.status}: ${detail}`);
   }
   return res.json() as Promise<T>;
 }
 
+/** Every request carries the session cookie. It is HttpOnly and set by the backend, so page scripts never see it. */
+const call = (path: string, init?: RequestInit) => fetch(`${API_URL}${path}`, { credentials: "include", ...init });
+
+const post = (path: string, body?: unknown) =>
+  call(path, body === undefined ? { method: "POST" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
 export const api = {
-  health: () => fetch(`${API_URL}/api/health`).then((r) => json<Health>(r)),
-  samples: () => fetch(`${API_URL}/api/samples`).then((r) => json<Sample[]>(r)),
+  health: () => call("/api/health").then((r) => json<Health>(r)),
+  samples: () => call("/api/samples").then((r) => json<Sample[]>(r)),
   analyzeSample(sampleId: string) {
     const form = new FormData();
     form.append("sample_id", sampleId);
-    return fetch(`${API_URL}/api/analyze`, { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
+    return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
   },
   analyzeFile(file: File) {
     const form = new FormData();
     form.append("file", file);
-    return fetch(`${API_URL}/api/analyze`, { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
+    return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
   },
-  confirm: (jobId: string, value: string) =>
-    fetch(`${API_URL}/api/jobs/${jobId}/confirm`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field: "salary", value }),
-    }).then((r) => json<{ ok: boolean; value: number }>(r)),
-  status: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}`).then((r) => json<{ status: string; error: string | null }>(r)),
-  result: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}/result`).then((r) => json<AnalysisResult>(r)),
-  ablation: (jobId: string) => fetch(`${API_URL}/api/jobs/${jobId}/ablation`, { method: "POST" }).then((r) => json<Ablation>(r)),
-  council: () => fetch(`${API_URL}/api/council`).then((r) => json<CouncilMember[]>(r)),
-  councilChat: (jobId: string, body: CouncilChatBody) =>
-    fetch(`${API_URL}/api/jobs/${jobId}/council/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => json<{ replies: CouncilReply[] }>(r)),
+  confirm: (jobId: string, value: string) => post(`/api/jobs/${jobId}/confirm`, { field: "salary", value }).then((r) => json<{ ok: boolean; value: number }>(r)),
+  status: (jobId: string) => call(`/api/jobs/${jobId}`).then((r) => json<{ status: string; error: string | null }>(r)),
+  result: (jobId: string) => call(`/api/jobs/${jobId}/result`).then((r) => json<AnalysisResult>(r)),
+  ablation: (jobId: string) => post(`/api/jobs/${jobId}/ablation`).then((r) => json<Ablation>(r)),
+  council: () => call("/api/council").then((r) => json<CouncilMember[]>(r)),
+  councilChat: (jobId: string, body: CouncilChatBody) => post(`/api/jobs/${jobId}/council/chat`, body).then((r) => json<{ replies: CouncilReply[] }>(r)),
   councilDeliberate: (jobId: string, body: CouncilDeliberateBody) =>
-    fetch(`${API_URL}/api/jobs/${jobId}/council/deliberate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => json<{ rebuttals: CouncilReply[]; ruling: CouncilRuling }>(r)),
+    post(`/api/jobs/${jobId}/council/deliberate`, body).then((r) => json<{ rebuttals: CouncilReply[]; ruling: CouncilRuling }>(r)),
   memoUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/memo.docx`,
   eventsUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/events`,
+
+  me: () => call("/api/auth/me").then((r) => json<Me>(r)),
+  signup: (email: string, password: string) => post("/api/auth/signup", { email, password }).then((r) => json<Me>(r)),
+  login: (email: string, password: string) => post("/api/auth/login", { email, password }).then((r) => json<Me>(r)),
+  logout: () => post("/api/auth/logout").then((r) => json<{ ok: boolean }>(r)),
+  deleteAccount: () => call("/api/auth/me", { method: "DELETE" }).then((r) => json<{ ok: boolean }>(r)),
+  jobs: () => call("/api/jobs").then((r) => json<JobSummary[]>(r)),
+  deleteJob: (jobId: string) => call(`/api/jobs/${jobId}`, { method: "DELETE" }).then((r) => json<{ ok: boolean }>(r)),
 };

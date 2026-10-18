@@ -39,6 +39,7 @@ export const STRINGS = {
     disclaimer: { bn: "সিদ্ধান্তে সহায়তা, আইনি পরামর্শ নয়।", en: "Decision support, not legal advice." },
     samplesTitle: { bn: "অথবা একটি নমুনা চুক্তি দিয়ে দেখুন", en: "Or try a sample contract" },
     counselLink: { bn: "আইনজীবী / এনজিও মোড →", en: "Lawyer / NGO mode →" },
+    saveLink: { bn: "অ্যাকাউন্ট খুলে ফলাফল সংরক্ষণ করুন", en: "Save my results in an account" },
     offline: {
       bn: "সার্ভারের সঙ্গে যোগাযোগ হচ্ছে না। একটু পরে আবার চেষ্টা করুন।",
       en: "Cannot reach the server. Please try again in a moment.",

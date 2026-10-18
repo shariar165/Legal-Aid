@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
 import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAnalysis";
+import { AccountMenu } from "./Account";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "./Icons";
@@ -108,8 +109,14 @@ export function CounselApp({ jobId }: { jobId: string }) {
                   <Icon name="download" size={16} />
                   <span>Download memo</span>
                 </a>
+                <AccountMenu />
               </div>
             </>
+          )}
+          {!result && (
+            <div className={styles.actions}>
+              <AccountMenu />
+            </div>
           )}
         </div>
         {result && (
@@ -137,8 +144,18 @@ export function CounselApp({ jobId }: { jobId: string }) {
             <span className={styles.stateIcon} data-tone="bad">
               <Icon name="alert" size={22} />
             </span>
-            <h1 className={styles.stateTitle}>The analysis could not be completed</h1>
-            <p className={styles.stateText}>{error === "offline" ? "The analysis server is not reachable. Check that the backend is running, then try again." : error}</p>
+            {/* the API answers 404 both for a deleted job and for someone else's, by design */}
+            {error?.startsWith("404") ? (
+              <>
+                <h1 className={styles.stateTitle}>This analysis isn&apos;t available</h1>
+                <p className={styles.stateText}>It may have been deleted, or it belongs to another account.</p>
+              </>
+            ) : (
+              <>
+                <h1 className={styles.stateTitle}>The analysis could not be completed</h1>
+                <p className={styles.stateText}>{error === "offline" ? "The analysis server is not reachable. Check that the backend is running, then try again." : error}</p>
+              </>
+            )}
             <Link href="/counsel" className={styles.primaryBtn}>
               <Icon name="arrowLeft" size={16} />
               Start a new analysis

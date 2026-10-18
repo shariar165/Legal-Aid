@@ -12,6 +12,7 @@ __pycache__/
 backend/.cache/
 backend/corpus/raw/
 backend/runs/
+backend/.data/
 *.log
 
 # Node / Next (also in web/.gitignore)

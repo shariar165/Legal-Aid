@@ -65,7 +65,7 @@ export function useAnalysis(existingJobId?: string) {
   const follow = useCallback(
     (jobId: string) => {
       close();
-      const es = new EventSource(api.eventsUrl(jobId));
+      const es = new EventSource(api.eventsUrl(jobId), { withCredentials: true });
       source.current = es;
       es.addEventListener("trace", (msg) => {
         const ev = JSON.parse((msg as MessageEvent).data) as TraceEvent;

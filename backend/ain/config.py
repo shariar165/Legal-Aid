@@ -18,9 +18,13 @@ PLAYBOOK_DIR = BACKEND / "ain" / "playbook"
 DEMO_DIR = BACKEND / "demo"
 OCR_CACHE_DIR = DEMO_DIR / "ocr_cache"
 CACHE_DIR = BACKEND / ".cache"
-RUNS_DIR = BACKEND / "runs"
 
 load_dotenv(ROOT / ".env")
+
+# user data: accounts/sessions DB, the at-rest encryption key, and the encrypted analysis results
+DATA_DIR = Path(os.getenv("AIN_DATA_DIR") or BACKEND / ".data")
+DB_FILE = Path(os.getenv("AIN_DB") or DATA_DIR / "ain.db")
+RUNS_DIR = Path(os.getenv("AIN_RUNS_DIR") or BACKEND / "runs")
 
 
 @dataclass(frozen=True)
@@ -76,3 +80,13 @@ def llm_mode() -> str:
 
 def dense_enabled() -> bool:
     return os.getenv("AIN_DENSE", "1") != "0"
+
+
+def cors_origins() -> list[str]:
+    """Browser origins allowed to call the API with the session cookie."""
+    raw = os.getenv("AIN_CORS") or "http://localhost:3000,http://127.0.0.1:3000"
+    return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+
+
+def cookie_secure() -> bool:
+    return os.getenv("AIN_COOKIE_SECURE", "0") == "1"

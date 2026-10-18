@@ -2,11 +2,19 @@
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 os.environ["AIN_LLM_MODE"] = "fake"
 os.environ["AIN_DENSE"] = "0"
 os.environ["HF_HUB_OFFLINE"] = "1"
+# accounts DB, encryption key and stored results go to a throwaway dir, never the real backend/.data or runs/
+_DATA = tempfile.mkdtemp(prefix="ain-test-")
+os.environ["AIN_DATA_DIR"] = _DATA
+os.environ["AIN_DB"] = str(Path(_DATA) / "ain.db")
+os.environ["AIN_RUNS_DIR"] = str(Path(_DATA) / "runs")
+os.environ["AIN_CORS"] = "http://localhost:3000"
+os.environ["AIN_COOKIE_SECURE"] = "0"  # TestClient talks plain http
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest  # noqa: E402
@@ -31,6 +39,13 @@ class RecordingLLM(LLM):
             if task.startswith(prefix):
                 fake = (lambda a=answer: a(role, user) if callable(a) else a)
         return await super().json(role=role, system=system, user=user, task=task, agent=agent, fake=fake, **kw)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    from ain import auth
+
+    auth.LIMITER.reset()
 
 
 @pytest.fixture

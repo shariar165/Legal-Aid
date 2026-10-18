@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api, type Sample } from "@/lib/api";
+import { useSession } from "@/lib/useSession";
 import { SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { useScreenFocus } from "./useScreenFocus";
@@ -22,6 +23,7 @@ interface Props {
 export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Props) {
   const [samples, setSamples] = useState<Sample[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const { me } = useSession();
 
   useEffect(() => {
     api
@@ -151,6 +153,14 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           <Link href="/counsel" className={styles.counselLink}>
             {T.counselLink[lang]}
           </Link>
+          {me && me.kind !== "account" && (
+            <>
+              <br />
+              <Link href="/signup?next=/" className={styles.counselLink}>
+                {T.saveLink[lang]}
+              </Link>
+            </>
+          )}
         </p>
       </div>
     </div>

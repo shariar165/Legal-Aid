@@ -1,7 +1,9 @@
 # Ain Copilot backend - install into the project venv:
 #   .venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 #   .venv\Scripts\python -m pip install -r requirements.txt
+argon2-cffi==25.1.0
 beautifulsoup4==4.15.0
+cryptography==50.0.2
 diskcache==5.6.3
 easyocr==1.7.2
 fastapi==0.143.2
@@ -11,8 +13,8 @@ numpy==2.5.2
 pillow==12.3.0
 pydantic==2.14.1
 pymupdf==1.28.2
-pytest==9.1.1
 pytest-asyncio==1.4.0
+pytest==9.1.1
 python-docx==1.2.0
 python-dotenv==1.2.4
 python-multipart==0.0.32

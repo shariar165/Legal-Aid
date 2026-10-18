@@ -133,6 +133,22 @@ Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each
 | `POST` | `/api/jobs/{id}/council/chat` | ask one or more council members a question (`language`: `en` or `bn`) |
 | `POST` | `/api/jobs/{id}/council/deliberate` | round 2: members answer each other, then the Chief Justice rules |
 | `GET` | `/api/corpus/{citation_id}` | statute text of one section |
+| `POST` | `/api/auth/signup` · `/api/auth/login` · `/api/auth/logout` | accounts; the session is an HttpOnly cookie |
+| `GET` / `DELETE` | `/api/auth/me` | who is signed in (`guest`, `account` or none) · delete the account and all its analyses |
+| `GET` | `/api/jobs` | the caller's saved analyses |
+| `DELETE` | `/api/jobs/{id}` | delete one analysis |
+
+Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets `404`, the same as for a job that doesn't exist.
+
+### Security and user data
+
+- **Who owns what.** Citizen mode needs no signup. The first analysis on a device creates a private **guest** session, which owns that device's analyses; guests and their data are deleted after 7 days. Counsel mode (`/counsel`) needs an **account** (email + password). Signing up or signing in from a guest session moves the guest's analyses into the account.
+- **Passwords** are hashed with argon2id. A wrong password and an unknown email get the same answer. After 5 failed sign-ins (per IP or per email) sign-in is locked for 15 minutes, and sign-ups are limited to 10 per IP per hour.
+- **Sessions** are random tokens in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` with `AIN_COOKIE_SECURE=1`). Only a SHA-256 of each token is stored, in `backend/.data/ain.db`. Account sessions last 30 days and renew while in use. A new token is issued at every sign-in.
+- **CSRF**: state-changing requests from a browser origin outside `AIN_CORS` are rejected with `403`.
+- **Encryption at rest**: results are stored as `backend/runs/{id}.json.enc`, encrypted with the Fernet key in `AIN_DATA_KEY`. Without that variable, a development key is created once in `backend/.data/secret.key`. Back the key up: without it, stored analyses can't be read. Results saved before accounts existed (plaintext `runs/*.json`) have no owner and are no longer served. `python -m scripts.purge_legacy_runs --delete` (from `backend/`) removes them.
+- **Erasure**: users can delete one analysis, or their whole account with all its analyses, from the account menu in Counsel mode.
+- Not built yet: email verification and password reset (there is no mail provider), OAuth and 2FA.
 
 ## Tests and evaluation
 
