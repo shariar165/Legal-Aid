@@ -203,6 +203,8 @@ export interface OutboundCall {
   model: string;
   chars: number;
   cached: boolean;
+  /** answered by a backup provider or a fallback model, not the configured primary */
+  fallback?: boolean;
 }
 
 export interface PrivacyReceipt {

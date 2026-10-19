@@ -8,6 +8,9 @@ from pathlib import Path
 os.environ["AIN_LLM_MODE"] = "fake"
 os.environ["AIN_DENSE"] = "0"
 os.environ["HF_HUB_OFFLINE"] = "1"
+# never pick up the real keys from ../.env (load_dotenv does not override variables that are already set)
+os.environ["GROQ_API_KEY"] = ""
+os.environ["OPENROUTER_API_KEY"] = ""
 # accounts DB, encryption key and stored results go to a throwaway dir, never the real backend/.data or runs/
 _DATA = tempfile.mkdtemp(prefix="ain-test-")
 os.environ["AIN_DATA_DIR"] = _DATA

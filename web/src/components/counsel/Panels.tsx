@@ -227,10 +227,11 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
 export function PrivacyPanel({ result }: { result: AnalysisResult }) {
   const p = result.privacy;
   const byModel = useMemo(() => {
-    const m = new Map<string, { calls: number; chars: number; cached: number }>();
+    const m = new Map<string, { calls: number; chars: number; cached: number; fallback: number }>();
     for (const c of p.outbound_calls) {
       const key = `${c.provider} · ${c.model}`;
-      const cur = m.get(key) ?? { calls: 0, chars: 0, cached: 0 };
+      const cur = m.get(key) ?? { calls: 0, chars: 0, cached: 0, fallback: 0 };
+      cur.fallback += c.fallback ? 1 : 0;
       cur.calls++;
       cur.chars += c.chars;
       cur.cached += c.cached ? 1 : 0;
@@ -275,7 +276,19 @@ export function PrivacyPanel({ result }: { result: AnalysisResult }) {
         <tbody>
           {byModel.map(([k, v]) => (
             <tr key={k}>
-              <td>{k}</td>
+              <td>
+                {k}
+                {v.fallback > 0 && (
+                  <span
+                    className={styles.chip}
+                    data-tone="warn"
+                    style={{ marginLeft: 8 }}
+                    title={`${v.fallback} of ${v.calls} calls: the configured model was unavailable (quota or rate limit), so this model answered as the backup`}
+                  >
+                    {v.fallback === v.calls ? "fallback" : `${v.fallback} as fallback`}
+                  </span>
+                )}
+              </td>
               <td>{v.calls}</td>
               <td>{v.chars.toLocaleString()}</td>
               <td>{v.cached}</td>

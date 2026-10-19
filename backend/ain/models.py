@@ -112,6 +112,7 @@ class OutboundCall(BaseModel):
     model: str
     chars: int
     cached: bool = False
+    fallback: bool = False  # answered by a backup provider or a fallback model, not the configured primary
 
 
 class PrivacyReceipt(BaseModel):

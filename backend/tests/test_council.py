@@ -54,7 +54,7 @@ async def test_member_sees_redacted_context_own_opinion_and_history(result):
     history = [ChatTurn(speaker="user", text="Is this bad?"), ChatTurn(speaker="gloomy", text="Very.")]
     await council.chat(llm, result, "Do you agree with Grey?", ["happy"], risk, history)
     [p] = [x for x in llm.payloads if x["task"] == "council_chat"]
-    assert "Sunny, the Happy AI" in p["system"]
+    assert "Sunny, the Happy AI" in p["system"] and council.BY_ID["happy"].lens in p["system"]
     assert risk.finding in p["user"] and "YOUR OPINION" in p["user"] and "Grey: Very." in p["user"]
     assert find_pii(p["system"] + p["user"]) == []
 

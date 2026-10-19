@@ -19,8 +19,8 @@
 |---|---|
 | **Citations can't be made up** | The agents may cite only `citation_id`s returned by retrieval over our own corpus. A citation produced any other way is rejected before verification. |
 | **4-gate verifier** | Every claim passes four gates. **G1** checks that the section exists *and applies* to this document. **G2** checks quote fidelity. **G3** checks entailment, judged by a different model family that sees only the section text. **G4** checks that the law is still in force. Dropped claims stay visible in the ledger. |
-| **Virtual Bench** | High and critical claims go to 3 judges from different model families (Claude, Gemini, DeepSeek via OpenRouter). They review each other anonymously, and a Chief Justice (GPT) writes a majority opinion and records any dissent. A dissent raises a ⚠ human-review flag. |
-| **LLM Council** | The three judges have personalities: **Sunny** (happy, leans lenient on borderline severity), **Regal** (proud, holds its view) and **Grey** (gloomy, leans harsh). Personality changes tone and borderline severity only, never how the statute is read. In Counsel mode you can question them in English or Bangla; each answers in character with a one-line position and a confidence level, only from the redacted analysis, and may cite only sections that passed verification. **Deliberation:** after the first answers, the members respond to each other (agree, challenge or change position), then the Chief Justice writes a ruling: unanimous / majority / split, the consensus, the points still in dispute, and one next step. |
+| **Virtual Bench** | High and critical claims go to 3 judges from different model families (Google Gemma 4, rednote dots.3, Xingchen Xing 4.0, all free models via OpenRouter). They review each other anonymously, and a Chief Justice (GPT-OSS 120B on Groq) writes a majority opinion and records any dissent. A dissent raises a ⚠ human-review flag. |
+| **LLM Council** | The three judges have personalities, and each reasons through its own lens: **Sunny** (happy) looks for remedies, exceptions and ways to fix the clause, and leans lenient on borderline severity; **Regal** (proud) tests the strict wording and definitions, element by element, and holds its view; **Grey** (gloomy) asks how an employer could exploit the clause and whether the worker could really enforce the right, and leans harsh. The lens shapes severity, reasoning and chat only. The **verdict** (does the statute text support the claim?) is one neutral test, worded identically for all three judges and decided from the text alone; a test checks the prompts stay identical. In Counsel mode you can question them in English or Bangla; each answers in character with a one-line position and a confidence level, only from the redacted analysis, and may cite only sections that passed verification. **Deliberation:** after the first answers, the members respond to each other (agree, challenge or change position), then the Chief Justice writes a ruling: unanimous / majority / split, the consensus, the points still in dispute, and one next step. |
 | **Real-world currency** | The corpus is the consolidated text as of Oct 2026. The 2012 Trafficking Act is **repealed**; the Critic re-anchors a stale citation to the 2026 Act and re-verifies it. Labour Act s.46 maternity leave now reads **60 + 60 days**, from the 2026 amendment. |
 | **Country of work** | Bangladeshi workers go to many countries, so the labour law of the 8 main destinations is in the corpus: **Saudi Arabia, UAE, Malaysia, Qatar, Oman, Kuwait, Singapore, Bahrain**. The country is found in the contract (English or Bangla, e.g. "সৌদি আরবে") or picked by the user. Each country's law adds to Bangladesh law and ILO standards: recruitment fees, passports, deduction caps (50% in Saudi Arabia, 25% in Oman and Kuwait…), the ticket home and the end-of-service gratuity. The worker also sees the Bangladesh labour wing to contact there. |
 | **Employer's own promises** | The contract is checked against (1) **fair-recruitment standards** many employers sign up to (ILO General Principles, Employer Pays Principle, RBA Code; always marked *voluntary standard, not law*), (2) an **employer policy or handbook the user uploads**, and (3) the **published policy of a named company** (`corpus/companies.yaml`). A contradiction is shown only if the policy quote passes the same 4 gates as a statute: "The employer's policy says X; this contract says Y." |
@@ -55,14 +55,23 @@ The orchestrator emits each step as an SSE event, so the UI progress and the age
 
 ### Models (`backend/ain/config.yaml`)
 
-| Role | Provider | Used for |
-|---|---|---|
-| `fast` | Groq · Llama 3.1 8B | facts extraction, routing confirmation |
-| `reasoner` | Groq · GPT-OSS 120B | risk analysis, adversarial counsel, drafting |
-| `judge` | Groq · Qwen3 32B | single-judge entailment (a different family from the drafter) |
-| `plain` | Groq · Llama 3.3 70B | the "plain chatbot" baseline: one prompt, no tools |
-| `bench_a` / `bench_b` / `bench_c` | OpenRouter · Claude / Gemini / DeepSeek | Sunny / Regal / Grey |
-| `chairman` | OpenRouter · GPT | Chief Justice |
+| Role | Primary | Backup | Used for |
+|---|---|---|---|
+| `fast` | Groq · GPT-OSS 20B | OpenRouter · Xing 4.0 29B (free) | facts extraction, routing confirmation |
+| `reasoner` | Groq · GPT-OSS 120B | OpenRouter · dots.3 (free) | risk analysis, adversarial counsel, drafting |
+| `judge` | Groq · Qwen 3.8 27B | OpenRouter · Gemma 4 31B (free) | single-judge entailment (a different family from the drafter) |
+| `plain` | Groq · GPT-OSS 120B | - | the "plain chatbot" baseline: the reasoner's own model with one prompt and no tools, so the ablation measures the pipeline, not the model |
+| `bench_a` | OpenRouter · Gemma 4 31B (free), then Gemma 4 26B | Groq · Qwen 3.8 27B | Sunny |
+| `bench_b` | OpenRouter · dots.3 (free) | Groq · GPT-OSS 120B | Regal |
+| `bench_c` | OpenRouter · Xing 4.0 29B (free) | Groq · GPT-OSS 20B | Grey |
+| `chairman` | Groq · GPT-OSS 120B | OpenRouter · dots.3 (free) | Chief Justice: writes the ruling from the judges' votes |
+
+How a call is routed:
+- **OpenRouter uses free models only.** `config.py` refuses to load a routing table that names a paid OpenRouter model. Every call sends `data_collection: deny`, so only free endpoints that do not train on prompts are used; OpenRouter's Nvidia and Poolside free endpoints are filtered out by that policy.
+- **Same-provider fallbacks** are sent as OpenRouter's `models: [...]` list, so OpenRouter retries the next model itself when a free endpoint is rate-limited upstream.
+- **The judges' chains do not overlap**, so two seats never land on the same model. `openrouter/free` is not used as a judge fallback because it routes to whatever free model is up, coding models included. Free endpoints are rate-limited per model, so at most `max_parallel` calls per model run at once.
+- **Backup provider.** The backup is used when the primary provider has no key, is out of its daily free quota, keeps failing, or returns an empty answer. A daily-quota error trips a breaker that skips OpenRouter until the quota resets. Fallback answers are marked "fallback" in the trace and the privacy receipt.
+- **Free tier limits.** OpenRouter's free tier allows 50 free-model requests a day (1000 a day once $10 of credit has ever been bought; calls still use free models only). A full bench costs 6 OpenRouter calls (3 opinions, 3 reviews); the ruling runs on Groq. Gemma's free endpoint is often rate-limited upstream, so Sunny's seat falls back to its Groq backup more often than the others. Requests are paced under each provider's per-minute limit (`rpm` in `config.yaml`).
 
 ### Corpus (`backend/corpus/processed/corpus.jsonl`, 1,154 sections)
 - **Bangladesh**, scraped from [bdlaws.minlaw.gov.bd](http://bdlaws.minlaw.gov.bd) with deep links to each section:
@@ -147,11 +156,11 @@ npm run dev                     # http://localhost:3000  ·  http://localhost:30
 ```
 
 ### LLM modes (`AIN_LLM_MODE` in `.env`)
-- `live` is the default when a key is present. It calls Groq (main pipeline) and OpenRouter (Bench), and caches every answer on disk. If only one provider has a key, roles fall back to the other provider.
+- `live` is the default when a key is present. It calls Groq (main pipeline) and OpenRouter (Bench), and caches every answer on disk. If a provider has no key or runs out of free quota, its roles use their backup on the other provider.
 - `replay` uses only the cache, with no network. Run `python -m scripts.smoke_live` once with keys and the demo then works offline. Council chat questions are new each time, so chat goes live whenever the bench roles have a key, and falls back to canned answers otherwise.
 - `fake` gives deterministic offline answers. It is used by the tests and runs when no key is configured. Law retrieval and all four gates are real; only the language-model answers are canned. The UI labels this mode "offline demo".
 
-Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each one against the providers' live `/models` lists.
+Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each one (primary, fallbacks, backup) against the providers' live `/models` lists and prints the OpenRouter free quota left. `--docs 1` warms one hero document at a time to stay inside the free quota.
 
 ### API
 
@@ -207,7 +216,7 @@ The tests cover:
 - the employer's own policy: contradictions are verified against the policy text, an invented promise fails the fidelity gate, the policy is redacted with the same placeholders as the contract, and a named company's published policy is used automatically;
 - each verifier gate failing on its own bad case;
 - the Critic's repeal healing;
-- Bench majority/dissent, the three personas, and that judges see only the statute and the claim;
+- Bench majority/dissent, the three personas and their lenses, the verdict test being identical for all three judges, reasoning clipped at a sentence boundary, and that judges see only the statute and the claim;
 - council chat: replies stay grounded in the analysis, citations outside the verified ledger are stripped (also from the prose), and PII in a question is refused;
 - council deliberation: each member sees only its colleagues' answers, the Chief Justice gets a neutral context and both rounds, rulings are sanitised, and Bangla answers are requested and returned;
 - wage arithmetic;

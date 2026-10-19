@@ -2,17 +2,25 @@
 
 Three judges from different model families decide independently, review each other's
 anonymised opinions ("Justice A/B/C"), may revise, and a Chief Justice (a fourth model)
-writes the majority opinion and records any dissent. Each judge is a council member with a
-personality - Sunny (happy), Regal (proud), Grey (gloomy) - that colours its voice, how it
-reads a borderline severity and how readily it revises; never what the statute says. Any dissent flags the claim for
-human review. Judges see ONLY the retrieved statute text, the proposition and the clause
-finding - never their own background knowledge of the law - so they cannot agree on a
-section that is not in front of them.
+writes the majority opinion and records any dissent. Any dissent flags the claim for human
+review. Judges see ONLY the retrieved statute text, the proposition and the clause finding -
+never their own background knowledge of the law - so they cannot agree on a section that is
+not in front of them.
+
+Each judge answers two questions, under different rules:
+- the VERDICT (does the text support the proposition?) is one neutral test, worded
+  identically for all three judges (`VERDICT_TEST`) and decided from the statute text alone;
+- the SEVERITY, the reasoning and the council chat go through the judge's personality: a
+  reasoning lens - Sunny (happy) looks for remedies and exceptions, Regal (proud) tests the
+  strict wording and definitions, Grey (gloomy) asks how the clause can be exploited and
+  whether the worker could really enforce the right - plus a voice, a borderline-severity
+  lean and a peer-review stance.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 from collections import Counter
 from dataclasses import dataclass
 
@@ -30,6 +38,7 @@ class Persona:
     seat: str
     role: str
     tagline: str
+    lens: str
     voice: str
     disposition: str
     review_stance: str
@@ -39,10 +48,11 @@ class Persona:
         return f"{self.name} ({self.seat})"
 
     def personality(self) -> str:
+        """Shapes severity, reasoning and chat only; the verdict test (`VERDICT_TEST`) stays outside it."""
         return (
-            f"PERSONALITY: You are {self.name}, {self.title}. Voice: {self.voice} "
-            f"Severity: {self.disposition} Peer review: {self.review_stance} "
-            "Your personality never changes what the statute text says."
+            f"PERSONALITY (it shapes your severity, your reasoning and your voice - never the verdict): You are {self.name}, "
+            f"{self.title}. Lens: {self.lens} Voice: {self.voice} Severity: {self.disposition} "
+            f"Peer review: {self.review_stance} Your personality never changes what the statute text says."
         )
 
 
@@ -50,45 +60,66 @@ PERSONAS = [
     Persona(
         id="happy", name="Sunny", title="the Happy AI", seat="Justice A", role="bench_a",
         tagline="Every bad clause has a fix. Let's find it.",
-        voice="warm, upbeat and encouraging; you lead with the remedy or the way out.",
+        lens="remedies and exceptions - look in the text for provisos, exemptions, cures and rights the worker can invoke, "
+        "and how the clause could be fixed or renegotiated; weigh how far a remedy the text offers reduces the harm.",
+        voice="warm, upbeat and encouraging; you lead with the way out.",
         disposition="on a genuinely borderline call you rate one notch lower, but you never deny a risk the text plainly shows.",
-        review_stance="you are open-minded and happy to revise if a colleague reads the text better.",
+        review_stance="you are open-minded and readily move your severity if a colleague's reasoning is better.",
     ),
     Persona(
         id="proud", name="Regal", title="the Proud AI", seat="Justice B", role="bench_b",
         tagline="The text is clear. I have read it correctly.",
+        lens="strict wording and definitions - test the clause against the exact words, defined terms and conditions of the "
+        "section, element by element, and infer nothing the text does not say.",
         voice="confident, formal and a little grand; you quote the statute precisely.",
         disposition="you call severity exactly as the text and the finding warrant, no more and no less.",
-        review_stance="you keep your opinion unless the statute text plainly proves you wrong.",
+        review_stance="you keep your severity unless a colleague shows the text plainly says otherwise.",
     ),
     Persona(
         id="gloomy", name="Grey", title="the Gloomy AI", seat="Justice C", role="bench_c",
         tagline="Assume it will go wrong. It usually does.",
+        lens="worst case and enforceability - ask how an employer could exploit the clause, and whether the worker could "
+        "realistically enforce the right the text gives (cost, distance, proof, fear of retaliation).",
         voice="melancholy and wary; you describe how the clause will hurt the weaker party in practice.",
         disposition="on a genuinely borderline call you rate one notch higher, but you never invent a risk the text does not support.",
-        review_stance="you revise only reluctantly, and never towards optimism without clear text.",
+        review_stance="you lower your severity only reluctantly, and never towards optimism without clear text.",
     ),
 ]
 BY_ID = {p.id: p for p in PERSONAS}
 SEV = ["low", "medium", "high", "critical"]
+REASONING_CHARS = 1200
+
+# Identical for every judge, and kept outside the personality block: the lens must not move the verdict.
+VERDICT_TEST = """Question 1 (verdict) is the same neutral test for every judge on the bench. Reading the statute text alone,
+does it SUPPORT the legal proposition ("supports"), say nothing about it ("neutral"), or contradict it ("contradicts")?
+Decide it first and on the text only; your lens, voice and severity lean play no part in it."""
 
 JUDGE_SYSTEM = """You are a judge on a three-member bench. Decide ONLY from the statute text provided; do not use outside
-knowledge of the law. Question 1: does the statute text SUPPORT the legal proposition ("supports"), say nothing about it
-("neutral"), or contradict it ("contradicts")? Question 2: given the contract finding, how severe is the risk for the
-weaker party ("critical"|"high"|"medium"|"low")?
+knowledge of the law.
+{verdict_test}
+Question 2 (severity): given the contract finding, how severe is the risk for the weaker party
+("critical"|"high"|"medium"|"low")? Answer it, and write your reasoning, through your personality below.
 {personality}
-Return JSON: {{"verdict": "supports|neutral|contradicts", "severity": "...", "reasoning": "2-3 sentences citing the text, in your voice"}}"""
+Return JSON: {{"verdict": "supports|neutral|contradicts", "severity": "...", "reasoning": "2-3 sentences citing the text, through your lens and in your voice"}}"""
 
 REVIEW_SYSTEM = """You sat on a three-member bench. You see your own opinion and the anonymised opinions of the other two
-judges. Re-read the statute text. You may keep or revise your verdict and severity. Decide ONLY from the statute text.
+judges. Re-read the statute text. Decide ONLY from the statute text.
+{verdict_test}
+Change your verdict only if the statute text shows you misread it - never because of a colleague's lens or mood. You may
+keep or revise your severity and reasoning, through your personality below.
 {personality}
 Return JSON: {{"verdict": "supports|neutral|contradicts", "severity": "...", "reasoning": "...", "revised": true|false}}"""
 
 CHAIR_SYSTEM = """You are the Chief Justice. Write the bench's ruling from the judges' final opinions: a short majority
 opinion (2-3 sentences) and, if any judge disagrees with the majority verdict or severity, a one-sentence dissent
-naming the member as labelled (e.g. "Grey (Justice C)"). The judges have personalities (happy, proud, gloomy); weigh
-their reasoning, not their mood. Rely only on the statute text and the opinions.
+naming the member as labelled (e.g. "Grey (Justice C)"). Each judge read the severity through a lens (Sunny: remedies
+and exceptions; Regal: strict wording; Grey: worst case and enforceability) and a mood; weigh their reasoning, not their
+mood. The verdict is a plain question of what the statute text says. Rely only on the statute text and the opinions.
 Return JSON: {"majority_opinion": "...", "dissent": "... or null"}"""
+
+
+def system_prompt(template: str, p: Persona) -> str:
+    return template.format(verdict_test=VERDICT_TEST, personality=p.personality())
 
 
 def _case(claim: Claim, section: Section, risk: Risk) -> str:
@@ -120,7 +151,7 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
     first = await asyncio.gather(
         *(
             llm.json(
-                role=p.role, system=JUDGE_SYSTEM.format(personality=p.personality()), user=case, task="bench_opinion",
+                role=p.role, system=system_prompt(JUDGE_SYSTEM, p), user=case, task="bench_opinion",
                 agent=f"Virtual Bench · {p.label}", fake=lambda p=p: _fake_opinion(p, claim, risk, fake_verdict),
             )
             for p in PERSONAS
@@ -135,7 +166,7 @@ async def convene(llm: LLM, claim: Claim, section: Section, risk: Risk, fake_ver
         user = f"{case}\n\nYOUR OPINION: verdict={me.verdict}, severity={me.severity}. {me.reasoning}\n\nOTHER JUDGES (anonymised):\n{others}"
         p = PERSONAS[i]
         return await llm.json(
-            role=p.role, system=REVIEW_SYSTEM.format(personality=p.personality()), user=user, task="bench_review", agent=f"Virtual Bench · {p.label}",
+            role=p.role, system=system_prompt(REVIEW_SYSTEM, p), user=user, task="bench_review", agent=f"Virtual Bench · {p.label}",
             fake=lambda: {"verdict": me.verdict, "severity": me.severity, "reasoning": me.reasoning, "revised": False},
         )
 
@@ -199,5 +230,21 @@ def _clean(p: Persona, model: str, op: dict) -> BenchOpinion:
     verdict = op.get("verdict") if op.get("verdict") in ("supports", "neutral", "contradicts") else "neutral"
     sev = op.get("severity") if op.get("severity") in SEV else "medium"
     return BenchOpinion(
-        seat=p.seat, model=model, persona=p.id, name=p.name, verdict=verdict, severity=sev, reasoning=str(op.get("reasoning", ""))[:600]
+        seat=p.seat, model=model, persona=p.id, name=p.name, verdict=verdict, severity=sev,
+        reasoning=clip(str(op.get("reasoning", "")), REASONING_CHARS),
     )
+
+
+_SENTENCE_END = re.compile(r"""[.!?।][)"'”’\]]*(?=\s|$)""")
+
+
+def clip(text: str, limit: int) -> str:
+    """Shorten to at most `limit` chars, ending on a whole sentence where one ends in the second half."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    ends = [m.end() for m in _SENTENCE_END.finditer(cut)]
+    if ends and ends[-1] > limit // 2:
+        return cut[: ends[-1]]
+    return cut[: limit - 1].rsplit(" ", 1)[0].rstrip(",;:") + "…"
