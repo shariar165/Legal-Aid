@@ -1,23 +1,56 @@
-# Model routing. Each role maps to a provider + model id.
-# Groq runs the fast main pipeline; OpenRouter runs the Virtual Bench (different model families).
-# Verify ids: Groq -> GET https://api.groq.com/openai/v1/models ; OpenRouter -> GET https://openrouter.ai/api/v1/models
+# Model routing. Each role maps to a provider + model id, tried in this order:
+#   1. model            - the primary
+#   2. fallbacks        - OpenRouter only: sent as `models: [...]`, so OpenRouter itself retries the next one
+#                         on an upstream 429 / outage
+#   3. backup           - the other provider, used when this one has no key, is out of free quota, or keeps failing
+# Groq runs the fast main pipeline; OpenRouter runs the Virtual Bench judges (different model families), FREE models only
+# (enforced by config.py). Only endpoints that pass `data_collection: deny` are listed: OpenRouter's Nvidia and
+# Poolside free endpoints train on prompts and are filtered out by that policy.
+# Verify ids: python -m scripts.smoke_live  (checks every id against the live /models lists)
 roles:
-  fast:      {provider: groq, model: llama-3.1-8b-instant}        # facts extraction, routing confirmation
-  reasoner:  {provider: groq, model: openai/gpt-oss-120b}         # risk analysis, adversarial counsel, drafting
-  judge:     {provider: groq, model: qwen/qwen3-32b}              # single-judge entailment (different family from drafter)
-  plain:     {provider: groq, model: llama-3.3-70b-versatile}     # ablation baseline: one prompt, no tools
-  bench_a:   {provider: openrouter, model: anthropic/claude-haiku-5.5}
-  bench_b:   {provider: openrouter, model: google/gemini-3.5-flash-lite}
-  bench_c:   {provider: openrouter, model: deepseek/deepseek-v4-flash}
-  chairman:  {provider: openrouter, model: openai/gpt-5.4-mini}
+  fast:     {provider: groq, model: openai/gpt-oss-20b,                   # facts extraction, routing confirmation
+             backup: {provider: openrouter, model: "xingchen-agi/xing4.0-29b-a4b:free"}}
+  reasoner: {provider: groq, model: openai/gpt-oss-120b,                  # risk analysis, adversarial counsel, drafting
+             backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
+  judge:    {provider: groq, model: qwen/qwen3.8-27b,                     # single-judge entailment (different family from drafter)
+             backup: {provider: openrouter, model: "google/gemma-4-31b-it:free"}}
+  plain:    {provider: groq, model: openai/gpt-oss-120b}                  # ablation baseline: same model as the reasoner, one prompt, no tools
+  # The three judges' chains are disjoint, so two seats can never end up on the same model. (openrouter/free is
+  # deliberately not a judge fallback: it routes to whatever free model is up, coding models included.)
+  bench_a:  {provider: openrouter, model: "google/gemma-4-31b-it:free",   # Sunny - Google
+             fallbacks: ["google/gemma-4-26b-a4b-it:free"],
+             backup: {provider: groq, model: qwen/qwen3.8-27b}}
+  bench_b:  {provider: openrouter, model: "dots-studio/dots-3-note-preview:free",   # Regal - rednote
+             backup: {provider: groq, model: openai/gpt-oss-20b}}  # wanted: llama-3.3-70b (retired on Groq, no free OpenRouter endpoint)
+  bench_c:  {provider: openrouter, model: "xingchen-agi/xing4.0-29b-a4b:free",      # Grey - Xingchen
+             backup: {provider: groq, model: openai/gpt-oss-120b}}
+  # The Chief Justice only writes the ruling from the judges' votes, so it runs on Groq: reliable, and it saves
+  # one of every seven OpenRouter free requests a bench would otherwise spend.
+  chairman: {provider: groq, model: openai/gpt-oss-120b,
+             backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
 
 providers:
-  groq:       {base_url: https://api.groq.com/openai/v1, key_env: GROQ_API_KEY}
-  openrouter: {base_url: https://openrouter.ai/api/v1, key_env: OPENROUTER_API_KEY}
+  groq:       {base_url: https://api.groq.com/openai/v1, key_env: GROQ_API_KEY, rpm: 30, max_tokens_floor: 2000}
+  # Free tier: 50 free-model requests/day (1000/day once $10 of credit has ever been bought), ~20/min.
+  # Free endpoints are rate-limited per model upstream, so at most `max_parallel` calls per model run at once.
+  openrouter: {base_url: https://openrouter.ai/api/v1, key_env: OPENROUTER_API_KEY, rpm: 18, max_parallel: 2, free_only: true, max_tokens_floor: 6000,
+               reasoning: {effort: low, exclude: true}}
 
 bench:
   # The Virtual Bench sits on the entailment gate and severity adjudication for these severities only.
   severities: [critical, high]
+  # OpenRouter quota savers. Each stays off until eval/bench_quality.py shows it leaves the answers unchanged
+  # (no gold recall/precision drop, no false "supports", verdict flips within run-to-run noise, severity within one
+  # notch of the baseline for >= 90% of opinions).
+  review_only_on_disagreement: false  # skip peer review when all three first opinions agree on verdict and severity
+  batch_bench: false                  # one call per judge for up to batch_size claims; answers must quote their own text
+  batch_size: 4
+  statute_window: false               # trim long sections to whole sub-sections, always keeping provisos/exceptions
+  window_chars: 1500
+  # Council ruling (2026-10-19), behind flags until the eval passes:
+  bench_leans: true                   # false: drop the one-notch borderline severity lean from the judges' prompts
+  human_review_on_wide_spread: false  # true: flag human review only on a verdict split or a severity spread of 2+ notches
+  severity_rubric: false              # true: one written severity rubric for all judges; the lens shapes only reasoning/advice
 
 verifier:
   quote_fidelity_threshold: 90

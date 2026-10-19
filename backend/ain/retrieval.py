@@ -113,6 +113,26 @@ def _load_sections() -> list[Section]:
     return out
 
 
+class CorpusOverlay:
+    """One job's view of the corpus: the shared statutes plus sections that exist only for this job
+    (the clauses of an uploaded employer policy). Extra sections resolve by citation_id, so the verifier
+    checks quotes against them like any statute, but they are not searched: the agents that need them
+    get them directly."""
+
+    def __init__(self, base: Corpus, extra: list[Section]):
+        self._base = base
+        self.extra = {s.citation_id: s for s in extra}
+
+    def get(self, citation_id: str) -> Section | None:
+        return self.extra.get(citation_id) or self._base.get(citation_id)
+
+    def __contains__(self, citation_id: str) -> bool:
+        return citation_id in self.extra or citation_id in self._base
+
+    def __getattr__(self, name: str):
+        return getattr(self._base, name)
+
+
 @lru_cache
 def get_corpus() -> Corpus:
     return Corpus(_load_sections())

@@ -13,6 +13,8 @@ export interface Sample {
   kind: "text" | "image";
   title: L10n;
   subtitle: L10n;
+  /** the sample also sends the employer's own policy */
+  with_policy?: boolean;
 }
 
 export interface Health {
@@ -39,6 +41,8 @@ export interface Section {
   status: "in_force" | "amended" | "repealed";
   superseded_by: string | null;
   amendment_notes: string[];
+  /** standard: a voluntary code such as the ILO fair-recruitment principles, not law */
+  kind?: "law" | "standard" | "company_policy";
 }
 
 export interface Claim {
@@ -47,7 +51,7 @@ export interface Claim {
   proposition: string;
   citation_id: string;
   quote: string | null;
-  origin: "playbook" | "adversary" | "critic" | "drafter" | "ablation";
+  origin: "playbook" | "adversary" | "critic" | "drafter" | "ablation" | "policy";
 }
 
 export interface Gate {
@@ -63,10 +67,12 @@ export interface BenchOpinion {
   model: string;
   persona: PersonaId | "";
   name: string;
+  lens?: string; // Remedies | Text | Enforcement
   verdict: "supports" | "neutral" | "contradicts";
   severity: Severity;
   reasoning: string;
   revised: boolean;
+  fallback?: boolean;
 }
 
 export interface BenchResult {
@@ -75,10 +81,17 @@ export interface BenchResult {
   majority_verdict: string;
   majority_severity: Severity;
   vote: string;
+  agreement?: "unanimous" | "majority" | "split" | "no_quorum"; // on the verdict; no_quorum: fewer than two judges answered
+  severity_range?: string | null; // "medium–high" when the judges are one notch apart
   majority_opinion: string;
   dissent: string | null;
   human_review: boolean;
+  review_reason?: string | null;
   chairman_model: string;
+  peer_review?: boolean; // false when the first opinions were unanimous and the review round was skipped
+  same_family?: string[]; // judges whose answering models share a family after a fallback
+  no_opinion?: string[]; // judges whose call failed on every route; they did not vote
+  quorum?: boolean; // false: the single-judge check decided instead of the bench
 }
 
 export interface Verification {
@@ -93,7 +106,8 @@ export interface Verification {
 export interface Risk {
   id: string;
   rule_id: string | null;
-  origin: "playbook" | "adversary" | "calculator";
+  /** policy: the contract breaks the employer's own policy */
+  origin: "playbook" | "adversary" | "calculator" | "policy";
   category: string;
   title: L10n;
   severity: Severity;
@@ -140,7 +154,7 @@ export interface CitizenCitation {
   url: string;
 }
 
-export type CardKind = "danger" | "todo" | "deadline" | "pay";
+export type CardKind = "danger" | "todo" | "deadline" | "pay" | "policy";
 
 export interface CitizenCard {
   kind: CardKind;
@@ -198,6 +212,8 @@ export interface OutboundCall {
   model: string;
   chars: number;
   cached: boolean;
+  /** answered by a backup provider or a fallback model, not the configured primary */
+  fallback?: boolean;
 }
 
 export interface PrivacyReceipt {
@@ -241,11 +257,39 @@ export interface Stats {
   seconds: number;
 }
 
+/** The country where the job is (backend/ain/countries.yaml). */
+export interface Destination {
+  /** null: a country whose labour law is not in the corpus yet */
+  code: string | null;
+  name: L10n;
+  /** possessive, e.g. "Saudi Arabia's" / "সৌদি আরবের" */
+  of: L10n | null;
+  supported: boolean;
+  /** label of the country's law pack */
+  law: string | null;
+  /** where the worker can get help in that country */
+  help: L10n | null;
+}
+
+export interface DocumentInfo {
+  name: string;
+  source_kind: string;
+  text: string;
+  clauses: Clause[];
+  ocr_used: boolean;
+  ocr_confidence: number | null;
+  pages: number;
+}
+
 export interface AnalysisResult {
   job_id: string;
   llm_mode: string;
-  document: { name: string; source_kind: string; text: string; clauses: Clause[]; ocr_used: boolean; ocr_confidence: number | null; pages: number };
+  document: DocumentInfo;
+  /** the employer's own policy, when one was added (redacted like the contract) */
+  policy?: DocumentInfo | null;
   facts: Record<string, unknown>;
+  /** absent on results saved before destination countries existed */
+  destination?: Destination | null;
   route: { packs: PackDecision[]; excluded: PackDecision[] };
   risks: Risk[];
   ledger: Verification[];
@@ -265,6 +309,7 @@ export interface CouncilMember {
   tagline: string;
   seat: string;
   model: string;
+  lens?: string;
 }
 
 export interface ChatTurn {
@@ -354,14 +399,18 @@ const post = (path: string, body?: unknown) =>
 export const api = {
   health: () => call("/api/health").then((r) => json<Health>(r)),
   samples: () => call("/api/samples").then((r) => json<Sample[]>(r)),
+  countries: () => call("/api/countries").then((r) => json<Destination[]>(r)),
   analyzeSample(sampleId: string) {
     const form = new FormData();
     form.append("sample_id", sampleId);
     return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
   },
-  analyzeFile(file: File) {
+  /** `destination` (a country code) overrides the detected country; `policy` is the employer's own policy or handbook. */
+  analyzeFile(file: File, destination?: string | null, policy?: File | null) {
     const form = new FormData();
     form.append("file", file);
+    if (destination) form.append("destination_country", destination);
+    if (policy) form.append("policy", policy);
     return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
   },
   confirm: (jobId: string, value: string) => post(`/api/jobs/${jobId}/confirm`, { field: "salary", value }).then((r) => json<{ ok: boolean; value: number }>(r)),

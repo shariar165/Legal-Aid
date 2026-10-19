@@ -15,27 +15,29 @@ import {
   type Section,
 } from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
-import { Icon, type IconName } from "./Icons";
+import { Icon } from "./Icons";
+import { PixelSticker } from "./PixelSticker";
 import styles from "./counsel.module.css";
 
-/* The three council members. Names and titles mirror backend/ain/agents/bench.py PERSONAS;
-   the API adds each member's live model. */
+/* The three council members. Lenses, names and titles mirror backend/ain/agents/bench.py PERSONAS;
+   the API adds each member's live model. The lens is the label; the name is flavour. */
 export const PERSONA_IDS: PersonaId[] = ["happy", "proud", "gloomy"];
 
 const FALLBACK: Record<PersonaId, CouncilMember> = {
-  happy: { id: "happy", name: "Sunny", title: "the Happy AI", tagline: "Every bad clause has a fix. Let's find it.", seat: "Justice A", model: "" },
-  proud: { id: "proud", name: "Regal", title: "the Proud AI", tagline: "The text is clear. I have read it correctly.", seat: "Justice B", model: "" },
-  gloomy: { id: "gloomy", name: "Grey", title: "the Gloomy AI", tagline: "Assume it will go wrong. It usually does.", seat: "Justice C", model: "" },
+  happy: { id: "happy", name: "Sunny", title: "the Constructive AI", tagline: "Every bad clause has a fix. Let's find it.", seat: "Justice A", model: "", lens: "Remedies" },
+  proud: { id: "proud", name: "Regal", title: "the Proud AI", tagline: "The words decide, so I read them closely.", seat: "Justice B", model: "", lens: "Text" },
+  gloomy: { id: "gloomy", name: "Grey", title: "the Gloomy AI", tagline: "Assume it will go wrong. It usually does.", seat: "Justice C", model: "", lens: "Enforcement" },
 };
 
-/* temperament in one word, shown under each name */
-const TEMPERAMENT: Record<PersonaId, string> = { happy: "Optimist", proud: "Textualist", gloomy: "Sceptic" };
+/* the reasoning lens, shown first; the persona name follows as flavour */
+const LENS: Record<PersonaId, string> = { happy: "Remedies", proud: "Text", gloomy: "Enforcement" };
 const ROLE_LINE: Record<PersonaId, string> = {
   happy: "Looks for the fix",
   proud: "Reads the statute strictly",
   gloomy: "Asks what can go wrong",
 };
-const GLYPH: Record<PersonaId, IconName> = { happy: "sun", proud: "shield", gloomy: "cloud" };
+/* the stickers' tilt in the empty-chat hero, as in the design */
+const TILT: Record<PersonaId, number> = { happy: -5, proud: 3, gloomy: -2 };
 
 export type CouncilTarget = PersonaId | "all";
 
@@ -52,27 +54,36 @@ export function memberName(id: PersonaId) {
   return FALLBACK[id].name;
 }
 
+/* "Remedies · Sunny" */
+export function memberLabel(id: PersonaId) {
+  return `${LENS[id]} · ${FALLBACK[id].name}`;
+}
+
 /* ------------------------------------------------------------------ Avatar */
 
-/* A monogram badge: initial on the persona's tint, with a small temperament glyph. */
-export function CouncilAvatar({ persona, size = 36 }: { persona: PersonaId; size?: number }) {
+/* The member's pixel mood sticker; animated only where it is the focus (empty chat, thinking). */
+export function CouncilAvatar({ persona, size = 36, animate = false }: { persona: PersonaId; size?: number; animate?: boolean }) {
   const m = FALLBACK[persona];
-  const glyph = Math.max(10, Math.round(size * 0.42));
   return (
-    <span
-      className={styles.avatar}
-      data-persona={persona}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.44) }}
-      role="img"
-      aria-label={`${m.name}, ${m.title}`}
-    >
-      {m.name[0]}
-      {size >= 28 && (
-        <span className={styles.avGlyph} style={{ width: glyph, height: glyph }} aria-hidden="true">
-          <Icon name={GLYPH[persona]} size={glyph - 4} />
-        </span>
-      )}
+    <span className={styles.sticker} data-persona={persona} style={{ width: size, height: size }} role="img" aria-label={`${LENS[persona]}: ${m.name}, ${m.title}`}>
+      <PixelSticker persona={persona} size={size} animate={animate} />
     </span>
+  );
+}
+
+/* The empty-chat hero: the three stickers, large, animated and captioned with their lens. */
+function CouncilStickers({ size }: { size: number }) {
+  return (
+    <div className={styles.stickerRow}>
+      {PERSONA_IDS.map((p) => (
+        <figure key={p} className={styles.stickerFig} data-persona={p}>
+          <span style={{ transform: `rotate(${TILT[p]}deg)` }}>
+            <CouncilAvatar persona={p} size={size} animate />
+          </span>
+          <figcaption>{LENS[p]}</figcaption>
+        </figure>
+      ))}
+    </div>
   );
 }
 
@@ -91,6 +102,17 @@ function dissents(o: BenchOpinion, b: BenchResult) {
   return o.verdict !== b.majority_verdict || o.severity !== b.majority_severity;
 }
 
+/* one line for a ruling: a 1-1-1 split is "split", never "majority"; a one-notch spread is shown as a range */
+export function benchOutcome(b: BenchResult) {
+  if (b.quorum === false) return "No quorum · single-judge check";
+  if (b.agreement === "split") return `Split ${b.vote} · no majority`;
+  const against = b.opinions.filter((o) => dissents(o, b) && o.persona).map((o) => LENS[o.persona as PersonaId]);
+  if (b.agreement === "majority") return `${b.vote} · ${against.join(" & ")} dissented`;
+  if (b.severity_range) return `Agreed · severity ${b.severity_range}`;
+  if (against.length) return `${b.vote} · ${against.join(" & ")} dissented`;
+  return `Unanimous ${b.vote}`;
+}
+
 /* Each member's severity vote on one benched risk (risk card). */
 export function MemberVotes({ bench }: { bench: BenchResult }) {
   return (
@@ -98,7 +120,7 @@ export function MemberVotes({ bench }: { bench: BenchResult }) {
       {bench.opinions
         .filter((o) => o.persona)
         .map((o) => (
-          <span key={o.seat} className={styles.memberVote} data-dissent={dissents(o, bench)} title={`${o.name}: ${o.verdict}, ${o.severity}`}>
+          <span key={o.seat} className={styles.memberVote} data-dissent={dissents(o, bench)} title={`${memberLabel(o.persona as PersonaId)}: ${o.verdict}, ${o.severity}`}>
             <CouncilAvatar persona={o.persona as PersonaId} size={20} />
             {SEVERITY_LABEL[o.severity]}
           </span>
@@ -232,7 +254,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
   }, [result.ledger]);
 
   const busy = exchanges.some((x) => x.status === "asking" || x.status === "deliberating");
-  const who = nav.target === "all" ? "the entire council" : FALLBACK[nav.target].name;
+  const who = nav.target === "all" ? "the entire council" : memberLabel(nav.target);
   const topic = nav.riskId ? (live.find((r) => r.id === nav.riskId)?.title.en ?? "this risk") : "the whole contract";
   const model = (id: PersonaId) => members.find((m) => m.id === id)?.model;
   const prompts = nav.riskId ? COPY[language].risk : COPY[language].whole;
@@ -329,7 +351,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                 <CouncilAvatar persona={m.id} size={36} />
                 <span className={styles.memberText}>
                   <b>
-                    {m.name} <em>{TEMPERAMENT[m.id]}</em>
+                    {LENS[m.id]} <em>{m.name}</em>
                   </b>
                   <span>{ROLE_LINE[m.id]}</span>
                   {m.model && <code title={m.model}>{m.model}</code>}
@@ -403,7 +425,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
           <div ref={logRef} className={styles.chatLog} aria-live="polite">
             {exchanges.length === 0 && (
               <div className={styles.emptyChat}>
-                <CouncilFaces size={40} />
+                <CouncilStickers size={phone ? 64 : 88} />
                 <p className={styles.emptyTitle}>The council is ready</p>
                 <p>Pick a starting question, or write your own below. With the entire council, you can then ask them to deliberate.</p>
                 <div className={styles.prompts}>
@@ -494,14 +516,14 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
               {PERSONA_IDS.map((p) => (
                 <span key={p} className={styles.voteHeadMember} data-persona={p}>
                   <CouncilAvatar persona={p} size={20} />
-                  {FALLBACK[p].name}
+                  {LENS[p]}
                 </span>
               ))}
               <span>Outcome</span>
             </div>
             {benched.map((r) => {
               const b = r.bench!;
-              const against = b.opinions.filter((o) => dissents(o, b) && o.name).map((o) => o.name);
+              const settled = !b.human_review;
               return (
                 <details key={r.id} className={styles.voteCase}>
                   <summary>
@@ -514,11 +536,15 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                       return (
                         <span key={p} className={styles.voteCell} data-dissent={o ? dissents(o, b) : undefined}>
                           {o ? (
-                            <span className={styles.sevPill} data-sev={o.severity} title={`${FALLBACK[p].name}: ${SEVERITY_LABEL[o.severity]}`}>
+                            <span className={styles.sevPill} data-sev={o.severity} title={`${memberLabel(p)}: ${SEVERITY_LABEL[o.severity]}`}>
                               <span className={styles.voteWho}>
                                 <CouncilAvatar persona={p} size={18} />
                               </span>
                               {SEVERITY_LABEL[o.severity]}
+                            </span>
+                          ) : b.no_opinion?.length ? (
+                            <span className={styles.voteWho} title={`${memberLabel(p)} gave no opinion: its model could not be reached`}>
+                              no opinion
                             </span>
                           ) : (
                             "—"
@@ -526,29 +552,34 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                         </span>
                       );
                     })}
-                    <span className={styles.voteOutcome} data-split={against.length > 0}>
-                      {against.length ? (
-                        <>
-                          <Icon name="flag" size={13} />
-                          {b.vote} · {against.join(" & ")} dissented
-                        </>
-                      ) : (
-                        <>
-                          <Icon name="check" size={13} />
-                          Unanimous {b.vote}
-                        </>
+                    <span className={styles.voteOutcome} data-split={!settled}>
+                      <Icon name={settled ? "check" : "flag"} size={13} />
+                      {benchOutcome(b)}
+                      {b.same_family && b.same_family.length > 0 && (
+                        <span className={styles.chip} data-tone="warn" title={`${b.same_family.join(" and ")} answered with models of one family after a fallback`}>
+                          same family (fallback)
+                        </span>
                       )}
                     </span>
                   </summary>
                   <div className={styles.voteBody}>
                     <p className={styles.majority}>
-                      <b>Majority opinion.</b> {b.majority_opinion}
+                      <b>{b.agreement === "split" ? "Chief Justice's note." : "Majority opinion."}</b> {b.majority_opinion}
                     </p>
                     {b.dissent && (
                       <p className={styles.dissentNote}>
                         <Icon name="flag" size={14} />
                         <span>
-                          <b>Dissent.</b> {b.dissent} This risk is flagged for a human lawyer to review.
+                          <b>Dissent.</b> {b.dissent}
+                          {b.human_review && ` This risk is flagged for a human lawyer to review${b.review_reason ? ` (${b.review_reason})` : ""}.`}
+                        </span>
+                      </p>
+                    )}
+                    {!b.dissent && b.human_review && (
+                      <p className={styles.dissentNote}>
+                        <Icon name="flag" size={14} />
+                        <span>
+                          This risk is flagged for a human lawyer to review{b.review_reason ? ` (${b.review_reason})` : ""}.
                         </span>
                       </p>
                     )}
@@ -557,12 +588,15 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                         {o.persona && <CouncilAvatar persona={o.persona} size={28} />}
                         <div>
                           <p className={styles.opinionHead}>
-                            <b>{o.name || o.seat}</b> rated it <span className={styles.sevDot} data-sev={o.severity} />
+                            <b>{o.persona ? memberLabel(o.persona) : o.seat}</b> rated it <span className={styles.sevDot} data-sev={o.severity} />
                             {SEVERITY_LABEL[o.severity].toLowerCase()}
                             {o.revised && <span className={styles.revised}>Revised after deliberation</span>}
                           </p>
                           <p>{o.reasoning}</p>
-                          <code className={styles.judgeModel}>{(o.persona && model(o.persona)) || o.model}</code>
+                          <code className={styles.judgeModel}>
+                            {o.model || (o.persona && model(o.persona))}
+                            {o.fallback && " · fallback"}
+                          </code>
                         </div>
                       </div>
                     ))}
@@ -640,8 +674,8 @@ function Thinking({ members }: { members: PersonaId[] }) {
     <>
       {members.map((p) => (
         <div key={p} className={styles.msg} data-persona={p}>
-          <CouncilAvatar persona={p} size={32} />
-          <span className={styles.typing} aria-label={`${FALLBACK[p].name} is thinking`}>
+          <CouncilAvatar persona={p} size={32} animate />
+          <span className={styles.typing} aria-label={`${memberLabel(p)} is thinking`}>
             <i />
             <i />
             <i />
@@ -659,7 +693,7 @@ function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section
       {ids.map((c) => {
         const s = sections.get(c);
         return s ? (
-          <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified" title="Verified section · opens the official text">
+          <a key={c} href={s.url || undefined} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified" title="Verified section · opens the official text">
             <Icon name="scale" size={13} />
             {citeLabel(s)}
             <Icon name="external" size={12} />
@@ -686,12 +720,12 @@ function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<strin
             <CouncilAvatar persona={r.member} size={24} />
           </span>
           <p className={styles.msgName}>
-            {FALLBACK[r.member].name} <span>{TEMPERAMENT[r.member]}</span>
+            {LENS[r.member]} <span>{FALLBACK[r.member].name}</span>
           </p>
           {r.round === 2 && r.responds_to && (
             <span className={styles.respondsTo}>
               <Icon name="cornerDownRight" size={13} />
-              to {FALLBACK[r.responds_to].name}
+              to {LENS[r.responds_to]}
             </span>
           )}
           {r.round === 2 && (

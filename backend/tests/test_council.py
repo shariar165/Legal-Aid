@@ -54,7 +54,7 @@ async def test_member_sees_redacted_context_own_opinion_and_history(result):
     history = [ChatTurn(speaker="user", text="Is this bad?"), ChatTurn(speaker="gloomy", text="Very.")]
     await council.chat(llm, result, "Do you agree with Grey?", ["happy"], risk, history)
     [p] = [x for x in llm.payloads if x["task"] == "council_chat"]
-    assert "Sunny, the Happy AI" in p["system"]
+    assert "Sunny, the Constructive AI" in p["system"] and council.BY_ID["happy"].lens in p["system"]
     assert risk.finding in p["user"] and "YOUR OPINION" in p["user"] and "Grey: Very." in p["user"]
     assert find_pii(p["system"] + p["user"]) == []
 
@@ -103,7 +103,7 @@ async def test_deliberation_round_two_and_chief_justice_ruling(result):
     tasks = [p["task"] for p in llm.payloads]
     assert tasks.count("council_rebuttal") == 3 and tasks.count("council_ruling") == 1
     # each member sees the colleagues' answers but is not shown its own as a colleague
-    sunny = next(p for p in llm.payloads if p["task"] == "council_rebuttal" and "Sunny, the Happy AI" in p["system"])
+    sunny = next(p for p in llm.payloads if p["task"] == "council_rebuttal" and "Sunny, the Constructive AI" in p["system"])
     colleagues = sunny["user"].split("COLLEAGUES' ANSWERS:")[1]
     assert "Regal (proud)" in colleagues and "Grey (gloomy)" in colleagues and "Sunny (happy)" not in colleagues
     # the Chief Justice gets a neutral context (no member's "YOUR OPINION") and both rounds

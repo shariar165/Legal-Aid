@@ -11,6 +11,7 @@ export const ORIGIN_LABEL = {
   critic: "Critic",
   drafter: "Procedural",
   ablation: "Ablation",
+  policy: "Policy Check",
 } as const;
 
 export const GATES = [
@@ -34,9 +35,21 @@ export const OUTCOME: Record<AblationRow["outcome"], { label: string; ok: boolea
 };
 
 /** "Contract Act 1872 · s.27" from a corpus record. */
+/** Mirrors backend/ain/naming.py: Gulf laws and ILO/EU texts number articles, standards are marked as not law. */
 export function citeLabel(s: Section): string {
-  const act = s.act_en.replace(/^The\s+/, "").replace(/,/g, "");
-  const unit = /^(ILO|EU)-/.test(s.act_key) ? "Art. " : /^(BD-GFET|BD-FENOTIF|BD-FECIRC|MY-MWO)/.test(s.act_key) ? "para " : "s.";
+  const act = s.act_en.replace(/^The\s+/, "").replace(/,/g, "") + (s.kind === "standard" ? " (voluntary standard)" : "");
+  if (s.act_key === "STD-EPP") return act;
+  if (s.kind === "company_policy" && s.act_key.startsWith("CO-")) return `${s.act_en.split(": ")[0]} · published policy · clause ${s.section}`;
+  if (s.kind === "company_policy") return `${act} · clause ${s.section}`;
+  const unit = /^STD-ILO-FAIR/.test(s.act_key)
+    ? "principle "
+    : /^STD-RBA/.test(s.act_key)
+      ? "§ "
+      : /^(ILO|EU|SA|AE|QA|OM|KW|BH)-/.test(s.act_key)
+        ? "Art. "
+        : /^(BD-GFET|BD-FENOTIF|BD-FECIRC|MY-MWO)/.test(s.act_key)
+          ? "para "
+          : "s.";
   return s.section.startsWith("Ch.") ? `${act} · ${s.section}` : `${act} · ${unit}${s.section}`;
 }
 

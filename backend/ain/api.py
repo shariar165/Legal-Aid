@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ain import auth, config
+from ain import auth, config, countries
 from ain.agents import ablation, council
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
@@ -30,6 +30,7 @@ from ain.models import (
     CouncilDeliberateResponse,
     CouncilMember,
     Credentials,
+    Destination,
     JobSummary,
     Me,
     Risk,
@@ -55,6 +56,21 @@ SAMPLES = [
         "kind": "text",
         "title": {"bn": "মালয়েশিয়ার চাকরির চুক্তি (লেখা)", "en": "Malaysia job contract (text)"},
         "subtitle": {"bn": "প্রবাসী কর্মী · ডিজিটাল কপি", "en": "Migrant worker · digital copy"},
+    },
+    {
+        "id": "migrant_sa",
+        "file": "migrant_sa_contract.txt",
+        "kind": "text",
+        "title": {"bn": "সৌদি আরবের চাকরির চুক্তি", "en": "Saudi Arabia job contract"},
+        "subtitle": {"bn": "প্রবাসী কর্মী · নির্মাণ শ্রমিক", "en": "Migrant worker · construction labourer"},
+    },
+    {
+        "id": "migrant_sa_policy",
+        "file": "migrant_sa_contract.txt",
+        "policy_file": "employer_policy_sample.txt",
+        "kind": "text",
+        "title": {"bn": "সৌদি চুক্তি + কোম্পানির নিজের নীতি", "en": "Saudi contract + the employer's own policy"},
+        "subtitle": {"bn": "চুক্তি কি কোম্পানির নিজের প্রতিশ্রুতি ভাঙছে?", "en": "Does the contract break the company's own promises?"},
     },
     {
         "id": "rmg_epz",
@@ -207,7 +223,28 @@ def health() -> dict:
 
 @app.get("/api/samples")
 def samples() -> list[dict]:
-    return [{k: v for k, v in s.items() if k != "file"} for s in SAMPLES if (config.DEMO_DIR / "docs" / s["file"]).exists()]
+    return [
+        {**{k: v for k, v in s.items() if k not in ("file", "policy_file")}, "with_policy": "policy_file" in s}
+        for s in SAMPLES
+        if (config.DEMO_DIR / "docs" / s["file"]).exists()
+    ]
+
+
+@app.get("/api/countries")
+def destination_countries() -> list[Destination]:
+    """Destination countries whose labour law is in the corpus (for the country picker)."""
+    return [countries.as_destination(c) for c in countries.load_countries()]
+
+
+async def _read_upload(file: UploadFile) -> tuple[str, bytes]:
+    name = os.path.basename(file.filename or "upload")
+    ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if ext not in ALLOWED:
+        raise HTTPException(415, f"Unsupported file type {ext or '(none)'}. Use PDF, DOCX, TXT or an image.")
+    data = await file.read()
+    if len(data) > MAX_BYTES:
+        raise HTTPException(413, "File too large (max 15 MB).")
+    return name, data
 
 
 @app.post("/api/analyze")
@@ -215,16 +252,13 @@ async def analyze(
     file: UploadFile | None = File(None),
     sample_id: str | None = Form(None),
     llm_mode: str | None = Form(None),
+    destination_country: str | None = Form(None),
+    policy: UploadFile | None = File(None),  # the employer's own policy or handbook, checked against the contract
     owner: Principal = Depends(require_principal),
 ) -> dict:
+    policy_doc = None
     if file is not None:
-        name = os.path.basename(file.filename or "upload")
-        ext = "." + name.rsplit(".", 1)[-1].lower() if "." in name else ""
-        if ext not in ALLOWED:
-            raise HTTPException(415, f"Unsupported file type {ext or '(none)'}. Use PDF, DOCX, TXT or an image.")
-        data = await file.read()
-        if len(data) > MAX_BYTES:
-            raise HTTPException(413, "File too large (max 15 MB).")
+        name, data = await _read_upload(file)
         kind = None
     elif sample_id:
         sample = next((s for s in SAMPLES if s["id"] == sample_id), None)
@@ -233,14 +267,21 @@ async def analyze(
         name = sample["file"]
         data = (config.DEMO_DIR / "docs" / name).read_bytes()
         kind = "sample" if sample["kind"] == "text" else None
+        if "policy_file" in sample:
+            policy_doc = ((config.DEMO_DIR / "docs" / sample["policy_file"]).read_bytes(), sample["policy_file"])
     else:
         raise HTTPException(400, "Send a file or a sample_id.")
     if llm_mode and llm_mode not in ("live", "replay", "fake"):
         raise HTTPException(400, "llm_mode must be live, replay or fake")
+    if destination_country and not countries.by_name(destination_country):
+        raise HTTPException(400, "Unknown destination_country. See /api/countries.")
+    if policy is not None:
+        policy_name, policy_data = await _read_upload(policy)
+        policy_doc = (policy_data, policy_name)
 
     job = new_job(name)
     auth.record_job(owner.user_id, job.id, name)
-    task = asyncio.create_task(run_pipeline(job, data, name, kind, llm_mode))
+    task = asyncio.create_task(run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc))
     _tasks.add(task)
     task.add_done_callback(lambda t: (_tasks.discard(t), t.exception() if not t.cancelled() else None))
     return {"job_id": job.id, "name": name}

@@ -32,6 +32,8 @@ class RoleConfig:
     role: str
     provider: str
     model: str
+    fallbacks: tuple[str, ...] = ()  # same-provider alternates (OpenRouter `models` routing)
+    backup: RoleConfig | None = None  # the other provider, when this one has no key or is exhausted
 
 
 @dataclass(frozen=True)
@@ -39,30 +41,97 @@ class ProviderConfig:
     name: str
     base_url: str
     key_env: str
+    rpm: int = 30
+    max_parallel: int = 0  # concurrent calls per model; 0 = no limit beyond the per-job semaphore
+    free_only: bool = False
+    reasoning: dict | None = None
+    max_tokens_floor: int = 0  # reasoning models spend part of max_tokens thinking
 
     @property
     def api_key(self) -> str | None:
         return os.getenv(self.key_env) or None
 
 
+class ConfigError(ValueError):
+    pass
+
+
+def is_free_model(model: str) -> bool:
+    return model.endswith(":free") or model == "openrouter/free"
+
+
+# Model families, matched on the model name: two judges from one family share training data and blind spots.
+FAMILIES = ("gpt-oss", "qwen", "llama", "gemma", "gemini", "claude", "deepseek", "mistral", "dots", "xing", "allam", "nemotron", "glm", "kimi")
+
+
+def model_family(model: str) -> str:
+    name = model.lower().split("/")[-1]
+    return next((f for f in FAMILIES if f in name), model.lower().split("/")[0])
+
+
+def validate(raw: dict) -> None:
+    """Refuse a routing table that could spend money on a free-only provider."""
+    providers = raw["providers"]
+    for name, r in raw["roles"].items():
+        for entry in (r, r.get("backup")):
+            if not entry:
+                continue
+            prov = entry.get("provider")
+            if prov not in providers:
+                raise ConfigError(f"role '{name}': unknown provider '{prov}'")
+            if providers[prov].get("free_only"):
+                paid = [m for m in (entry["model"], *(entry.get("fallbacks") or ())) if not is_free_model(m)]
+                if paid:
+                    raise ConfigError(f"role '{name}': {prov} is free-only, but {', '.join(paid)} is not a free model")
+
+
 @lru_cache
 def _raw() -> dict:
     with open(BACKEND / "ain" / "config.yaml", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        raw = yaml.safe_load(f)
+    validate(raw)
+    return raw
+
+
+def _role(name: str, r: dict) -> RoleConfig:
+    backup = r.get("backup")
+    return RoleConfig(
+        role=name,
+        provider=r["provider"],
+        model=r["model"],
+        fallbacks=tuple(r.get("fallbacks") or ()),
+        backup=_role(name, backup) if backup else None,
+    )
 
 
 def role(name: str) -> RoleConfig:
-    r = _raw()["roles"][name]
-    return RoleConfig(role=name, provider=r["provider"], model=r["model"])
+    return _role(name, _raw()["roles"][name])
+
+
+def role_names() -> list[str]:
+    return list(_raw()["roles"])
 
 
 def provider(name: str) -> ProviderConfig:
     p = _raw()["providers"][name]
-    return ProviderConfig(name=name, base_url=p["base_url"], key_env=p["key_env"])
+    return ProviderConfig(
+        name=name,
+        base_url=p["base_url"],
+        key_env=p["key_env"],
+        rpm=int(p.get("rpm", 30)),
+        max_parallel=int(p.get("max_parallel", 0)),
+        free_only=bool(p.get("free_only")),
+        reasoning=p.get("reasoning"),
+        max_tokens_floor=int(p.get("max_tokens_floor", 0)),
+    )
 
 
 def bench_severities() -> set[str]:
     return set(_raw()["bench"]["severities"])
+
+
+def bench_settings() -> dict:
+    return dict(_raw()["bench"])
 
 
 def quote_threshold() -> int:

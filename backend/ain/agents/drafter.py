@@ -133,7 +133,7 @@ async def draft(
     if any(v.verdict == "partial" for v in ledger):
         caveats.append("Items marked partial rely on amended provisions or paraphrases; check the cited source.")
     if any(r.bench and r.bench.human_review for r in live):
-        caveats.append("The Virtual Bench recorded a dissent on at least one risk; those items are flagged for human review.")
+        caveats.append("The Virtual Bench flagged at least one risk for human review (the judges disagreed on the verdict or on its severity, or a judge gave no opinion).")
     memo = Memo(
         title=f"Legal Risk Memorandum - {doc_name}",
         prepared_for="Migrant worker and caseworker" if migrant else "Supplier management",
@@ -158,7 +158,7 @@ def citizen_view(route: RouteDecision, risks: list[Risk], ledger: list[Verificat
         return list(out.values())
 
     cards: list[CitizenCard] = []
-    top = live[:4]
+    top = [r for r in live if r.origin != "policy"][:4]  # contradictions with the employer's policy get their own card
     cards.append(
         CitizenCard(
             kind="danger",
@@ -167,6 +167,16 @@ def citizen_view(route: RouteDecision, risks: list[Risk], ledger: list[Verificat
             citations=cites([r.id for r in top]),
         )
     )
+    broken = [r for r in live if r.origin == "policy"]
+    if broken:
+        cards.append(
+            CitizenCard(
+                kind="policy",
+                title=L10n(bn="কোম্পানির নিজের নীতি ভাঙছে", en="Breaks the company's own policy"),
+                lines=[r.citizen_line for r in broken[:4]],
+                citations=cites([r.id for r in broken[:4]]),
+            )
+        )
     if wage:
         pay_lines = [
             L10n(bn=f"কথা দেওয়া বেতন: {wage.currency} {_bn(wage.promised)}", en=f"Promised salary: {wage.currency} {wage.promised:,.0f}"),

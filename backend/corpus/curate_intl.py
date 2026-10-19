@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import json
 import re
+import zipfile
 from datetime import date
 from pathlib import Path
 
@@ -44,9 +45,15 @@ def load(name: str) -> str:
         if path.suffix == ".pdf":
             with pymupdf.open(path) as doc:
                 text = " ".join(p.get_text() for p in doc)
+        elif path.suffix == ".docx":
+            xml = zipfile.ZipFile(path).read("word/document.xml").decode("utf-8")
+            text = html.unescape(re.sub(r"<[^>]+>", " ", xml.replace("</w:p>", "\n")))
         else:
-            text = html.unescape(re.sub(r"<[^>]+>", " ", path.read_text(encoding="utf-8", errors="replace")))
-        _cache[name] = _ws(text.replace("ﬁ", "fi").replace("ﬂ", "fl"))
+            page = re.sub(r"<script.*?</script>|<style.*?</style>", " ", path.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+            text = html.unescape(re.sub(r"<[^>]+>", " ", page))
+        for lig, plain in (("ﬃ", "ffi"), ("ﬄ", "ffl"), ("ﬀ", "ff"), ("ﬁ", "fi"), ("ﬂ", "fl")):
+            text = text.replace(lig, plain)
+        _cache[name] = _ws(text)
     return _cache[name]
 
 
@@ -64,6 +71,44 @@ def cut(name: str, start: str, end: str | None, occurrence: int = 0) -> str:
         raise SystemExit(f"end marker not found in {name}: {end!r}")
     return text[idx:j].strip()
 
+
+def table(name: str, page: int, index: int, title: str) -> str:
+    """One table of a PDF, read cell by cell and written out row by row: "Title: Head: value | Head (sub-head): key: value; ...".
+
+    Only the cells' own text is used (joined with ":", ";" and "|"), so nothing is typed by hand. The table must start with a
+    row holding just `title`, then a row of column heads; a head spanning several columns (e.g. "Daily" over one column per
+    number of working days) is followed by a sub-head row, a row of keys and a row of values. Anything else fails loudly.
+    """
+    with pymupdf.open(RAW / name) as doc:
+        rows = [[_ws(c) if c else None for c in r] for r in doc[page].find_tables().tables[index].extract()]
+    rows = [r for r in rows if any(r)]
+    if rows[0][0] != title or any(rows[0][1:]):
+        raise SystemExit(f"table {name} p.{page} #{index}: first row is not the title {title!r}: {rows[0]}")
+    heads = [i for i, c in enumerate(rows[1]) if c]
+    spans = [range(a, b) for a, b in zip(heads, [*heads[1:], len(rows[1])])]
+    parts = []
+    for cols in spans:
+        head = rows[1][cols[0]]
+        cells = [[r[c] for c in cols] for r in rows[2:]]
+        if len(cols) == 1:
+            vals = [c[0] for c in cells if c[0]]
+            if len(vals) != 1:
+                raise SystemExit(f"table {name}: column {head!r} has {len(vals)} values")
+            parts.append(f"{head}: {vals[0]}")
+            continue
+        sub_head, keys, vals = cells[0][0], cells[1], cells[2]
+        if not sub_head or any(cells[0][1:]) or not all(keys) or not all(vals):
+            raise SystemExit(f"table {name}: column group {head!r} is not sub-head / keys / values: {cells}")
+        parts.append(f"{head} ({sub_head}): " + "; ".join(f"{k}: {v}" for k, v in zip(keys, vals)))
+    return f"{title}: " + " | ".join(parts)
+
+
+def _law(common: dict, *sections: dict) -> list[dict]:
+    """Several excerpts of one act: the act-level fields are shared, each section adds its own."""
+    return [{**common, **sec} for sec in sections]
+
+
+BH_NOTE = "Legislation & Legal Opinion Commission English version for reference (published May 2024); the Arabic text in the Official Gazette prevails."
 
 SPECS = [
     # --- ILO ---------------------------------------------------------------------------
@@ -94,8 +139,153 @@ SPECS = [
          start="Minimum wages rates and rate of wages paid to employee based only on piece rate, tonnage, etc. with effect from 1 February 2025",
          end="Minimum wages rates and rate of wages paid to employee based only on piece rate, tonnage, etc. for the period",
          url="https://amcham.com.my/wp-content/uploads/PUA-376.pdf", via=None, packs=["my_employment"],
-         extra_start="Minimum Wages Rate Monthly Daily Hourly RM1,700", extra_end=" Minimum Wages Rate Monthly Daily Hourly RM1,500",
+         # para 3(1)'s rate table heads the next page; the plain text flattens it ("Monthly Daily Hourly RM1,700 ... RM98.08"),
+         # so it is read cell by cell and put back where 3(1) introduces it
+         table=dict(page=6, index=0, title="Minimum Wages Rate", after="shall be as follows:"),
+         drop=r" P\.U\. \(A\) 376 \d+(?= \()",  # the gazette's running page header, not part of the text
          note="Federal Government Gazette, 4 December 2024; revokes Minimum Wages Order 2022."),
+    dict(citation_id="MY-EA-1955-s90B", jurisdiction="MY", act_key="MY-EA-1955", act="Employment Act 1955 (Act 265), Malaysia",
+         year=1955, section="90B", heading="Forced labour", file="my_ea_mohr.pdf",
+         start="90B. Any employer who threatens, deceives or forces an employee", end=" Employment 101",
+         url="https://jtksm.mohr.gov.my/sites/default/files/2023-11/Akta%20Kerja%201955%20(Akta%20265).pdf",
+         via=None, packs=["my_employment"], note="AGC updated text as at 1 January 2023."),
+    # --- Saudi Arabia ------------------------------------------------------------------
+    *_law(
+        dict(jurisdiction="SA", act_key="SA-LABOR-2005", act="Labor Law, Royal Decree No. M/51 of 1426H (Saudi Arabia)", year=2005,
+             file="sa_labor_wipo.html", url="https://www.wipo.int/wipolex/en/legislation/details/14685",
+             via="https://www.wipo.int/wipolex/edocs/lexdocs/laws/en/sa/sa055en.pdf", packs=["sa_labour"], status="amended",
+             note="English translation of the 2005 text (the Arabic text prevails). The Labor Law has since been amended, including by "
+                  "Royal Decree M/44 in force from 19 February 2025; check the current Arabic text before relying on it."),
+        dict(citation_id="SA-LABOR-2005-a40", section="40", heading="Employer bears recruitment, iqama, work-permit and return-ticket costs",
+             start="Article (40): (1) An employer shall incur the fees", end=" (3) An employer shall bear the fees of transferring"),
+        dict(citation_id="SA-LABOR-2005-a61", section="61", heading="No unpaid work; wages may not be withheld",
+             start="Article (61): In addition to the duties provided for in this Law", end=" (2) Give the workers the time required"),
+        dict(citation_id="SA-LABOR-2005-a84", section="84", heading="End-of-service award",
+             start="Article (84): Upon the end of the work relation", end=" Article (85):"),
+        dict(citation_id="SA-LABOR-2005-a93", section="93", heading="Deductions may not exceed half the wage",
+             start="Article (93): In all cases, deductions made may not exceed",
+             end=" PART VI WORK CONDITIONS AND CIRCUMSTANCES Chapter One Wages PART VI"),
+    ),
+    # --- United Arab Emirates ----------------------------------------------------------
+    *_law(
+        dict(jurisdiction="AE", act_key="AE-LABOUR-2021", act="Federal Decree-Law No. 33 of 2021 Regulating Labour Relations (UAE)", year=2021,
+             file="ae_labour_fao.pdf", url="https://u.ae/en/information-and-services/jobs/employment-laws-and-regulations-in-the-private-sector",
+             via="https://faolex.fao.org/docs/pdf/uae217212E.pdf", packs=["ae_labour"], status="amended",
+             note="MOHRE English text of the 2021 Decree-Law, marked 'not an official translation' (the Arabic text prevails). "
+                  "Later amended, including by Federal Decree-Laws 14/2022 and 20/2023."),
+        dict(citation_id="AE-LABOUR-2021-a6", section="6", heading="Recruitment and employment of workers; no recruitment fees for workers",
+             start="Article (6) Recruitment and Employment of Workers", end=" 5. Te Minister, in coordination"),
+        dict(citation_id="AE-LABOUR-2021-a13", section="13", heading="Obligations of the employer (documents, repatriation)",
+             start="Article (13) Employer’s Obligations", end="Article (14) Prohibition of Forced Labour"),
+        dict(citation_id="AE-LABOUR-2021-a14", section="14", heading="Prohibition of forced labour",
+             start="Article (14) Prohibition of Forced Labour", end=" 2. Sexual harassment"),
+        dict(citation_id="AE-LABOUR-2021-a25", section="25", heading="Cases of deduction or withholding from the wage",
+             start="Article (25) Cases of Deduction or Withhold", end="Article (26) Enabling the Worker to Work"),
+        dict(citation_id="AE-LABOUR-2021-a51", section="51", heading="End-of-service benefits for full-time workers",
+             start="Article (51) End of Service Benefits for Full-Time Workers", end=" 3. Te foreign worker shall be entitled to a benefit for parts"),
+    ),
+    # --- Qatar -------------------------------------------------------------------------
+    *_law(
+        dict(jurisdiction="QA", act_key="QA-LABOUR-2004", act="Labour Law, Law No. 14 of 2004 (Qatar)", year=2004,
+             file="qa_labour_embassy.pdf", url="https://www.almeezan.qa/LawView.aspx?opt&LawID=3961&language=en",
+             via="https://dev.alkarama.org/sites/default/files/2016-11/QTR_LabourLaw_EN_0.pdf", packs=["qa_labour"], status="amended",
+             note="English translation distributed by the Embassy of Qatar (the Arabic text prevails). Amended since 2004, "
+                  "including by Law No. 18 of 2020; check the consolidated text on Al Meezan."),
+        dict(citation_id="QA-LABOUR-2004-a33", section="33", heading="Recruiters may not take recruitment fees from the worker",
+             start="Article (33) The person who is licensed to recruit workers", end=" 2. To carry out in the office"),
+        dict(citation_id="QA-LABOUR-2004-a54", section="54", heading="End-of-service gratuity",
+             start="Article (54) In addition to any sums", end=" The worker's service shall be considered"),
+        dict(citation_id="QA-LABOUR-2004-a57", section="57", heading="Employer returns the worker home at its own cost",
+             start="Article (57) Upon termination of the service of the worker", end=" If the worker joins another employer"),
+        dict(citation_id="QA-LABOUR-2004-a70", section="70", heading="Limits on attachment and deduction of wages",
+             start="Article (70) Any part of the wage", end=" Article (71)"),
+    ),
+    # --- Oman --------------------------------------------------------------------------
+    *_law(
+        dict(jurisdiction="OM", act_key="OM-LABOUR-2023", act="Labour Law, Royal Decree 53/2023 (Oman)", year=2023,
+             file="om_labour_decree.html", url="https://decree.om/2023/rd20230053/", via=None, packs=["om_labour"],
+             note="Unofficial English translation published by Decree.om; the Arabic text in the Official Gazette prevails."),
+        dict(citation_id="OM-LABOUR-2023-a5", section="5", heading="No compulsory or forced labour",
+             start="Article 5 The employer is prohibited from imposing", end=" Article 6 It is not permitted"),
+        dict(citation_id="OM-LABOUR-2023-a6", section="6", heading="Employer may not keep the worker's passport",
+             start="Article 6 It is not permitted for the employer to keep the passport", end=" Article 7 The Arabic language"),
+        dict(citation_id="OM-LABOUR-2023-a14", section="14", heading="Employer returns the non-Omani worker home",
+             start="Article 14 The employer shall return the non-Omani worker", end=" Article 15 The minister shall issue"),
+        dict(citation_id="OM-LABOUR-2023-a31", section="31", heading="No amounts may be charged to recruited workers",
+             start="Article 31 It is prohibited to practise the activity of recruiting", end=" Article 32 It is prohibited to advertise"),
+        dict(citation_id="OM-LABOUR-2023-a96", section="96", heading="Wages may be withheld only up to one-fourth",
+             start="Article 96 It is not permitted to withhold or waive the wages", end=" Article 97 The right"),
+    ),
+    # --- Kuwait ------------------------------------------------------------------------
+    *_law(
+        dict(jurisdiction="KW", act_key="KW-LABOUR-2010", act="Law No. 6 of 2010 on Labour in the Private Sector (Kuwait)", year=2010,
+             file="kw_labour_huembassy.pdf", url="https://kuwait.mfa.gov.hu/assets/03/54/68/2937dc434147a45919353f5d3aa861cc69e84dcf.pdf",
+             via="https://web.archive.org/web/20240909223937/https://kuwait.mfa.gov.hu/assets/03/54/68/2937dc434147a45919353f5d3aa861cc69e84dcf.pdf",
+             packs=["kw_labour"], status="amended",
+             note="Unofficial English translation hosted by the Embassy of Hungary in Kuwait (archived copy); the Arabic text prevails. "
+                  "Amended since 2010 (e.g. 2017-2018 changes to Articles 51 and 70)."),
+        dict(citation_id="KW-LABOUR-2010-a10", section="10", heading="Employer bears the worker's return to his country",
+             start="Article -10- The employer shall be prohibited from employing foreign labor", end="Article -11-"),
+        dict(citation_id="KW-LABOUR-2010-a51", section="51", heading="End-of-service gratuity",
+             start="Article -51- The laborer shall be entitled the end of service gratuity", end="Article -52-"),
+        dict(citation_id="KW-LABOUR-2010-a59", section="59", heading="Limits on deductions from wages",
+             start="Article -59-", end="Article -60-"),
+    ),
+    # --- Bahrain -----------------------------------------------------------------------
+    *_law(
+        dict(jurisdiction="BH", act_key="BH-LMRA-2006", act="Law No. 19 of 2006 Regulating the Labour Market (Bahrain)", year=2006,
+             file="bh_lmra_lloc.docx", url="https://www.lloc.gov.bh/FullEn/K1906.docx", via=None, packs=["bh_labour"], note=BH_NOTE),
+        dict(citation_id="BH-LMRA-2006-a23", section="23", heading="Work permits; no money may be taken from a worker for a permit or a job",
+             start="Article (23) Work Permits", end="Article (24) Conditions and Procedures"),
+    ),
+    *_law(
+        dict(jurisdiction="BH", act_key="BH-LABOUR-2012", act="Labour Law for the Private Sector, Law No. 36 of 2012 (Bahrain)", year=2012,
+             file="bh_labour_lloc.docx", url="https://www.lloc.gov.bh/FullEn/K3612.docx", via=None, packs=["bh_labour"], note=BH_NOTE),
+        dict(citation_id="BH-LABOUR-2012-a44", section="44", heading="Loan deductions limited to 10% of the wage",
+             start="Article (44): (a) An employer shall not deduct", end="Article (45):"),
+        dict(citation_id="BH-LABOUR-2012-a45", section="45", heading="Wages may be attached only up to 25%",
+             start="Article (45): The wage due to a worker shall not be attached", end="Article (46):"),
+        dict(citation_id="BH-LABOUR-2012-a116", section="116", heading="Leaving indemnity",
+             start="Article (116): A worker who is not subject", end=" Article (117):"),
+    ),
+    # --- Singapore ---------------------------------------------------------------------
+    dict(citation_id="SG-EFMA-1990-s22A", jurisdiction="SG", act_key="SG-EFMA-1990", act="Employment of Foreign Manpower Act 1990 (Singapore)",
+         year=1990, section="22A", heading="No money may be taken from a foreign employee for getting or keeping a job", file="sg_efma_s22a.html",
+         start="22A. —(1) A person must not deduct", end=" (3) Any person who deducts",
+         url="https://sso.agc.gov.sg/Act/EFMA1990?ProvIds=pr22A-", via=None, packs=["sg_labour"], note="Singapore Statutes Online, current version."),
+    dict(citation_id="SG-EA-1968-s32", jurisdiction="SG", act_key="SG-EA-1968", act="Employment Act 1968 (Singapore)",
+         year=1968, section="32", heading="Deductions not to exceed prescribed limit", file="sg_ea_s32.html",
+         start="32. —(1) The total amount of all deductions", end=" Singapore Statutes Online FAQs",
+         url="https://sso.agc.gov.sg/Act/EmA1968?ProvIds=pr32-", via=None, packs=["sg_labour"], note="Singapore Statutes Online, current version."),
+    dict(citation_id="SG-PA-2007-s47", jurisdiction="SG", act_key="SG-PA-2007", act="Passports Act 2007 (Singapore)",
+         year=2007, section="47(5)", heading="Offence to keep another person's foreign travel document", file="sg_pa_s47.html",
+         start="(5) If — ( a ) a person has or retains possession", end=" (6) If",
+         url="https://sso.agc.gov.sg/Act/PA2007?ProvIds=pr47-", via=None, packs=["sg_labour"], note="Singapore Statutes Online, current version."),
+    # --- voluntary recruitment standards (not law) ---------------------------------------
+    *_law(
+        dict(jurisdiction="INTL", act_key="STD-ILO-FAIR-2019", act="ILO General Principles and Operational Guidelines for Fair Recruitment (2019)",
+             year=2019, file="std_ilo_fair.pdf", url="https://www.ilo.org/publications/general-principles-and-operational-guidelines-fair-recruitment-and",
+             via="https://respect.international/wp-content/uploads/2019/07/General-Principles-and-Operational-Guidelines-for-Fair-Recruitment-and-Definition-of-Recruitment-Fees-and-Related-Costs.pdf",
+             packs=["std_recruitment"], kind="standard", note="Non-binding ILO guidance adopted by a tripartite meeting of experts."),
+        dict(citation_id="STD-ILO-FAIR-2019-p7", section="7", heading="No recruitment fees or related costs for workers",
+             start="7. No recruitment fees or related costs should be charged to, or otherwise borne by, workers or jobseekers.", end=" 8. The terms and conditions"),
+        dict(citation_id="STD-ILO-FAIR-2019-p8", section="8", heading="Clear written contracts; no contract substitution",
+             start="8. The terms and conditions of a worker’s employment should be specified", end=" 9. Workers’ agreements"),
+        dict(citation_id="STD-ILO-FAIR-2019-p11", section="11", heading="Identity documents must not be retained",
+             start="11. Freedom of workers to move within a country or to leave a country should be respected.", end=" 12. Workers should be free"),
+        dict(citation_id="STD-ILO-FAIR-2019-p12", section="12", heading="Freedom to end the job and return home",
+             start="12. Workers should be free to terminate their employment", end=" 13. Workers, irrespective"),
+    ),
+    dict(citation_id="STD-EPP-LGRR", jurisdiction="INTL", act_key="STD-EPP", act="Employer Pays Principle (Leadership Group for Responsible Recruitment)",
+         year=2016, section="policy commitment", heading="No worker should pay for a job", file="std_epp_lgrr.pdf",
+         start="The policy commitment should reflect the Employer Pays Principle", end=" • The commitment should clearly expl",
+         url="https://www.ihrb.org/employerpays/the-employer-pays-principle", via=None, packs=["std_recruitment"], kind="standard",
+         note="Voluntary industry commitment; from the Leadership Group's 'Six Steps to Responsible Recruitment' guide."),
+    dict(citation_id="STD-RBA-2024-A1", jurisdiction="INTL", act_key="STD-RBA-2024", act="Responsible Business Alliance Code of Conduct 8.0 (2024)",
+         year=2024, section="A.1", heading="Prohibition of forced labor (documents, fees, contracts)", file="std_rba_8.pdf",
+         start="1) Prohibition of Forced Labor Forced labor in any form", end=" 2) Young Workers",
+         url="https://www.responsiblebusiness.org/code-of-conduct/", via="https://www.responsiblebusiness.org/media/docs/RBACodeofConduct8.0_English.pdf",
+         packs=["std_recruitment"], kind="standard", note="Industry code binding RBA members and their suppliers by contract; in effect from 1 January 2024."),
     # --- EU ------------------------------------------------------------------------------
     dict(citation_id="EU-CSDDD-2024-a10", jurisdiction="EU", act_key="EU-CSDDD-2024",
          act="Directive (EU) 2024/1760 on corporate sustainability due diligence (CSDDD)", year=2024, section="10",
@@ -130,12 +320,18 @@ SPECS = [
 
 
 def main() -> None:
-    today = date.today().isoformat()
     out = []
     for s in SPECS:
         text = cut(s["file"], s["start"], s["end"])
         if s.get("extra_start"):
             text += " " + cut(s["file"], s["extra_start"], s["extra_end"])
+        if s.get("drop"):
+            text = re.sub(s["drop"], "", text)
+        if s.get("table"):
+            t = s["table"]
+            if text.count(t["after"]) != 1:
+                raise SystemExit(f"{s['citation_id']}: table anchor {t['after']!r} must occur exactly once")
+            text = text.replace(t["after"], f"{t['after']} {table(s['file'], t['page'], t['index'], t['title'])}")
         out.append(
             {
                 "citation_id": s["citation_id"],
@@ -151,11 +347,12 @@ def main() -> None:
                 "url": s["url"],
                 "act_url": s["url"],
                 "source": s.get("via") or s["url"],
-                "retrieved_at": today,
+                "retrieved_at": date.fromtimestamp((RAW / s["file"]).stat().st_mtime).isoformat(),  # when the file was downloaded
                 "status": s.get("status", "in_force"),
                 "superseded_by": None,
                 "amendment_notes": [s["note"]] if s.get("note") else [],
                 "packs": s["packs"],
+                "kind": s.get("kind", "law"),
             }
         )
         print(f"{s['citation_id']:<24} {len(text):>5} chars  {text[:70]}…")

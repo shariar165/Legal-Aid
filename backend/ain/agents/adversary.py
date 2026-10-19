@@ -42,10 +42,15 @@ def _clause_block(clauses: list[Clause], redact) -> str:
 # ------------------------------------------------------------------ deterministic stand-ins for offline/test mode
 
 
-def _fake_hypotheses(clauses: list[Clause], facts: DocFacts, route: RouteDecision, text: str) -> dict:
+def _fake_hypotheses(clauses: list[Clause], facts: DocFacts, route: RouteDecision, text: str, known: list[Risk]) -> dict:
     low = text.lower()
     hyps = []
-    if "bd_migration" in route.pack_ids and not re.search(r"return (air|ticket|flight|passage|journey)|ফেরত আসিবার খরচ", low):
+    flagged = {r.rule_id for r in known}
+    if (
+        "bd_migration" in route.pack_ids
+        and "PB-RETURN-TICKET" not in flagged  # the playbook already raised it under the destination country's law
+        and not re.search(r"return (air|ticket|flight|passage|journey)|ফেরত আসিবার খরচ", low)
+    ):
         ids = [c.id for c in clauses if re.search(r"terminate|air ticket|travel", c.text, re.I)][:3]
         hyps.append(
             {
@@ -141,7 +146,7 @@ async def run(
         f"LAW PACKS: {', '.join(sorted(route.pack_ids))}\nALREADY FLAGGED:\n{known_titles}\n\nCLAUSES:\n{_clause_block(clauses, redact)}",
         task="adversary_hypotheses",
         agent="Adversarial Counsel",
-        fake=lambda: _fake_hypotheses(clauses, facts, route, full_text),
+        fake=lambda: _fake_hypotheses(clauses, facts, route, full_text, known),
         temperature=0.3,
     )
     hypotheses = [h for h in hyp.get("hypotheses", [])[:3] if h.get("queries")]

@@ -36,6 +36,9 @@ class Section(BaseModel):
     superseded_by: str | None = None
     amendment_notes: list[str] = Field(default_factory=list)
     packs: list[str] = Field(default_factory=list)
+    # law: a statute or regulation; standard: a voluntary code (ILO principles, Employer Pays, RBA);
+    # company_policy: an employer's own published or uploaded policy
+    kind: Literal["law", "standard", "company_policy"] = "law"
 
 
 # ---------------------------------------------------------------- ingestion
@@ -109,6 +112,7 @@ class OutboundCall(BaseModel):
     model: str
     chars: int
     cached: bool = False
+    fallback: bool = False  # answered by a backup provider or a fallback model, not the configured primary
 
 
 class PrivacyReceipt(BaseModel):
@@ -147,7 +151,7 @@ class Claim(BaseModel):
     proposition: str
     citation_id: str
     quote: str | None = None
-    origin: Literal["playbook", "adversary", "critic", "drafter", "ablation"] = "playbook"
+    origin: Literal["playbook", "adversary", "critic", "drafter", "ablation", "policy"] = "playbook"
 
 
 GateName = Literal["existence", "fidelity", "entailment", "currency"]
@@ -165,10 +169,12 @@ class BenchOpinion(BaseModel):
     model: str
     persona: str = ""  # council personality id: happy | proud | gloomy
     name: str = ""  # the persona's display name, e.g. "Sunny"
+    lens: str = ""  # the judge's reasoning lens, shown first: Remedies | Text | Enforcement
     verdict: Literal["supports", "neutral", "contradicts"]
     severity: Severity
     reasoning: str
     revised: bool = False
+    fallback: bool = False  # answered by a fallback or backup model, not the seat's configured one
 
 
 class BenchResult(BaseModel):
@@ -177,10 +183,17 @@ class BenchResult(BaseModel):
     majority_verdict: Literal["supports", "neutral", "contradicts"]
     majority_severity: Severity
     vote: str  # e.g. "2–1"
+    agreement: Literal["unanimous", "majority", "split", "no_quorum"] = "unanimous"  # on the verdict; a 1-1-1 split has no majority
+    severity_range: str | None = None  # "medium–high" when the judges are one notch apart
     majority_opinion: str
     dissent: str | None = None
     human_review: bool = False
+    review_reason: str | None = None  # why human review was flagged
     chairman_model: str
+    peer_review: bool = True  # False when the first opinions were unanimous and the review round was skipped
+    same_family: list[str] = Field(default_factory=list)  # judges whose answering models share a family (after a fallback)
+    no_opinion: list[str] = Field(default_factory=list)  # judges whose call failed on every route; they do not vote
+    quorum: bool = True  # False when fewer than two judges answered: the single-judge check (Gate 3) decides instead
 
 
 class Verification(BaseModel):
@@ -195,7 +208,7 @@ class Verification(BaseModel):
 class Risk(BaseModel):
     id: str
     rule_id: str | None = None
-    origin: Literal["playbook", "adversary", "calculator"]
+    origin: Literal["playbook", "adversary", "calculator", "policy"]  # policy: the contract breaks the employer's own policy
     category: str
     title: L10n
     severity: Severity
@@ -243,7 +256,7 @@ class CitizenCitation(BaseModel):
 
 
 class CitizenCard(BaseModel):
-    kind: Literal["danger", "todo", "deadline", "pay"]
+    kind: Literal["danger", "todo", "deadline", "pay", "policy"]
     title: L10n
     big: L10n | None = None
     lines: list[L10n]
@@ -308,11 +321,24 @@ class Stats(BaseModel):
     seconds: float = 0.0
 
 
+class Destination(BaseModel):
+    """The country where the job is, as the UI shows it (from ain/countries.yaml)."""
+
+    code: str | None = None  # None: a country we have no labour law for yet
+    name: L10n
+    of: L10n | None = None  # possessive: "Saudi Arabia's" / "সৌদি আরবের"
+    supported: bool = False
+    law: str | None = None  # label of the country's law pack
+    help: L10n | None = None  # where the worker can get help there
+
+
 class AnalysisResult(BaseModel):
     job_id: str
     llm_mode: str
     document: Document
+    policy: Document | None = None  # the employer's own policy, if one was uploaded (redacted like the contract)
     facts: DocFacts
+    destination: Destination | None = None
     route: RouteDecision
     risks: list[Risk]
     ledger: list[Verification]
@@ -331,10 +357,11 @@ class AnalysisResult(BaseModel):
 class CouncilMember(BaseModel):
     id: str  # happy | proud | gloomy
     name: str
-    title: str  # e.g. "the Happy AI"
+    title: str  # e.g. "the Constructive AI"
     tagline: str
     seat: str
     model: str
+    lens: str = ""  # Remedies | Text | Enforcement - shown before the name
 
 
 class ChatTurn(BaseModel):

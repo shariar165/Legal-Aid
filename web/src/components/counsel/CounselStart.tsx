@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { api, type Health, type Sample } from "@/lib/api";
+import { api, type Destination, type Health, type Sample } from "@/lib/api";
 import { AccountMenu } from "./Account";
 import { Icon, type IconName } from "./Icons";
 import styles from "./counsel.module.css";
@@ -24,6 +24,10 @@ export function CounselStart() {
   const router = useRouter();
   const [health, setHealth] = useState<Health | null>(null);
   const [samples, setSamples] = useState<Sample[]>([]);
+  const [countries, setCountries] = useState<Destination[]>([]);
+  const [country, setCountry] = useState("");
+  const [policy, setPolicy] = useState<File | null>(null);
+  const policyInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -36,6 +40,10 @@ export function CounselStart() {
         setSamples(s);
       })
       .catch(() => setError("The analysis server is not reachable at the configured address. Start the backend and reload."));
+    api
+      .countries()
+      .then(setCountries)
+      .catch(() => {}); // without the list the document alone decides the country
   }, []);
 
   const go = async (run: () => Promise<{ job_id: string }>, key: string) => {
@@ -51,7 +59,7 @@ export function CounselStart() {
   };
 
   const upload = (f: File | undefined) => {
-    if (f && !busy) void go(() => api.analyzeFile(f), "upload");
+    if (f && !busy) void go(() => api.analyzeFile(f, country || null, policy), "upload");
   };
 
   return (
@@ -142,6 +150,50 @@ export function CounselStart() {
           }}
         />
 
+        <div className={styles.countryRow}>
+          <span>Employer&apos;s own policy</span>
+          {policy ? (
+            <>
+              <span className={styles.chip}>
+                <Icon name="file" size={13} />
+                {policy.name}
+              </span>
+              <button type="button" className={styles.quietBtn} onClick={() => setPolicy(null)}>
+                Remove
+              </button>
+            </>
+          ) : (
+            <button type="button" className={styles.secondaryBtn} onClick={() => policyInput.current?.click()} disabled={!!busy}>
+              <Icon name="plus" size={15} />
+              Add a policy or handbook (optional)
+            </button>
+          )}
+          <input
+            ref={policyInput}
+            type="file"
+            hidden
+            accept=".pdf,.docx,.txt,image/*"
+            onChange={(e) => {
+              setPolicy(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        {countries.length > 0 && (
+          <label className={styles.countryRow}>
+            <span>Country of work</span>
+            <select className={styles.countrySelect} value={country} onChange={(e) => setCountry(e.target.value)}>
+              <option value="">Detect from the document</option>
+              {countries.map((c) => (
+                <option key={c.code} value={c.code ?? ""}>
+                  {c.name.en} · {c.law}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         {samples.length > 0 && (
           <section aria-labelledby="samples-title">
             <div className={styles.sectionHead}>
@@ -155,7 +207,7 @@ export function CounselStart() {
                 <button key={s.id} type="button" className={styles.sampleCard} disabled={!!busy} onClick={() => go(() => api.analyzeSample(s.id), s.id)}>
                   <span className={styles.sampleKind}>
                     <Icon name={s.kind === "image" ? "camera" : "file"} size={13} />
-                    {s.kind === "image" ? "Phone photo" : "Document"}
+                    {s.kind === "image" ? "Phone photo" : s.with_policy ? "Contract + policy" : "Document"}
                   </span>
                   <span className={styles.sampleTitle}>{s.title.en}</span>
                   <span className={styles.sampleBn} lang="bn">

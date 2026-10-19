@@ -18,7 +18,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from ain import config
+from ain import config, countries
 from ain.models import Clause, Deduction, DocFacts, Document
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".heic"}
@@ -151,13 +151,12 @@ def segment(text: str) -> list[Clause]:
 
 # ------------------------------------------------------------------ facts
 
-COUNTRIES = {
-    "malaysia": "Malaysia", "saudi arabia": "Saudi Arabia", "qatar": "Qatar", "united arab emirates": "UAE",
-    "dubai": "UAE", "oman": "Oman", "kuwait": "Kuwait", "singapore": "Singapore", "jordan": "Jordan", "bahrain": "Bahrain",
-    "মালয়েশিয়া": "Malaysia", "সৌদি": "Saudi Arabia",
-}
-CURRENCY = {"rm": "RM", "myr": "RM", "ringgit": "RM", "bdt": "BDT", "tk": "BDT", "taka": "BDT", "টাকা": "BDT", "sar": "SAR", "qar": "QAR", "aed": "AED", "usd": "USD", "$": "USD"}
-MONEY = re.compile(r"(RM|MYR|BDT|Tk\.?|Taka|SAR|QAR|AED|USD|\$)\s?([\d,]+(?:\.\d+)?)", re.I)
+# Destination countries and their currencies come from the registry (ain/countries.yaml).
+CURRENCY = {"bdt": "BDT", "tk": "BDT", "taka": "BDT", "টাকা": "BDT", "usd": "USD", "$": "USD", **countries.currency_codes()}
+_CUR = "|".join(re.escape(k) for k in sorted(CURRENCY, key=len, reverse=True))
+_AMOUNT = r"[\d,]+(?:\.\d+)?"
+# "RM 1,200" or "1,200 riyals"; the lookarounds keep "rm" in "form 3" or "kd" in "kd5" from counting
+MONEY = re.compile(rf"(?<![A-Za-z])({_CUR})\.?\s?({_AMOUNT})|({_AMOUNT})\s?({_CUR})(?![A-Za-z])", re.I)
 WORDNUM = re.compile(r"\((\d{1,3})\)")
 
 
@@ -169,13 +168,19 @@ def _cur(s: str) -> str:
     return CURRENCY.get(s.lower().rstrip("."), s.upper())
 
 
+def _money(m: re.Match[str]) -> tuple[float, str]:
+    """(amount, currency code) from a MONEY match, whichever order the contract wrote them in."""
+    return (_num(m.group(2)), _cur(m.group(1))) if m.group(1) else (_num(m.group(3)), _cur(m.group(4)))
+
+
 def _salary(clauses: list[Clause]) -> tuple[float | None, str | None, str | None]:
     for c in clauses:
         low = c.text.lower()
         if re.search(r"salary|wage|বেতন|মজুরি", low) and not re.search(r"deduct", low):
             m = MONEY.search(c.text)
             if m:
-                return _num(m.group(2)), _cur(m.group(1)), m.group(0)
+                amount, cur = _money(m)
+                return amount, cur, m.group(0)
     return None, None, None
 
 
@@ -186,12 +191,13 @@ def _deductions(clauses: list[Clause]) -> list[Deduction]:
             continue
         items = re.split(r"\n\s*\([a-z]\)\s*|;\s*\([a-z]\)\s*", c.text)
         for item in items[1:] if len(items) > 1 else items:
-            per_month = re.search(r"(RM|MYR|BDT|Tk\.?)\s?([\d,]+)\s*(?:per|a|each)\s*month", item, re.I)
+            per_month = re.search(rf"(?:{MONEY.pattern})\s*(?:per|a|each)\s*month", item, re.I)
             if not per_month:
                 continue
             months = re.search(r"for\s+(\d{1,3})\s+months", item, re.I)
-            label = re.split(r"\s+(?:of|at)\s+(?:RM|MYR|BDT|Tk)|,\s*RM|\s+RM", item.strip(), maxsplit=1)[0].strip(" ;.,")
-            out.append(Deduction(label=label[:90], amount=_num(per_month.group(2)), per="month", months=int(months.group(1)) if months else None))
+            item = item.strip()
+            label = re.sub(r"(?:\s+(?:of|at)|,)\s*$", "", item[: MONEY.search(item).start()].strip()).strip(" ;.,") or item
+            out.append(Deduction(label=label[:90], amount=_money(per_month)[0], per="month", months=int(months.group(1)) if months else None))
     return out
 
 
@@ -208,10 +214,8 @@ def extract_facts(text: str, clauses: list[Clause]) -> DocFacts:
     has_supply = bool(re.search(r"supply agreement|purchase order|buyer", low))
     f.doc_type = "mixed" if has_employment and has_supply else "employment" if has_employment else "commercial" if has_supply else "unknown"
 
-    for key, name in COUNTRIES.items():
-        if key in low:
-            f.destination_country = name
-            break
+    country = countries.detect(text)
+    f.destination_country = country.name["en"] if country else None
 
     for m in re.finditer(r"\b(?:EPZ|DEPZ|CEPZ|AEPZ|export processing zone)\b|ইপিজেড", text, re.I):
         before = low[max(0, m.start() - 25) : m.start()]
@@ -254,7 +258,7 @@ def build_document(data: bytes, filename: str, source_kind: str | None = None) -
     clauses = segment(text)
     facts = extract_facts(text, clauses)
     if ex.ocr_lines and facts.salary_text:
-        amount = facts.salary_text.split()[-1] if " " in facts.salary_text else facts.salary_text
+        amount = re.search(r"[\d,]+(?:\.\d+)?", facts.salary_text).group(0)
         hits = [line.conf for line in ex.ocr_lines if amount.replace(",", "") in line.text.replace(",", "")]
         facts.salary_confidence = float(min(hits)) if hits else 0.5
     doc = Document(

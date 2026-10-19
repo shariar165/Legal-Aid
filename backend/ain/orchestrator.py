@@ -14,12 +14,12 @@ import time
 import uuid
 from dataclasses import dataclass, field
 
-from ain import config, vault
-from ain.agents import adversary, calculator, critic, drafter, ingestion, risk_analyst, router, verifier
+from ain import companies, config, countries, vault
+from ain.agents import adversary, calculator, critic, drafter, ingestion, policy_check, risk_analyst, router, verifier
 from ain.agents.pii import redact
 from ain.llm import LLM
-from ain.models import AnalysisResult, Claim, OcrCheck, OutboundCall, Stats, TraceEvent, Verification
-from ain.retrieval import get_corpus
+from ain.models import AnalysisResult, Claim, OcrCheck, OutboundCall, PackDecision, Stats, TraceEvent, Verification
+from ain.retrieval import CorpusOverlay, get_corpus
 
 CONFIRM_TIMEOUT_S = 600.0
 OCR_CONFIDENCE_FLOOR = 0.9
@@ -96,10 +96,13 @@ def new_job(name: str) -> Job:
 
 async def run_pipeline(
     job: Job, data: bytes, filename: str, source_kind: str | None = None, llm_mode: str | None = None,
-    confirm_timeout: float = CONFIRM_TIMEOUT_S, llm: LLM | None = None,
+    confirm_timeout: float = CONFIRM_TIMEOUT_S, llm: LLM | None = None, destination: str | None = None,
+    policy: tuple[bytes, str] | None = None,
 ) -> AnalysisResult:
+    """`destination` is the country the user picked when the document does not name one clearly;
+    `policy` is the employer's own policy or handbook as (file bytes, file name), checked against the contract."""
     try:
-        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm)
+        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm, destination, policy)
     except Exception as e:  # surfaced to the UI; the trace keeps what happened before
         job.status = "error"
         job.error = f"{type(e).__name__}: {e}"
@@ -107,7 +110,10 @@ async def run_pipeline(
         raise
 
 
-async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, llm_mode: str | None, confirm_timeout: float, llm: LLM | None) -> AnalysisResult:
+async def _run(
+    job: Job, data: bytes, filename: str, source_kind: str | None, llm_mode: str | None, confirm_timeout: float, llm: LLM | None,
+    destination: str | None, policy: tuple[bytes, str] | None,
+) -> AnalysisResult:
     t_start = time.time()
 
     def on_call(call: OutboundCall) -> None:
@@ -137,12 +143,35 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
         return redact(t, mapping).text
 
     job.say("agent_done", "PII Shield", f"{len(red.redactions)} identifiers redacted", counts=privacy.counts)
+
+    # 2b. the employer's own policy: read and redacted exactly like the contract (same placeholders)
+    policy_doc, policy_secs = None, []
+    if policy:
+        pdoc, _, _ = await asyncio.to_thread(ingestion.build_document, policy[0], policy[1], None)
+        pred = redact(pdoc.text, mapping)
+        mapping = pred.mapping  # red_text() reads this, so placeholders stay the same across both documents
+        privacy.redactions += pred.redactions
+        for r in pred.redactions:
+            privacy.counts[r.kind] = privacy.counts.get(r.kind, 0) + 1
+        policy_doc = pdoc.model_copy(update={"text": pred.text, "clauses": [c.model_copy(update={"text": red_text(c.text)}) for c in pdoc.clauses]})
+        policy_secs = policy_check.sections_from_clauses(policy_doc.clauses, policy[1], "uploaded by the user")
+        job.say("agent_done", "PII Shield", f"Employer policy: {len(policy_doc.clauses)} clauses, {len(pred.redactions)} identifiers redacted")
     job.say("step", None, "redact", step="redact")
 
     # 3. routing -------------------------------------------------------------------
     job.say("agent_start", "Jurisdiction Router", "Choosing the applicable law")
     facts = await router.refine_facts(llm, facts, red.text)
+    if picked := countries.by_name(destination):  # the user's choice beats detection
+        facts.destination_country = picked.name["en"]
     route = router.decide(facts, doc.text.lower())
+    if policy_secs:
+        route.packs.append(PackDecision(pack=policy_check.POLICY_PACK, label=policy_check.POLICY_LABEL, reason="The user added the employer's own policy; the contract is checked against what it promises."))
+        corpus = CorpusOverlay(corpus, policy_secs)  # the policy's clauses become citable for this job only
+    # a named employer whose own published policy is in the corpus (corpus/companies.yaml)
+    company = companies.detect(doc.text)
+    company_secs = [s for s in corpus.sections if company and company.pack in s.packs]
+    if company_secs:
+        route.packs.append(PackDecision(pack=company.pack, label=company.label, reason=f"The contract names {company.name}; the company's own published policy is checked against the contract."))
     job.say("agent_done", "Jurisdiction Router", ", ".join(p.label for p in route.packs), packs=[p.pack for p in route.packs], excluded=[p.model_dump() for p in route.excluded])
 
     # human-in-the-loop: a blurry salary must be confirmed before the wage maths runs
@@ -197,10 +226,25 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
     for rj in rejected:
         job.say("citation_rejected", "Adversarial Counsel", f"{rj['citation_id']}: {rj['reason']}", **rj)
     job.say("agent_done", "Adversarial Counsel", f"{len(adv_risks)} additional risks")
+
+    pol_risks, pol_claims = [], []
+    if policy_secs:
+        job.say("agent_start", "Policy Check", "Comparing the contract with the employer's own policy")
+        pol_risks, pol_claims = await policy_check.run(llm, doc.clauses, policy_secs, red_text, start=n + 1, source_label="own policy (uploaded)")
+        for r in pol_risks:
+            job.say("risk_found", "Policy Check", r.title.en, risk_id=r.id, severity=r.severity, origin="policy")
+        job.say("agent_done", "Policy Check", f"{len(pol_risks)} contradiction(s) with the employer's policy")
+    if company_secs:
+        job.say("agent_start", "Policy Check", f"Comparing the contract with {company.name}'s published policy")
+        co_risks, co_claims = await policy_check.run(llm, doc.clauses, company_secs, red_text, start=n + 1 + len(pol_risks), source_label=company.source_label)
+        for r in co_risks:
+            job.say("risk_found", "Policy Check", r.title.en, risk_id=r.id, severity=r.severity, origin="policy")
+        job.say("agent_done", "Policy Check", f"{len(co_risks)} contradiction(s) with {company.name}'s published policy")
+        pol_risks, pol_claims = pol_risks + co_risks, pol_claims + co_claims
     job.say("step", None, "match", step="match")
 
-    risks = text_risks + fact_risks + adv_risks
-    claims: list[Claim] = text_claims + fact_claims + adv_claims
+    risks = text_risks + fact_risks + adv_risks + pol_risks
+    claims: list[Claim] = text_claims + fact_claims + adv_claims + pol_claims
     proc_claims = [
         Claim(id=f"P{i + 1}", risk_id="P", proposition=prop, citation_id=cid, quote=q, origin="drafter")
         for pack, items in PROCEDURAL.items() if pack in route.pack_ids for i, (cid, prop, q) in enumerate(items)
@@ -213,7 +257,11 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
         kind = {"verified": "claim_verified", "partial": "claim_partial", "dropped": "claim_dropped"}[v.verdict]
         job.say(kind, "Citation Verifier", f"{v.claim.citation_id}: {v.verdict}", claim_id=v.claim.id, citation_id=v.claim.citation_id, gates={g.gate: g.status for g in v.gates})
         if v.bench:
-            job.say("bench_ruling", "Virtual Bench", f"{v.bench.vote} {v.bench.majority_verdict}, severity {v.bench.majority_severity}" + (" · dissent" if v.bench.human_review else ""), claim_id=v.claim.id, human_review=v.bench.human_review)
+            b = v.bench
+            verdict = "split, no majority" if b.agreement == "split" else f"{b.vote} {b.majority_verdict}"
+            msg = f"{verdict}, severity {b.severity_range or b.majority_severity}" + (f" · human review: {b.review_reason}" if b.human_review else "")
+            msg += " · same family (fallback): " + " & ".join(b.same_family) if b.same_family else ""
+            job.say("bench_ruling", "Virtual Bench", msg, claim_id=v.claim.id, human_review=b.human_review, same_family=b.same_family)
 
     ledger = await verifier.verify_all(llm, corpus, route, risks, claims, on_result=on_verified)
     proc_ledger = await verifier.verify_all(llm, corpus, route, [], proc_claims)
@@ -249,7 +297,9 @@ async def _run(job: Job, data: bytes, filename: str, source_kind: str | None, ll
         llm_mode=llm.mode,
         # only redacted text is ever stored or served
         document=doc.model_copy(update={"text": red.text, "clauses": [c.model_copy(update={"text": red_text(c.text)}) for c in doc.clauses]}),
+        policy=policy_doc,
         facts=facts,
+        destination=countries.destination(facts.destination_country),
         route=route,
         risks=risks,
         ledger=full_ledger,

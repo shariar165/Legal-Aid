@@ -390,6 +390,20 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
               ))}
             </div>
           )}
+          {result.destination && (
+            <p className={styles.destLine}>
+              <span className={styles.chip} data-tone={result.destination.supported ? undefined : "warn"}>
+                <Icon name="globe" size={13} />
+                {result.destination.name.en}
+              </span>
+              <span>
+                {result.destination.supported
+                  ? `Host-country law checked: ${result.destination.law}.`
+                  : `No ${result.destination.name.en} labour law in the corpus yet; only Bangladesh law and ILO standards were applied.`}
+                {result.destination.help && ` Help on the ground: ${result.destination.help.en}.`}
+              </span>
+            </p>
+          )}
           <p className={styles.summary}>{result.memo.executive_summary}</p>
           <div className={styles.summaryBn}>
             <span className={styles.insetLabel}>বাংলা সারাংশ · Summary in Bangla</span>

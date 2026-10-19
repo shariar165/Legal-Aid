@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 
-from ain.agents.bench import BY_ID, PERSONAS, Persona, model_name
+from ain.agents.bench import BY_ID, PERSONAS, Persona, cited_text, model_name
 from ain.llm import LLM, LLMError
 from ain.models import (
     AnalysisResult,
@@ -31,7 +31,6 @@ from ain.models import (
 )
 
 HISTORY_TURNS = 8
-SECTION_CHARS = 1500
 
 LANGUAGE = {
     "en": "Write in plain English.",
@@ -89,7 +88,7 @@ def chat_mode(result_mode: str) -> str:
 
 def members(llm: LLM) -> list[CouncilMember]:
     return [
-        CouncilMember(id=p.id, name=p.name, title=p.title, tagline=p.tagline, seat=p.seat, model=model_name(llm, p.role))
+        CouncilMember(id=p.id, name=p.name, title=p.title, tagline=p.tagline, seat=p.seat, model=model_name(llm, p.role), lens=p.lens_label)
         for p in PERSONAS
     ]
 
@@ -131,7 +130,7 @@ def build_context(result: AnalysisResult, risk: Risk | None, p: Persona | None) 
             allowed.append(s.citation_id)
             lines.append(
                 f"\n[{s.citation_id}] {s.act_en}, s.{s.section} - {s.heading} ({v.verdict})\n"
-                f"CLAIM: {v.claim.proposition}\nTEXT: {s.text[:SECTION_CHARS]}"
+                f"CLAIM: {v.claim.proposition}\nTEXT: {cited_text(s, v.claim)}"  # the whole section, as the judges read it
             )
     else:
         lines.append("RISKS FOUND:")

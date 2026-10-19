@@ -1,0 +1,106 @@
+# Destination-country registry: the countries where most Bangladeshi migrant workers go.
+# One entry drives country detection (ingestion), routing (router), the wage calculator and
+# the help line shown to the worker. Legal numbers (minimum wage, deduction cap) are only
+# listed when the cited corpus section states them; tests/test_countries.py checks this.
+#
+# of:        possessive form, for sentences like "below Malaysia's minimum wage"
+# aliases:   words that place the job in this country (matched on whole words, NFC-normalised)
+# currency:  the code facts use for this country's money; currency_aliases are how contracts write it
+# pack:      the Jurisdiction Router pack with this country's law excerpts
+# min_wage / deduction_cap: null when our corpus has no official text for the figure
+
+- code: SA
+  name: {en: Saudi Arabia, bn: সৌদি আরব}
+  of: {en: "Saudi Arabia's", bn: সৌদি আরবের}
+  aliases: [saudi arabia, saudi, ksa, kingdom of saudi arabia, riyadh, jeddah, jiddah, dammam, makkah, mecca, madinah, medina, সৌদি, রিয়াদ, জেদ্দা]
+  currency: SAR
+  currency_aliases: [sar, riyal, riyals, saudi riyal]
+  pack: sa_labour
+  label: Saudi Labor Law (Royal Decree M/51)
+  min_wage: null
+  deduction_cap: {pct: 50, citation_id: SA-LABOR-2005-a93}
+  help: {en: "Labour Wing, Bangladesh Embassy in Riyadh / Consulate General in Jeddah", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস রিয়াদ / কনস্যুলেট জেনারেল জেদ্দা"}
+
+- code: AE
+  name: {en: United Arab Emirates, bn: সংযুক্ত আরব আমিরাত}
+  of: {en: "the UAE's", bn: আমিরাতের}
+  aliases: [united arab emirates, uae, u.a.e, dubai, abu dhabi, sharjah, ajman, ras al khaimah, fujairah, আমিরাত, দুবাই, আবুধাবি, শারজাহ]
+  currency: AED
+  currency_aliases: [aed, dirham, dirhams, dhs]
+  pack: ae_labour
+  label: UAE Labour Relations Decree-Law 33/2021
+  min_wage: null
+  deduction_cap: {pct: 50, citation_id: AE-LABOUR-2021-a25}
+  help: {en: "Labour Wing, Bangladesh Embassy in Abu Dhabi / Consulate General in Dubai", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস আবুধাবি / কনস্যুলেট জেনারেল দুবাই"}
+
+- code: MY
+  name: {en: Malaysia, bn: মালয়েশিয়া}
+  of: {en: "Malaysia's", bn: মালয়েশিয়ার}
+  aliases: [malaysia, kuala lumpur, selangor, johor, penang, pulau pinang, sabah, sarawak, negeri sembilan, মালয়েশিয়া, কুয়ালালামপুর]
+  currency: RM
+  currency_aliases: [rm, myr, ringgit]
+  pack: my_employment
+  label: Malaysia Employment Act 1955 · Minimum Wages Order 2024
+  min_wage: {amount: 1700, citation_id: MY-MWO-2024-p3}
+  deduction_cap: {pct: 50, citation_id: MY-EA-1955-s24}
+  help: {en: "Labour Wing, Bangladesh High Commission in Kuala Lumpur", bn: "শ্রম উইং, বাংলাদেশ হাইকমিশন কুয়ালালামপুর"}
+
+- code: QA
+  name: {en: Qatar, bn: কাতার}
+  of: {en: "Qatar's", bn: কাতারের}
+  aliases: [qatar, doha, কাতার, দোহা]
+  currency: QAR
+  currency_aliases: [qar, qr, qatari riyal]
+  pack: qa_labour
+  label: Qatar Labour Law (Law 14/2004)
+  min_wage: null  # Law 17/2020 sets one, but we have no official English text of it yet
+  deduction_cap: {pct: 50, citation_id: QA-LABOUR-2004-a70}
+  help: {en: "Labour Wing, Bangladesh Embassy in Doha", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস দোহা"}
+
+- code: OM
+  name: {en: Oman, bn: ওমান}
+  of: {en: "Oman's", bn: ওমানের}
+  aliases: [oman, sultanate of oman, muscat, salalah, sohar, ওমান, মাস্কাট]
+  currency: OMR
+  currency_aliases: [omr, rial omani, omani rial, r.o]
+  pack: om_labour
+  label: Oman Labour Law (Royal Decree 53/2023)
+  min_wage: null
+  deduction_cap: {pct: 25, citation_id: OM-LABOUR-2023-a96}
+  help: {en: "Labour Wing, Bangladesh Embassy in Muscat", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস মাস্কাট"}
+
+- code: KW
+  name: {en: Kuwait, bn: কুয়েত}
+  of: {en: "Kuwait's", bn: কুয়েতের}
+  aliases: [kuwait, কুয়েত]
+  currency: KWD
+  currency_aliases: [kwd, kd, kuwaiti dinar]
+  pack: kw_labour
+  label: Kuwait Private Sector Labour Law (Law 6/2010)
+  min_wage: null
+  deduction_cap: {pct: 25, citation_id: KW-LABOUR-2010-a59}
+  help: {en: "Labour Wing, Bangladesh Embassy in Kuwait City", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস কুয়েত সিটি"}
+
+- code: SG
+  name: {en: Singapore, bn: সিঙ্গাপুর}
+  of: {en: "Singapore's", bn: সিঙ্গাপুরের}
+  aliases: [singapore, সিঙ্গাপুর]
+  currency: SGD
+  currency_aliases: [sgd, s$, singapore dollar]
+  pack: sg_labour
+  label: Singapore Employment Act · Employment of Foreign Manpower Act
+  min_wage: null
+  deduction_cap: {pct: 50, citation_id: SG-EA-1968-s32}
+  help: {en: "Labour Wing, Bangladesh High Commission in Singapore", bn: "শ্রম উইং, বাংলাদেশ হাইকমিশন সিঙ্গাপুর"}
+
+- code: BH
+  name: {en: Bahrain, bn: বাহরাইন}
+  of: {en: "Bahrain's", bn: বাহরাইনের}
+  aliases: [bahrain, kingdom of bahrain, manama, বাহরাইন, মানামা]
+  currency: BHD
+  currency_aliases: [bhd, bahraini dinar]
+  pack: bh_labour
+  label: Bahrain Labour Law (Law 36/2012) · Labour Market Law (Law 19/2006)
+  min_wage: null
+  deduction_cap: null  # the Labour Law caps loan deductions (10%) and attachment (25%), not all deductions together
+  help: {en: "Labour Wing, Bangladesh Embassy in Manama", bn: "শ্রম উইং, বাংলাদেশ দূতাবাস মানামা"}

@@ -15,9 +15,10 @@ from functools import lru_cache
 
 import yaml
 
-from ain import config
+from ain import config, countries
 from ain.llm import LLM
 from ain.models import Claim, Clause, DocFacts, L10n, Risk, RouteDecision, WageCalc
+from ain.naming import EN_TO_BN_DIGITS
 
 CHECK_SYSTEM = """You are a careful contract lawyer. You get ONE question and the text of one or more contract clauses
 (personal data is replaced by placeholders). Answer ONLY from the clause text.
@@ -41,17 +42,21 @@ class Rule:
     exclude_packs: list[str] = field(default_factory=list)
     anchors: list[dict] = field(default_factory=list)
     anchors_by_pack: dict[str, list[dict]] = field(default_factory=dict)
+    pack_anchors: dict[str, list[dict]] = field(default_factory=dict)  # routed pack (a destination country, standards) -> extra anchors
 
     def active(self, packs: set[str]) -> bool:
         return bool(set(self.packs) & packs) and not set(self.exclude_packs) & packs
 
     def anchors_for(self, packs: set[str]) -> list[dict]:
+        base = self.anchors
         if self.anchors_by_pack:
+            base = []
             for pack in ("bd_epz", "bd_labour"):  # EPZ regime first: it overrides the Labour Act
                 if pack in packs and pack in self.anchors_by_pack:
-                    return self.anchors_by_pack[pack]
-            return []
-        return self.anchors
+                    base = self.anchors_by_pack[pack]
+                    break
+        # the host country's law applies on top of Bangladesh law and ILO standards
+        return base + [a for pack, group in self.pack_anchors.items() if pack in packs for a in group]
 
 
 @lru_cache
@@ -121,8 +126,39 @@ FACT_CLAUSE_HINTS = {
 # ------------------------------------------------------------------ helpers
 
 
-def _risk_from_rule(rule: Rule, n: int, finding: str, clause_ids: list[str], packs: set[str]) -> tuple[Risk, list[Claim]]:
+class _Blanks(dict):
+    def __missing__(self, key: str) -> str:  # leave unknown {placeholders} as they are
+        return "{" + key + "}"
+
+
+def _placeholders(packs: set[str], wage: WageCalc | None) -> dict[str, _Blanks]:
+    """Values for {country}, {country_of}, {currency}, {min_wage} and {cap} in rule texts, per language."""
+    country = next((c for c in countries.load_countries() if c.pack in packs), None)
+    out = {}
+    for lang in ("en", "bn"):
+        vals = _Blanks()
+        if country:
+            vals.update(country=country.name[lang], country_of=country.of[lang], currency=country.currency)
+            if country.min_wage:
+                vals["min_wage"] = f"{country.min_wage['amount']:,}"
+            if country.deduction_cap:
+                cap = f"{country.deduction_cap['pct']}"
+                vals["cap"] = cap.translate(EN_TO_BN_DIGITS) if lang == "bn" else cap
+        if wage and wage.currency:
+            vals["currency"] = wage.currency
+        out[lang] = vals
+    return out
+
+
+def _l10n(texts: dict, vals: dict[str, _Blanks]) -> L10n:
+    return L10n(**{lang: text.format_map(vals[lang]) for lang, text in texts.items()})
+
+
+def _risk_from_rule(
+    rule: Rule, n: int, finding: str, clause_ids: list[str], packs: set[str], wage: WageCalc | None = None
+) -> tuple[Risk, list[Claim]]:
     rid = f"R{n}"
+    vals = _placeholders(packs, wage)
     claims = [
         Claim(id=f"{rid}.{i + 1}", risk_id=rid, proposition=a["proposition"], citation_id=a["citation_id"], quote=a.get("quote"), origin="playbook")
         for i, a in enumerate(rule.anchors_for(packs))
@@ -132,14 +168,14 @@ def _risk_from_rule(rule: Rule, n: int, finding: str, clause_ids: list[str], pac
         rule_id=rule.id,
         origin="calculator" if rule.trigger.get("fact") in ("below_min_wage", "deduction_over_cap") else "playbook",
         category=rule.category,
-        title=L10n(**rule.title),
+        title=_l10n(rule.title, vals),
         severity=rule.severity,  # type: ignore[arg-type]
         clause_ids=clause_ids,
         finding=finding,
-        why_non_obvious=rule.why_non_obvious,
-        citizen_line=L10n(**rule.citizen_line),
-        action=L10n(**rule.action),
-        mitigation_clause=rule.mitigation,
+        why_non_obvious=rule.why_non_obvious.format_map(vals["en"]),
+        citizen_line=_l10n(rule.citizen_line, vals),
+        action=_l10n(rule.action, vals),
+        mitigation_clause=rule.mitigation.format_map(vals["en"]),
         clash=rule.clash,
         claim_ids=[c.id for c in claims],
     )
@@ -151,14 +187,26 @@ def _matching_clauses(rule: Rule, clauses: list[Clause]) -> list[Clause]:
     return [c for c in clauses if any(p.search(c.text) for p in pats)]
 
 
-async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact) -> tuple[bool, list[str], str]:
+def _missing_term(rule: Rule, clauses: list[Clause]) -> list[Clause]:
+    """For an `absent` trigger: the clauses to show the LLM when NO clause has the protective term, else []."""
+    if not rule.trigger.get("absent"):
+        return []
+    text = "\n".join(c.text for c in clauses)
+    if any(re.search(p, text, re.I | re.S) for p in rule.trigger["absent"]):
+        return []
+    hint = re.compile(rule.trigger.get("hint", "."), re.I)
+    return [c for c in clauses if hint.search(c.text)][:3] or clauses[:1]
+
+
+async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact, absence: bool = False) -> tuple[bool, list[str], str]:
     body = "\n\n".join(f"[{c.id}] {redact(c.text)}" for c in hits)
     first = redact(hits[0].text).replace("\n", " ")
 
     excerpt = first if len(first) <= 220 else first[:217].rsplit(" ", 1)[0].rstrip(",;:") + "…"
 
     def fake() -> dict:
-        return {"applies": True, "clause_ids": [c.id for c in hits], "finding": f"Clause {hits[0].id}: “{excerpt}”"}
+        finding = rule.trigger.get("absent_finding") if absence else None
+        return {"applies": True, "clause_ids": [c.id for c in hits], "finding": finding or f"Clause {hits[0].id}: “{excerpt}”"}
 
     data = await llm.json(
         role="reasoner",
@@ -176,20 +224,21 @@ async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact) -> tuple[bo
 
 
 async def run_text_rules(llm: LLM, clauses: list[Clause], route: RouteDecision, redact, start: int = 1) -> tuple[list[Risk], list[Claim]]:
-    """Regex-triggered rules, confirmed by the LLM in parallel."""
+    """Regex- and absence-triggered rules, confirmed by the LLM in parallel."""
     packs = route.pack_ids
     jobs = []
     for rule in load_rules():
-        if not rule.active(packs) or "regex" not in rule.trigger:
+        if not rule.active(packs) or not {"regex", "absent"} & rule.trigger.keys() or not rule.anchors_for(packs):
             continue
-        hits = _matching_clauses(rule, clauses)
-        if hits and rule.anchors_for(packs):
-            jobs.append((rule, hits))
-    results = await asyncio.gather(*(_confirm(llm, rule, hits, redact) for rule, hits in jobs))
+        if hits := _matching_clauses(rule, clauses):
+            jobs.append((rule, hits, False))
+        elif missing := _missing_term(rule, clauses):
+            jobs.append((rule, missing, True))
+    results = await asyncio.gather(*(_confirm(llm, rule, hits, redact, absence) for rule, hits, absence in jobs))
     risks: list[Risk] = []
     claims: list[Claim] = []
     n = start
-    for (rule, _), (applies, ids, finding) in zip(jobs, results):
+    for (rule, _, _), (applies, ids, finding) in zip(jobs, results):
         if not applies:
             continue
         risk, cl = _risk_from_rule(rule, n, finding, ids, packs)
@@ -213,7 +262,7 @@ def run_fact_rules(facts: DocFacts, wage: WageCalc | None, clauses: list[Clause]
             continue
         hint = re.compile(FACT_CLAUSE_HINTS[name], re.I)
         ids = [c.id for c in clauses if hint.search(c.text)][:2]
-        risk, cl = _risk_from_rule(rule, n, finding, ids, packs)
+        risk, cl = _risk_from_rule(rule, n, finding, ids, packs, wage)
         risks.append(risk)
         claims += cl
         n += 1

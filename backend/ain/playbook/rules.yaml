@@ -25,6 +25,30 @@
     - citation_id: ILO-C029-a2
       proposition: ILO Convention 29 Art. 2 defines forced or compulsory labour as all work or service exacted from a person under the menace of any penalty and for which the person has not offered himself voluntarily.
       quote: all work or service which is exacted from any person under the menace of any penalty and for which the said person has not offered himself voluntarily
+  pack_anchors:
+    ae_labour:
+      - citation_id: AE-LABOUR-2021-a13
+        proposition: Under UAE Federal Decree-Law 33/2021 Art. 13(2), the employer must not withhold the worker's official documents or force the worker to leave the State at the end of the employment relationship.
+        quote: Not withholding the official documents of the worker or forcing him to leave the State at the end of the employment relationship
+    om_labour:
+      - citation_id: OM-LABOUR-2023-a6
+        proposition: Under Oman's Labour Law 2023 Art. 6, the employer may not keep the worker's passport or personal documents except with the worker's written consent.
+        quote: It is not permitted for the employer to keep the passport of the worker or his personal documents except with the written consent of the worker.
+    sg_labour:
+      - citation_id: SG-PA-2007-s47
+        proposition: Under Singapore's Passports Act 2007 s.47(5), a person who has or retains possession or control in Singapore of a foreign travel document, knowing that it was not issued to them, commits an offence punishable with a fine of up to $10,000, imprisonment of up to 10 years, or both.
+        quote: a person has or retains possession or control in Singapore of a foreign travel document
+    my_employment:
+      - citation_id: MY-EA-1955-s90B
+        proposition: Under the Malaysian Employment Act 1955 s.90B, an employer who threatens, deceives or forces an employee to work and prevents the employee from leaving the place where the work is done commits an offence, punishable with a fine of up to RM100,000, imprisonment of up to two years, or both.
+        quote: prevents that employee from proceeding beyond the place or area where such activity, service or work is done
+    std_recruitment:
+      - citation_id: STD-ILO-FAIR-2019-p11
+        proposition: Under the ILO General Principles for Fair Recruitment (2019), principle 11, workers' identity documents and contracts should not be confiscated, destroyed or retained. This is a voluntary standard, not law.
+        quote: Workers’ identity documents and contracts should not be confiscated, destroyed or retained.
+      - citation_id: STD-RBA-2024-A1
+        proposition: Under the RBA Code of Conduct 8.0 §A.1, an industry code that binds RBA members and their suppliers, employers and their agents may not hold, destroy, conceal or confiscate workers' identity or immigration documents such as passports, unless local law requires it, and workers must never be denied access to them.
+        quote: may not hold or otherwise destroy, conceal, or confiscate identity or immigration documents, such as government-issued identification, passports, or work permits
   why_non_obvious: "'Safekeeping' language makes passport retention look like a favour to the worker; it is a criminal offence in Bangladesh and a recognised forced-labour indicator."
   citizen_line: {bn: "মালিক আপনার পাসপোর্ট নিজের কাছে রেখে দেবে। এটা বেআইনি।", en: "Your employer will keep your passport. This is illegal."}
   action: {bn: "পাসপোর্ট সবসময় নিজের কাছে রাখুন। এই শর্তটি কেটে দিতে বলুন।", en: "Always keep your passport yourself. Ask for this term to be removed."}
@@ -45,9 +69,45 @@
     - citation_id: ILO-C095-a9
       proposition: ILO Convention 95 Art. 9 prohibits any deduction from wages made to ensure a direct or indirect payment for obtaining or retaining employment, paid to an employer, its representative or an intermediary such as a recruiter.
       quote: Any deduction from wages with a view to ensuring a direct or indirect payment for the purpose of obtaining or retaining employment
-    - citation_id: MY-EA-1955-s24
-      proposition: Under the Malaysian Employment Act 1955 s.24(1), no deductions shall be made by an employer from an employee's wages otherwise than in accordance with the Act.
-      quote: No deductions shall be made by an employer from the wages of an employee otherwise than in accordance with this Act.
+  pack_anchors:
+    my_employment:
+      - citation_id: MY-EA-1955-s24
+        proposition: Under the Malaysian Employment Act 1955 s.24(1), no deductions shall be made by an employer from an employee's wages otherwise than in accordance with the Act.
+        quote: No deductions shall be made by an employer from the wages of an employee otherwise than in accordance with this Act.
+    sa_labour:
+      - citation_id: SA-LABOR-2005-a40
+        proposition: Under the Saudi Labor Law Art. 40(1), the employer bears the fees for recruiting non-Saudi workers, the residence permit (iqama) and work permit fees and their renewal, and the worker's return ticket at the end of the relationship.
+        quote: An employer shall incur the fees pertaining to recruitment of non-Saudi workers
+    ae_labour:
+      - citation_id: AE-LABOUR-2021-a6
+        proposition: Under UAE Federal Decree-Law 33/2021 Art. 6(4), the employer is prohibited from charging the worker the fees and costs of recruitment and employment, or collecting them from the worker, directly or indirectly.
+        quote: employer is prohibited from charging the worker for the fees and costs of recruitment and employment or collecting them from him, whether directly or indirectly
+    qa_labour:
+      - citation_id: QA-LABOUR-2004-a33
+        proposition: Under Qatar's Labour Law Art. 33(1), a person licensed to recruit workers from abroad may not receive from the worker any sums for recruitment fees, expenses or any other costs.
+        quote: To receive from the worker any sums representing recruitment fees or expenses or any other costs.
+    om_labour:
+      - citation_id: OM-LABOUR-2023-a31
+        proposition: Under Oman's Labour Law 2023 Art. 31, it is prohibited to charge any amounts to recruited non-Omani workers in return for employing them.
+        quote: It is also prohibited to charge any amounts to the workers whose recruitment is permitted in return for employing him.
+    sg_labour:
+      - citation_id: SG-EFMA-1990-s22A
+        proposition: Under Singapore's Employment of Foreign Manpower Act 1990 s.22A(1), no person may deduct from a foreign employee's salary, or demand or receive from the employee, any sum as a condition of getting or keeping the job; contravention is an offence under s.22A(2).
+        quote: A person must not deduct from any salary payable to a foreign employee, or demand or receive, directly or indirectly and whether in Singapore or elsewhere, from a foreign employee any sum or other benefit
+    bh_labour:
+      - citation_id: BH-LMRA-2006-a23
+        proposition: Under Bahrain's Labour Market Regulation Law 2006 Art. 23, no person may receive any money or benefit from a worker in return for a work permit, for employing the worker, or for keeping the worker in the job.
+        quote: It is prohibited for any person to receive any moneys or obtain any benefit or advantage from an employee in return for issuing him with a work permit or in return for the employment of such an employee or his retention in his job.
+    std_recruitment:
+      - citation_id: STD-ILO-FAIR-2019-p7
+        proposition: Under the ILO General Principles for Fair Recruitment (2019), principle 7, no recruitment fees or related costs should be charged to, or otherwise borne by, workers or jobseekers. This is a voluntary standard, not law.
+        quote: No recruitment fees or related costs should be charged to, or otherwise borne by, workers or jobseekers.
+      - citation_id: STD-EPP-LGRR
+        proposition: Under the Employer Pays Principle, a voluntary commitment made by many multinational employers, no worker should pay for a job, and the costs of recruitment should be borne by the employer, not the worker.
+        quote: No worker should pay for a job – the costs of recruitment should be borne not by the worker but by the employer.
+      - citation_id: STD-RBA-2024-A1
+        proposition: Under the RBA Code of Conduct 8.0 §A.1, workers shall not be required to pay recruitment or related fees for their employment, and any such fees found to have been paid must be repaid to the worker.
+        quote: Workers shall not be required to pay employers’ agents or sub-agents’ recruitment fees or other related fees for their employment.
   why_non_obvious: The fee is not called a fee; it is spread as small monthly 'recovery' deductions, so the worker effectively pays to get the job.
   citizen_line: {bn: "নিয়োগের খরচ আপনার বেতন থেকে কাটা হবে।", en: "Recruitment costs will be cut from your salary."}
   action: {bn: "সই করার আগে এজেন্সিকে এই কর্তন বাদ দিতে বলুন।", en: "Before signing, ask the agency to remove this deduction."}
@@ -56,36 +116,63 @@
 - id: PB-MIN-WAGE
   category: wage
   severity: high
-  packs: [my_employment]
-  title: {en: "Basic salary is below the Malaysian minimum wage", bn: "মূল বেতন মালয়েশিয়ার ন্যূনতম মজুরির চেয়ে কম"}
+  # Only countries whose minimum-wage text is in the corpus have anchors (ain/countries.yaml min_wage).
+  packs: [my_employment, sa_labour, ae_labour, qa_labour, om_labour, kw_labour, sg_labour, bh_labour]
+  title: {en: "Basic salary is below {country_of} minimum wage", bn: "মূল বেতন {country_of} ন্যূনতম মজুরির চেয়ে কম"}
   trigger:
     fact: below_min_wage
   question: Is the promised monthly basic wage below the applicable minimum wage?
-  anchors:
-    - citation_id: MY-MWO-2024-p3
-      proposition: Under Malaysia's Minimum Wages Order 2024 (P.U.(A) 376), from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
-      quote: Minimum Wages Rate Monthly Daily Hourly RM1,700
-  why_non_obvious: The salary looks like a normal figure in ringgit; only the 2024 gazette shows it is below the legal floor.
-  citizen_line: {bn: "আপনার বেতন মালয়েশিয়ার আইনে ন্যূনতম বেতনের চেয়ে কম।", en: "Your salary is less than Malaysia's legal minimum wage."}
-  action: {bn: "কমপক্ষে RM 1,700 মূল বেতন লিখে দিতে বলুন।", en: "Ask for a basic salary of at least RM 1,700 in writing."}
-  mitigation: "The Employer shall pay a basic monthly wage of not less than the minimum wage prescribed under the Minimum Wages Order in force from time to time (currently RM1,700)."
+  pack_anchors:
+    my_employment:
+      - citation_id: MY-MWO-2024-p3
+        proposition: Under Malaysia's Minimum Wages Order 2024 (P.U.(A) 376), from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
+        quote: "Minimum Wages Rate: Monthly: RM1,700"
+  why_non_obvious: The salary looks like a normal figure in local currency; only the official wage order shows it is below the legal floor.
+  citizen_line: {bn: "আপনার বেতন {country_of} আইনে ন্যূনতম বেতনের চেয়ে কম।", en: "Your salary is less than {country_of} legal minimum wage."}
+  action: {bn: "কমপক্ষে {currency} {min_wage} মূল বেতন লিখে দিতে বলুন।", en: "Ask for a basic salary of at least {currency} {min_wage} in writing."}
+  mitigation: "The Employer shall pay a basic monthly wage of not less than the minimum wage prescribed by the law of {country} in force from time to time (currently {currency} {min_wage})."
 
 - id: PB-DEDUCTION-CAP
   category: wage_deduction
   severity: high
-  packs: [my_employment]
-  title: {en: "Monthly deductions exceed the 50% legal cap", bn: "মাসিক কর্তন আইনের ৫০% সীমা ছাড়িয়ে যায়"}
+  packs: [my_employment, sa_labour, ae_labour, qa_labour, om_labour, kw_labour, sg_labour]
+  title: {en: "Monthly deductions exceed the {cap}% legal cap", bn: "মাসিক কর্তন আইনের {cap}% সীমা ছাড়িয়ে যায়"}
   trigger:
     fact: deduction_over_cap
-  question: Do the total monthly deductions exceed half of the wages earned in that month?
-  anchors:
-    - citation_id: MY-EA-1955-s24
-      proposition: Under the Malaysian Employment Act 1955 s.24(8), the total deductions from an employee's wages in any one month shall not exceed fifty per cent of the wages earned in that month.
-      quote: shall not exceed fifty per centum of the wages earned by that employee in that month
-  why_non_obvious: Each deduction is small on its own; only the sum shows that more than half of the pay is taken.
-  citizen_line: {bn: "খরচ কাটার পর বেতন কথা দেওয়া বেতনের অর্ধেকেরও কম হবে।", en: "After the cuts, you will get less than half of the promised pay."}
+  question: Do the total monthly deductions exceed the share of the monthly wage that the law allows to be deducted?
+  pack_anchors:
+    my_employment:
+      - citation_id: MY-EA-1955-s24
+        proposition: Under the Malaysian Employment Act 1955 s.24(8), the total deductions from an employee's wages in any one month shall not exceed fifty per cent of the wages earned in that month.
+        quote: shall not exceed fifty per centum of the wages earned by that employee in that month
+    sa_labour:
+      - citation_id: SA-LABOR-2005-a93
+        proposition: Under the Saudi Labor Law Art. 93, deductions from the worker's wage may in all cases not exceed half of the wage due, unless the Commission for the Settlement of Labor Disputes decides otherwise.
+        quote: In all cases, deductions made may not exceed half the worker’s due wage
+    ae_labour:
+      - citation_id: AE-LABOUR-2021-a25
+        proposition: Under UAE Federal Decree-Law 33/2021 Art. 25(2), where there are several reasons for deduction or withholding, the total deducted or withheld may in all cases not exceed 50% of the wage.
+        quote: in all cases the percentage of deduction and/or withholding may not exceed (50%) fifty percent of the wage
+    qa_labour:
+      - citation_id: QA-LABOUR-2004-a70
+        proposition: Under Qatar's Labour Law Art. 70, the total sums deducted from a worker's wage for deductibles and debts may not exceed 50% of the wage, and loan repayments may not exceed 10%.
+        quote: The total of the sums to be deducted from the wage of the worker in settlement of the deductibles and debts due from him shall not exceed 50% of his aggregate wage.
+    om_labour:
+      - citation_id: OM-LABOUR-2023-a96
+        proposition: Under Oman's Labour Law 2023 Art. 96, wages owed to the worker may be withheld only up to one-fourth, for legal maintenance or for amounts the worker owes the government or the employer.
+        quote: It is not permitted to withhold or waive the wages owed to the worker except within the limits of one-fourth
+    kw_labour:
+      - citation_id: KW-LABOUR-2010-a59
+        proposition: Under Kuwait's Labour Law 2010 Art. 59, loan repayments to the employer may not exceed 10% of the wage, and deductions for debts, including debts owed to the employer, may not exceed 25% of the wage.
+        quote: except within the limit of ( 25 per cent) of the wage
+    sg_labour:
+      - citation_id: SG-EA-1968-s32
+        proposition: Under Singapore's Employment Act 1968 s.32(1), the total of all deductions from an employee's salary in a salary period, other than certain listed deductions, must not exceed 50% of the salary for that period.
+        quote: must not exceed 50% (or such other percentage prescribed in substitution by the Minister) of the salary payable to the employee in respect of that period
+  why_non_obvious: Each deduction is small on its own; only the sum shows that more of the pay is taken than the law allows.
+  citizen_line: {bn: "আপনার বেতনের {cap}%-এর বেশি কেটে নেওয়া হবে। আইন এত কাটতে দেয় না।", en: "More than {cap}% of your pay will be cut. The law does not allow that much."}
   action: {bn: "মোট কর্তন লিখিতভাবে কমাতে বলুন।", en: "Ask in writing for the total deductions to be reduced."}
-  mitigation: "Total deductions in any month shall not exceed 50% of the wages earned in that month, and shall be limited to deductions permitted by s.24 of the Employment Act 1955."
+  mitigation: "Total deductions in any month shall not exceed {cap}% of the wages earned in that month, and shall be limited to deductions permitted by the labour law of {country}."
 
 - id: PB-CLAIM-WAIVER
   category: access_to_justice
@@ -107,6 +194,84 @@
   citizen_line: {bn: "চুক্তি বলছে আপনি BMET বা আদালতে অভিযোগ করতে পারবেন না। এটা আইনে টেকে না।", en: "The contract says you cannot complain to BMET or a court. That does not hold up in law."}
   action: {bn: "সমস্যা হলে BMET, দূতাবাস বা আদালতে যেতে পারবেন, এটা মনে রাখুন।", en: "Remember you can still go to BMET, the embassy or a court if there is a problem."}
   mitigation: "Nothing in this Contract limits the Worker's right to complain to BMET, the Bangladesh Mission or any court, or to claim compensation under section 28 of the Overseas Employment and Migrants Act 2013."
+
+- id: PB-RETURN-TICKET
+  category: repatriation
+  severity: high
+  # Only destinations whose labour law puts the trip home on the employer. Elsewhere Adversarial Counsel
+  # still raises the gap against OEMA 2013 s.22 (the contract must state the cost of return).
+  packs: [sa_labour, ae_labour, qa_labour, om_labour, kw_labour]
+  title: {en: "The worker, not the employer, would pay for the trip home", bn: "দেশে ফেরার খরচ মালিক নয়, কর্মীকে দিতে হবে"}
+  trigger:
+    regex: ['(worker|employee|labou?rer).{0,60}(shall|will|must) (bear|pay).{0,60}(return|homeward|repatriation).{0,30}(ticket|air ?fare|passage|travel|journey)', '(return|homeward|repatriation).{0,30}(ticket|air ?fare|passage|travel|journey).{0,60}(borne|paid) by the (worker|employee)']
+    # protective wording, searched within one sentence ([^.] stops at the full stop)
+    absent: ['employer shall (bear|pay|provide)[^.]{0,80}(return|repatriation|homeward)', '(return|repatriation|homeward)[^.]{0,60}(borne|paid) by the employer', 'at the employer.{0,4}s? (cost|expense)[^.]{0,60}(return|repatriat)', 'ফেরত[^।.]{0,30}(মালিক|নিয়োগকর্তা)']
+    hint: 'terminat|ticket|travel|passage|return|repatriat'
+    absent_finding: "The contract never says that the employer pays for the worker's journey home at the end of the job."
+  question: Does the contract make the worker pay for the journey home at the end of the job, or fail to say that the employer pays for it?
+  pack_anchors:
+    sa_labour:
+      - citation_id: SA-LABOR-2005-a40
+        proposition: Under the Saudi Labor Law Art. 40(1), the employer bears the cost of the worker's return ticket to his home country at the end of the relationship; under Art. 40(2) the worker pays only if unfit for work or returning without a legitimate reason.
+        quote: return tickets to the worker’s home country at the end of the relation between the two parties
+    ae_labour:
+      - citation_id: AE-LABOUR-2021-a13
+        proposition: Under UAE Federal Decree-Law 33/2021 Art. 13(12), the employer bears the worker's repatriation expenses to the place of recruitment or another agreed place, unless the worker has joined another employer or the contract ended for a reason attributable to the worker.
+        quote: Bearing the repatriation expenses of the worker to his place of recruitment or any other place that both parties had agreed upon
+    qa_labour:
+      - citation_id: QA-LABOUR-2004-a57
+        proposition: Under Qatar's Labour Law Art. 57, when the worker's service ends the employer must return the worker, at its own cost, to the place of recruitment or another agreed place, and must complete the return of a non-Qatari worker within two weeks of the contract's expiry.
+        quote: the employer shall at his cost return him to the place from where he has recruited him
+    om_labour:
+      - citation_id: OM-LABOUR-2023-a14
+        proposition: Under Oman's Labour Law 2023 Art. 14, the employer must return the non-Omani worker to his country, or another agreed country, within 60 days after the employment contract ends.
+        quote: The employer shall return the non-Omani worker to his country or any other country agreed to after the end of the employment contract within a maximum period of 60 (sixty) days.
+    kw_labour:
+      - citation_id: KW-LABOUR-2010-a10
+        proposition: Under Kuwait's Labour Law 2010 Art. 10, the employer bears the expenses of the worker's return to his country.
+        quote: The employer shall bear the expenses of the laborer's return to his country.
+    std_recruitment:
+      - citation_id: STD-EPP-LGRR
+        proposition: Under the Employer Pays Principle, a voluntary employer commitment, the costs of recruitment, travel and processing of migrant workers, including the return journey when the move is not permanent, should be covered by the employer.
+        quote: including through to return when the relocation is not permanent, shall be covered by the employer
+  why_non_obvious: The contract deals with the flight out but shifts, or says nothing about, the flight home, so a worker dismissed early can be stranded abroad without a ticket.
+  citizen_line: {bn: "{country_of} আইনে দেশে ফেরার টিকিট মালিকের দেওয়ার কথা, কিন্তু এই চুক্তি আপনাকে সেটা দিচ্ছে না।", en: "Under {country_of} law the employer must pay for your ticket home; this contract does not give you that."}
+  action: {bn: "ফেরার টিকিট মালিক দেবে, এটা চুক্তিতে লিখে নিন।", en: "Ask for the employer-paid ticket home to be written into the contract."}
+  mitigation: "The Employer shall bear the cost of the Worker's return journey to Bangladesh at the end of this Contract or on any earlier termination, as required by the labour law of {country}."
+
+- id: PB-END-OF-SERVICE
+  category: wage
+  severity: high
+  packs: [sa_labour, ae_labour, qa_labour, kw_labour, bh_labour]
+  title: {en: "Contract takes away the end-of-service gratuity", bn: "চাকরি শেষের গ্র্যাচুইটি বাদ দেওয়া হয়েছে"}
+  trigger:
+    regex: ['(\bno|not (be )?entitled to( any)?|waives?( any| all| the)?( right to)?( any)?)\s+(end[- ]of[- ]service|gratuity|leaving indemnity|service (award|benefit))', '(end[- ]of[- ]service|gratuity|leaving indemnity).{0,60}(shall not be (payable|paid)|is not payable|is waived|forfeit)']
+  question: Does the contract deny, waive or reduce the end-of-service gratuity that the worker is entitled to by law?
+  pack_anchors:
+    sa_labour:
+      - citation_id: SA-LABOR-2005-a84
+        proposition: Under the Saudi Labor Law Art. 84, when the work relation ends the employer must pay the worker an end-of-service award of half a month's wage for each of the first five years and one month's wage for each following year.
+        quote: the employer shall pay the worker an end-of-service award of a half-month wage for each of the first five years and a one-month wage for each of the following years
+    ae_labour:
+      - citation_id: AE-LABOUR-2021-a51
+        proposition: Under UAE Federal Decree-Law 33/2021 Art. 51(2), a full-time foreign worker with a year or more of continuous service is entitled to end-of-service benefits of 21 days' basic wage for each of the first five years and 30 days' basic wage for each further year.
+        quote: full-time foreign worker, who completed a year or more in continuous service, shall be entitled to end of service benefits at the end of his service
+    qa_labour:
+      - citation_id: QA-LABOUR-2004-a54
+        proposition: Under Qatar's Labour Law Art. 54, a worker who has completed one year or more of employment is entitled to an end-of-service gratuity of not less than three weeks' wage for every year of employment.
+        quote: provided that it is not less than a three-week wage for every year of employment
+    kw_labour:
+      - citation_id: KW-LABOUR-2010-a51
+        proposition: Under Kuwait's Labour Law 2010 Art. 51, the worker is entitled to an end-of-service gratuity based on length of service; for monthly-paid workers it is 15 days' wage for each of the first five years and one month's wage for each later year, up to a total of a year and a half's wage.
+        quote: The laborer shall be entitled the end of service gratuity according to the following
+    bh_labour:
+      - citation_id: BH-LABOUR-2012-a116
+        proposition: Under Bahrain's Labour Law 2012 Art. 116, a worker who is not covered by the Social Insurance Law is entitled on termination to a leaving indemnity of half a month's wage for each of the first three years and one month's wage for each following year.
+        quote: shall be entitled upon the termination of his employment to a leaving indemnity at the rate of half month’s wage for each of the first three years of employment
+  why_non_obvious: The gratuity is a statutory right that builds up every year; a one-line waiver can quietly cost the worker months of pay.
+  citizen_line: {bn: "{country_of} আইনে চাকরি শেষে আপনার গ্র্যাচুইটি পাওনা, চুক্তি সেটা কেড়ে নিচ্ছে।", en: "Under {country_of} law you are owed an end-of-service payment; this contract takes it away."}
+  action: {bn: "গ্র্যাচুইটি বাদ দেওয়ার শর্ত কেটে দিতে বলুন।", en: "Ask for the gratuity waiver to be removed."}
+  mitigation: "On termination or expiry of this Contract the Worker shall receive the end-of-service gratuity required by the labour law of {country}, calculated on the last wage."
 
 - id: PB-NONCOMPETE
   exclude_packs: [bd_migration]

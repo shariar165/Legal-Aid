@@ -41,9 +41,15 @@ def memo_docx(r: AnalysisResult) -> bytes:
             if risk.clash:
                 meta.add_run(f"\nValid abroad, void in BD: {risk.clash}").italic = True
             if risk.bench:
-                meta.add_run(f"\nVirtual Bench {risk.bench.vote}: {risk.bench.majority_opinion}").italic = True
-                if risk.bench.dissent:
-                    meta.add_run(f"\nDissent: {risk.bench.dissent} (flagged for human review)").italic = True
+                b = risk.bench
+                head = f"split {b.vote}" if b.agreement == "split" else b.vote
+                sev = f" (severity {b.severity_range})" if b.severity_range else ""
+                meta.add_run(f"\nVirtual Bench {head}{sev}: {b.majority_opinion}").italic = True
+                meta.add_run("\nJudges by lens: " + "; ".join([f"{o.lens or o.name} ({o.name}): {o.severity}" for o in b.opinions] + [f"{n}: no opinion" for n in b.no_opinion])).italic = True
+                if b.human_review and not b.dissent:
+                    meta.add_run(f"\nFlagged for human review: {b.review_reason}.").italic = True
+                if b.dissent:
+                    meta.add_run(f"\nDissent: {b.dissent}" + (" (flagged for human review)" if b.human_review else "")).italic = True
         for title, body in (("Issue", issue.issue), ("Rule", issue.rule), ("Application", issue.application), ("Conclusion", issue.conclusion)):
             para = d.add_paragraph()
             para.add_run(f"{title}. ").bold = True

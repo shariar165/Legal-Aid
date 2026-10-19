@@ -5,7 +5,8 @@
   G2 fidelity     any quoted statutory text fuzzy-matches the source (rapidfuzz >= threshold); otherwise it is
                   shown as a paraphrase (warn)
   G3 entailment   a judge model from a different family reads ONLY the section text and decides whether it
-                  supports the proposition; for high/critical risks the Virtual Bench decides instead
+                  supports the proposition; for high/critical risks the Virtual Bench decides instead (without a
+                  quorum of two judges' opinions, the single judge decides and the claim is flagged for human review)
   G4 currency     the section is in force; amended -> warn with the amendment note; repealed -> fail
 
 verified = all pass/skip · partial = some warn · dropped = any fail (kept in the ledger, never shown as advice)
@@ -18,10 +19,10 @@ import re
 
 from rapidfuzz import fuzz
 
-from ain import config
+from ain import companies, config
 from ain.agents import bench as bench_mod
-from ain.llm import LLM
-from ain.models import Claim, GateResult, Risk, RouteDecision, Section, Verification
+from ain.llm import LLM, LLMError
+from ain.models import BenchResult, Claim, GateResult, Risk, RouteDecision, Section, Verification
 from ain.naming import SHORT_EN
 from ain.retrieval import Corpus, nfc, tokenize
 
@@ -60,6 +61,12 @@ def gate_fidelity(claim: Claim, sec: Section) -> GateResult:
 
 
 def gate_currency(sec: Section) -> GateResult:
+    if sec.kind == "company_policy" and sec.jurisdiction == "COMPANY" and companies.is_stale(sec.retrieved_at):
+        return GateResult(gate="currency", status="warn", detail=f"The company's published policy was fetched on {sec.retrieved_at}, over a year ago; it may have changed. Re-check {sec.source}.")
+    if sec.kind == "company_policy":  # the employer's own words; they bind it as a promise, not as law
+        return GateResult(gate="currency", status="pass", detail=f"The employer's own policy text, not law ({sec.source}, {sec.retrieved_at}).")
+    if sec.kind == "standard":  # not law: "in force" means this is the current version of the standard
+        return GateResult(gate="currency", status="pass", detail=f"Current version of a voluntary standard, not law (retrieved {sec.retrieved_at} from {sec.source}).")
     if sec.status == "repealed":
         succ = f" It was superseded by the {SHORT_EN.get(sec.superseded_by, sec.superseded_by)} ({sec.superseded_by})." if sec.superseded_by else ""
         return GateResult(gate="currency", status="fail", detail=f"{sec.act_en} has been repealed.{succ}")
@@ -99,14 +106,17 @@ def fake_entailment(claim: Claim, sec: Section) -> str:
 
 async def gate_entailment(llm: LLM, claim: Claim, sec: Section) -> GateResult:
     fv = fake_entailment(claim, sec)
-    data = await llm.json(
-        role="judge",
-        system=ENTAIL_SYSTEM,
-        user=f"STATUTE: {sec.act_en}, s.{sec.section} - {sec.heading}\nTEXT:\n{sec.text[:3500]}\n\nPROPOSITION: {claim.proposition}",
-        task="entailment",
-        agent="Citation Verifier",
-        fake=lambda: {"verdict": fv, "reasoning": "Offline check: proposition terms found in the section text." if fv == "supports" else "Offline check: the section text does not address the proposition."},
-    )
+    try:
+        data = await llm.json(
+            role="judge",
+            system=ENTAIL_SYSTEM,
+            user=f"STATUTE: {sec.act_en}, s.{sec.section} - {sec.heading}\nTEXT:\n{bench_mod.cited_text(sec, claim)}\n\nPROPOSITION: {claim.proposition}",
+            task="entailment",
+            agent="Citation Verifier",
+            fake=lambda: {"verdict": fv, "reasoning": "Offline check: proposition terms found in the section text." if fv == "supports" else "Offline check: the section text does not address the proposition."},
+        )
+    except LLMError:  # fail closed: a claim no judge could check is dropped (and kept in the ledger), never shown as advice
+        return GateResult(gate="entailment", status="fail", detail="Not checked: no judge model could be reached on any route, so the claim is held back.")
     verdict = data.get("verdict", "neutral")
     reason = str(data.get("reasoning", ""))[:300]
     if verdict == "supports":
@@ -122,7 +132,10 @@ def _verdict(gates: list[GateResult]) -> str:
     return "verified"
 
 
-async def verify_claim(llm: LLM, corpus: Corpus, route: RouteDecision, claim: Claim, risk: Risk | None, use_bench: bool) -> Verification:
+async def verify_claim(
+    llm: LLM, corpus: Corpus, route: RouteDecision, claim: Claim, risk: Risk | None, use_bench: bool, bench: BenchResult | None = None
+) -> Verification:
+    """`bench`: a ruling the Virtual Bench already gave on this claim (batched with others); otherwise it convenes here."""
     g1, sec = gate_existence(claim, corpus, route)
     if sec is None or g1.status == "fail":
         skipped = [GateResult(gate=g, status="skip", detail="Not checked: the citation failed the existence/applicability gate.") for g in ("fidelity", "entailment", "currency")]
@@ -132,37 +145,60 @@ async def verify_claim(llm: LLM, corpus: Corpus, route: RouteDecision, claim: Cl
     if g4.status == "fail":
         g3 = GateResult(gate="entailment", status="skip", detail="Not checked: the cited law is no longer in force.")
         return Verification(claim=claim, gates=[g1, g2, g3, g4], verdict="dropped", section=sec)
-    bench_result = None
-    if use_bench and risk is not None:
+    bench_result = bench
+    if bench_result is None and use_bench and risk is not None:
         bench_result = await bench_mod.convene(llm, claim, sec, risk, fake_entailment(claim, sec))
+    if bench_result is not None and bench_result.quorum:
         ok = bench_result.majority_verdict == "supports"
         g3 = GateResult(
             gate="entailment",
             status="pass" if ok else "fail",
-            detail=f"Virtual Bench {bench_result.vote}: {bench_result.majority_verdict}." + (" Dissent recorded - human review." if bench_result.human_review else ""),
+            detail=_bench_detail(bench_result),
         )
+    elif bench_result is not None:  # fewer than two judges answered: the single judge decides, flagged for human review
+        single = await gate_entailment(llm, claim, sec)
+        g3 = GateResult(gate="entailment", status=single.status, detail=f"{_bench_detail(bench_result)} Single-judge check instead: {single.detail}")
     else:
         g3 = await gate_entailment(llm, claim, sec)
     gates = [g1, g2, g3, g4]
     return Verification(claim=claim, gates=gates, verdict=_verdict(gates), section=sec, bench=bench_result)  # type: ignore[arg-type]
 
 
+def _bench_detail(b: BenchResult) -> str:
+    if not b.quorum:
+        head = f"Virtual Bench had no quorum: {' and '.join(b.no_opinion)} gave no opinion."
+    elif b.agreement == "split":
+        head = f"Virtual Bench split {b.vote}: no majority, so not supported."
+    else:
+        head = f"Virtual Bench {b.vote}: {b.majority_verdict}."
+    sev = f" Severity {b.severity_range}." if b.severity_range else ""
+    review = f" Human review: {b.review_reason}." if b.human_review else ""
+    fam = f" Same family (fallback): {' and '.join(b.same_family)}." if b.same_family else ""
+    return head + sev + review + fam
+
+
 async def verify_all(llm: LLM, corpus: Corpus, route: RouteDecision, risks: list[Risk], claims: list[Claim], on_result=None) -> list[Verification]:
     by_risk = {r.id: r for r in risks}
     bench_sev = config.bench_severities()
     # the bench sits on ONE claim per high/critical risk: the first one that exists, applies and is in force
-    bench_claims: set[str] = set()
+    bench_items: dict[str, tuple[Claim, Section, Risk, str]] = {}
     for r in risks:
         if r.severity in bench_sev:
             for cid in r.claim_ids:
                 c = next(c for c in claims if c.id == cid)
                 g1, sec = gate_existence(c, corpus, route)
                 if sec is not None and g1.status != "fail" and sec.status != "repealed":
-                    bench_claims.add(cid)
+                    bench_items[cid] = (c, sec, r, fake_entailment(c, sec))
                     break
+    # batch_bench: the bench sits once for all its claims, so each judge can answer several in one call
+    together = None
+    if bench_mod.Options.from_config().batch and len(bench_items) > 1:
+        together = asyncio.ensure_future(bench_mod.convene_many(llm, list(bench_items.values())))
+    order = list(bench_items)
 
     async def one(c: Claim) -> Verification:
-        v = await verify_claim(llm, corpus, route, c, by_risk.get(c.risk_id), c.id in bench_claims)
+        ruling = (await together)[order.index(c.id)] if together is not None and c.id in bench_items else None
+        v = await verify_claim(llm, corpus, route, c, by_risk.get(c.risk_id), c.id in bench_items, bench=ruling)
         if on_result:
             on_result(v)
         return v
@@ -172,5 +208,6 @@ async def verify_all(llm: LLM, corpus: Corpus, route: RouteDecision, risks: list
         if v.bench is not None:
             risk = by_risk[v.claim.risk_id]
             risk.bench = v.bench
-            risk.severity = v.bench.majority_severity
+            if v.bench.quorum:  # without a quorum the risk keeps its own severity
+                risk.severity = v.bench.majority_severity
     return ledger
