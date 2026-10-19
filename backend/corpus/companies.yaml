@@ -1,0 +1,59 @@
+# Published policies of employers that hire many Bangladeshi workers.
+#
+# Rules for every entry (README "Adding or correcting a company"):
+#   * quote ONLY the company's own published words, cut verbatim from its own website (policy_url);
+#     never press reports, audits or allegations about the company
+#   * findings are worded "The employer's published policy says X; this contract says Y" - nothing more
+#   * `published` is the date on the document; records retrieved more than 12 months ago show a re-check badge
+#   * `notes` records corrections or context the company has asked for
+#
+# aliases are matched as whole words in the contract (company names are not personal data).
+# specs are cut by corpus/curate_companies.py into processed/company_sections.jsonl.
+
+- slug: ioi
+  name: IOI Corporation Berhad
+  aliases: [IOI Corporation, IOI Corporation Berhad, IOI Group, IOI Plantation, IOI Plantation Services]
+  country: MY
+  sector: Palm oil plantations
+  document: Foreign Workers Recruitment Guideline & Procedure in Malaysia
+  published: "Q4 2017"
+  policy_url: https://www.ioigroup.com/Content/S/PDF/Foreign%20Workers%20Recruitment%20Guideline%20Procedure.pdf
+  file: co_ioi.pdf
+  notes: ""
+  specs:
+    - section: "4.2"
+      heading: No recruitment fee policy
+      start: "4.2 “No Recruitment Fee” Policy"
+      end: " 5. FOREIGN WORKERS EMPLOYMENT STAGES"
+    - section: "6.3"
+      heading: Enforcement of the no recruitment fee policy
+      start: "6.3 Policy enforcement"
+      end: " 6.4 HRD roles"
+    - section: "7.5"
+      heading: Passport handling
+      start: "7.5 Passport handling"
+      end: " 7.6 Renewal of passport"
+    - section: "7.9"
+      heading: Grievance mechanism
+      start: "7.9 Grievance mechanism"
+      end: " At the plantation/estate"
+
+- slug: topglove
+  name: Top Glove Corporation Bhd
+  aliases: [Top Glove, Top Glove Corporation, Top Glove Corporation Bhd, Top Glove Sdn Bhd, Top Glove Sdn. Bhd.]
+  country: MY
+  sector: Rubber glove manufacturing
+  document: Press statement of 15 February 2021 setting out its worker policies
+  published: "2021-02-15"
+  policy_url: https://topglove.com/App_ClientFile/7ff8cb3f-fbf6-42e7-81da-6db6a0ab2ef4/WebEvent/UploadItem/EventDocument/37613778-797b-4a52-a4a4-afbecccc4b50_en.pdf
+  file: co_topglove.pdf
+  notes: "Only the policy statements are quoted, not the parts of the statement that respond to news reports."
+  specs:
+    - section: "1.2"
+      heading: Zero Cost Recruitment Policy
+      start: "Under the Zero Cost Recruitment Policy, the Company bears all recruitment related fees for our foreign workers."
+      end: " We are remediating"
+    - section: "2"
+      heading: Passport Safekeeping Policy
+      start: "Under Top Glove’s Passport Safekeeping Policy"
+      end: " 3. Workers’ Accommodation"

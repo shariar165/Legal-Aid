@@ -1,17 +1,23 @@
 """Wage Truth Calculator: plain arithmetic, no LLM.
 
 promised salary - monthly deductions = what the worker actually receives, compared with the
-legal floor and the legal cap on deductions. Legal numbers come from corpus sections
-(MY-MWO-2024-p3, MY-EA-1955-s24), and those citations go through the verifier like any other claim.
+legal floor and the legal cap on deductions. Legal numbers come from the country registry
+(ain/countries.yaml), each tied to a corpus section (e.g. MY-MWO-2024-p3, SA-LABOR-2005-a93), and
+those citations go through the verifier like any other claim.
 """
 
 from __future__ import annotations
 
+from ain import countries
 from ain.models import DocFacts, RouteDecision, WageCalc
 
-# (currency, pack) -> (minimum monthly wage, citation) ; values are read from the cited gazette text
-MINIMUM_WAGES = {("RM", "my_employment"): (1700.0, "MY-MWO-2024-p3")}
-DEDUCTION_CAPS = {("RM", "my_employment"): (50.0, "MY-EA-1955-s24")}
+# (currency, pack) -> (figure, citation) ; values are read from the cited statute text
+MINIMUM_WAGES = {
+    (c.currency, c.pack): (float(c.min_wage["amount"]), c.min_wage["citation_id"]) for c in countries.load_countries() if c.min_wage
+}
+DEDUCTION_CAPS = {
+    (c.currency, c.pack): (float(c.deduction_cap["pct"]), c.deduction_cap["citation_id"]) for c in countries.load_countries() if c.deduction_cap
+}
 
 
 def compute(facts: DocFacts, route: RouteDecision, salary: float | None = None, confirmed: bool = False) -> WageCalc | None:

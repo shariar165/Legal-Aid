@@ -2,7 +2,7 @@
 
 **A multi-agent legal copilot for Bangladesh.** It reads a raw contract (PDF, DOCX, text, or a phone photo in Bangla or English) and finds non-obvious compliance risks. It then writes a memorandum in which **every legal claim has been verified against official statute text**. One engine serves two views:
 
-- **Citizen mode** (`/`) is for a migrant worker on a phone. It works in Bangla, can read every answer aloud, and asks the worker to confirm a blurry salary figure. It shows the real take-home pay and drafts a letter to the recruiting agency.
+- **Citizen mode** (`/`) is for a migrant worker on a phone. It works in Bangla, can read every answer aloud, and asks the worker to confirm a blurry salary figure. It shows the real take-home pay, the labour law of the country of work, where to get help there, and drafts a letter to the recruiting agency.
 - **Counsel mode** (`/counsel`) is for a lawyer, NGO caseworker or factory compliance team. It is a workspace with four views:
   - **Report**: an IRAC memo with risk cards (what is wrong, what to do, the checked law), an at-a-glance summary and a DOCX download.
   - **Contract**: the document as a paper sheet, with each clause tinted by the severity of its risk.
@@ -22,6 +22,8 @@
 | **Virtual Bench** | High and critical claims go to 3 judges from different model families (Claude, Gemini, DeepSeek via OpenRouter). They review each other anonymously, and a Chief Justice (GPT) writes a majority opinion and records any dissent. A dissent raises a ⚠ human-review flag. |
 | **LLM Council** | The three judges have personalities: **Sunny** (happy, leans lenient on borderline severity), **Regal** (proud, holds its view) and **Grey** (gloomy, leans harsh). Personality changes tone and borderline severity only, never how the statute is read. In Counsel mode you can question them in English or Bangla; each answers in character with a one-line position and a confidence level, only from the redacted analysis, and may cite only sections that passed verification. **Deliberation:** after the first answers, the members respond to each other (agree, challenge or change position), then the Chief Justice writes a ruling: unanimous / majority / split, the consensus, the points still in dispute, and one next step. |
 | **Real-world currency** | The corpus is the consolidated text as of Oct 2026. The 2012 Trafficking Act is **repealed**; the Critic re-anchors a stale citation to the 2026 Act and re-verifies it. Labour Act s.46 maternity leave now reads **60 + 60 days**, from the 2026 amendment. |
+| **Country of work** | Bangladeshi workers go to many countries, so the labour law of the 8 main destinations is in the corpus: **Saudi Arabia, UAE, Malaysia, Qatar, Oman, Kuwait, Singapore, Bahrain**. The country is found in the contract (English or Bangla, e.g. "সৌদি আরবে") or picked by the user. Each country's law adds to Bangladesh law and ILO standards: recruitment fees, passports, deduction caps (50% in Saudi Arabia, 25% in Oman and Kuwait…), the ticket home and the end-of-service gratuity. The worker also sees the Bangladesh labour wing to contact there. |
+| **Employer's own promises** | The contract is checked against (1) **fair-recruitment standards** many employers sign up to (ILO General Principles, Employer Pays Principle, RBA Code; always marked *voluntary standard, not law*), (2) an **employer policy or handbook the user uploads**, and (3) the **published policy of a named company** (`corpus/companies.yaml`). A contradiction is shown only if the policy quote passes the same 4 gates as a statute: "The employer's policy says X; this contract says Y." |
 | **Regime switch** | For a factory inside an EPZ, the Router turns **off** the Labour Act 2006 and applies the BEPZ Labour Act 2019 (s.3 gives it overriding effect). A Labour Act citation in an EPZ document fails G1. |
 | **Valid abroad, void in BD** | A clash badge marks clauses that are normal under English or EU law but void in Bangladesh: non-competes (Contract Act s.27), shortened limitation periods (s.28), 150-day payment terms (Bangladesh Bank's four-month repatriation rule). |
 | **Off-playbook risks** | Adversarial Counsel runs agentic RAG with bilingual queries, so it finds risks the YAML playbook doesn't cover. Examples: silence on return airfare combined with termination at will; an exit penalty combined with withheld wages (debt bondage); a buyer's multi-union clause that can't be performed inside an EPZ. |
@@ -33,8 +35,9 @@
 ```
 upload ─► Ingestion (PyMuPDF · python-docx · EasyOCR bn+en, cached) → clauses + facts
        ─► PII Shield → placeholders; only redacted text ever leaves the machine
-       ─► Jurisdiction Router → law packs (EPZ ⇒ BEPZ Labour Act replaces Labour Act)
+       ─► Jurisdiction Router → law packs (EPZ ⇒ BEPZ Labour Act replaces Labour Act; country of work ⇒ its labour law)
        ─► Risk Analyst (YAML playbook) ║ Adversarial Counsel (agentic RAG) ║ Wage Calculator (waits for the human salary check)
+       ─► Policy Check: contract vs the employer's own policy (uploaded, or the named company's published one)
        ─► Citation Verifier: G1 existence/applicability · G2 fidelity · G3 entailment · G4 currency
             └─ high/critical → Virtual Bench (Sunny · Regal · Grey + Chief Justice, OpenRouter)
        ─► Critic (re-anchors repealed law, withdraws unsupported risks)
@@ -61,7 +64,7 @@ The orchestrator emits each step as an SSE event, so the UI progress and the age
 | `bench_a` / `bench_b` / `bench_c` | OpenRouter · Claude / Gemini / DeepSeek | Sunny / Regal / Grey |
 | `chairman` | OpenRouter · GPT | Chief Justice |
 
-### Corpus (`backend/corpus/processed/corpus.jsonl`, 1,113 sections)
+### Corpus (`backend/corpus/processed/corpus.jsonl`, 1,154 sections)
 - **Bangladesh**, scraped from [bdlaws.minlaw.gov.bd](http://bdlaws.minlaw.gov.bd) with deep links to each section:
   - Contract Act 1872; Stamp Act 1899; CPC 1908 (ss.13, 14, 44A); FER Act 1947
   - Labour Act 2006 (as amended 2026); BEPZ Labour Act 2019
@@ -69,21 +72,55 @@ The orchestrator emits each step as an SSE event, so the UI progress and the age
   - Personal Data Protection Act 2026
 - **International**, as verbatim excerpts cut from official documents by `corpus/curate_intl.py`:
   - ILO C29, C95, C181
-  - Malaysia Employment Act 1955 s.24 (AGC text) and Minimum Wages Order 2024 (P.U.(A) 376)
   - EU CSDDD Art.10 and GDPR Art.44 (Publications Office CELLAR)
   - Bangladesh Bank GFET 2018 Ch.8 para 13, Notification FE 1/77-BB, FE Circular 13/2020
+- **Countries of work** (`ain/countries.yaml` lists each country's aliases, currency, wage figures and help contact):
+
+  | Country | Law (source) | What is covered |
+  |---|---|---|
+  | Saudi Arabia | Labor Law, Royal Decree M/51 (English translation, WIPO Lex) | employer pays recruitment, iqama and return ticket (Art. 40), wages not withheld (61), end-of-service award (84), deductions ≤ half the wage (93) |
+  | UAE | Federal Decree-Law 33/2021 (MOHRE English text via FAOLEX) | no recruitment fees (Art. 6), documents not withheld and repatriation paid (13), forced labour (14), deductions ≤ 50% (25), end-of-service benefit (51) |
+  | Malaysia | Employment Act 1955 (AGC text), Minimum Wages Order 2024 | deductions (s.24), forced labour (s.90B), RM 1,700 minimum wage |
+  | Qatar | Labour Law 14/2004 (embassy translation) | no fees from workers (Art. 33), gratuity (54), employer pays the return (57), deductions ≤ 50% (70) |
+  | Oman | Labour Law, Royal Decree 53/2023 (Decree.om translation) | forced labour (Art. 5), passport only with written consent (6), return home (14), no fees (31), withholding ≤ ¼ (96) |
+  | Kuwait | Law 6/2010 (embassy translation, archived) | employer pays the return (Art. 10), gratuity (51), deductions ≤ 25% (59) |
+  | Singapore | EFMA 1990 s.22A, Employment Act s.32, Passports Act s.47(5) (Singapore Statutes Online) | no payment for a job, deductions ≤ 50%, keeping another person's passport is an offence |
+  | Bahrain | Labour Law 36/2012, Labour Market Law 19/2006 (LLOC English versions) | no money for a permit or job (Art. 23), loan deductions ≤ 10% (44), attachment ≤ 25% (45), leaving indemnity (116) |
+
+  Gulf laws are official or embassy English translations; the Arabic text prevails, and older translations are marked *amended*, so the currency gate shows a warning.
+- **Fair-recruitment standards** (voluntary, not law): ILO General Principles and Operational Guidelines for Fair Recruitment (2019), Employer Pays Principle, RBA Code of Conduct 8.0 §A.1.
+- **Companies' published policies** (`corpus/companies.yaml`, cut by `corpus/curate_companies.py`): IOI Corporation (recruitment guideline) and Top Glove (zero-cost recruitment and passport policies).
 
 No statute text or section number is typed by hand. A test checks that every playbook quote appears verbatim in its source section.
+
+Rebuild after changing a source (from `backend/`):
+
+```bash
+..\.venv\Scripts\python -m corpus.fetch_intl          # download international and country sources into corpus/raw/
+..\.venv\Scripts\python -m corpus.curate_intl         # cut the verbatim excerpts (fails loudly on a missing marker)
+..\.venv\Scripts\python -m corpus.curate_companies    # companies' published policies
+..\.venv\Scripts\python -m corpus.build_corpus        # merge everything into corpus.jsonl
+..\.venv\Scripts\python -m ain.retrieval              # rebuild the dense embeddings
+```
+
+### Adding or correcting a company
+
+Add an entry to `backend/corpus/companies.yaml` and run `curate_companies` and `build_corpus`. The rules:
+- quote **only the company's own published document**, downloaded from its own website (`policy_url`); never press reports, audits or allegations;
+- findings always read "The employer's published policy says X; this contract says Y", and say nothing else about the company;
+- `published` is the document's own date. A policy fetched more than a year ago gets a warning in the currency gate, asking for a re-check;
+- if a company asks for a correction, update or remove its entry and record the reason in `notes`.
 
 ## Project layout
 
 ```
 backend/
   ain/            FastAPI app (api.py), orchestrator, LLM layer, models, DOCX export
-    agents/       ingestion · pii · router · risk_analyst · adversary · calculator
+    agents/       ingestion · pii · router · risk_analyst · adversary · calculator · policy_check
                   verifier · bench · council · critic · drafter · ablation
+    countries.yaml  destination countries (aliases, currency, wage figures, help contacts)
     playbook/     rules.yaml (the risk playbook)
-  corpus/         bdlaws scraper, international excerpt curation, processed corpus + embeddings
+  corpus/         bdlaws scraper, international + country + company excerpt curation, companies.yaml, processed corpus + embeddings
   demo/           hero documents, the sample contract photo, pre-warmed OCR cache
   eval/           gold set and evaluation runner
   scripts/        smoke_live.py (live model check + cache warm-up), make_photo_sample.py
@@ -122,7 +159,8 @@ Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each
 |---|---|---|
 | `GET` | `/api/health` | LLM mode, which provider keys are set, corpus size |
 | `GET` | `/api/samples` | demo documents |
-| `POST` | `/api/analyze` | upload a document or pick a sample; returns a job id |
+| `GET` | `/api/countries` | countries of work whose labour law is in the corpus |
+| `POST` | `/api/analyze` | upload a document or pick a sample; optional `destination_country` (code) and `policy` (the employer's own policy file); returns a job id |
 | `GET` | `/api/jobs/{id}` | job status |
 | `GET` | `/api/jobs/{id}/events` | SSE stream of agent events |
 | `POST` | `/api/jobs/{id}/confirm` | human salary check |
@@ -154,7 +192,7 @@ Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets 
 
 ```bash
 cd backend
-..\.venv\Scripts\python -m pytest -q            # 59 offline tests
+..\.venv\Scripts\python -m pytest -q            # 94 offline tests
 ..\.venv\Scripts\python -m eval.run_eval        # recall / precision / citation validity / drop rate / ablation
 ..\.venv\Scripts\python -m scripts.smoke_live   # live keys: model check + hero docs + cache warm-up
 cd ..\web && npm run lint && npm run build
@@ -165,6 +203,8 @@ The tests cover:
 - bilingual retrieval;
 - PII redaction, plus a check that **no outbound payload contains PII**;
 - the router, including that **EPZ documents never rely on the Labour Act**;
+- countries of work: detection in English and Bangla, one pack per country, each wage figure is stated in its cited section, and every country has its own law in the playbook;
+- the employer's own policy: contradictions are verified against the policy text, an invented promise fails the fidelity gate, the policy is redacted with the same placeholders as the contract, and a named company's published policy is used automatically;
 - each verifier gate failing on its own bad case;
 - the Critic's repeal healing;
 - Bench majority/dissent, the three personas, and that judges see only the statute and the claim;
@@ -193,4 +233,6 @@ The tests cover:
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
+- Country coverage is the 8 main destinations. For any other country only Bangladesh law and ILO standards are checked, and the UI says so. Qatar's 2020 minimum wage and Kuwait's minimum wage have no official English text in the corpus yet, so the calculator shows no minimum for them.
+- The company database starts small (two companies). The format is designed for growth, but each entry needs a published document from the company itself.
 - Council members can discuss only what the analysis already verified; they cannot research new law. Deliberation adds four model calls per question (three responses and the ruling).

@@ -66,6 +66,20 @@ def test_upload_and_bad_inputs(client, docs):
     assert client.get("/api/corpus/BD-CONTRACT-1872-s27").json()["section"] == "27"
 
 
+def test_countries_and_destination_override(client):
+    listed = client.get("/api/countries").json()
+    assert {c["code"] for c in listed} >= {"SA", "AE", "MY", "QA", "OM", "KW", "SG", "BH"}
+    assert all(c["supported"] and c["help"]["bn"] for c in listed)
+    text = b"EMPLOYMENT CONTRACT\n\n1. Salary. A basic salary of 1,000 per month.\n\n2. Recruiting agency fees are paid by the worker."
+    bad = client.post("/api/analyze", data={"destination_country": "Atlantis"}, files={"file": ("c.txt", text, "text/plain")})
+    assert bad.status_code == 400
+    job = client.post("/api/analyze", data={"destination_country": "QA"}, files={"file": ("c.txt", text, "text/plain")}).json()
+    assert _wait(client, job["job_id"])["status"] == "done"
+    r = client.get(f"/api/jobs/{job['job_id']}/result").json()
+    assert r["destination"]["code"] == "QA" and r["destination"]["supported"]
+    assert "qa_labour" in {p["pack"] for p in r["route"]["packs"]}
+
+
 def test_blurry_salary_waits_for_human_confirmation(client, docs, monkeypatch):
     real = ingestion.build_document
 

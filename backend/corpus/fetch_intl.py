@@ -19,6 +19,32 @@ SOURCES = {
     "cellar_32016R0679.xhtml": ("http://publications.europa.eu/resource/celex/32016R0679", "application/xhtml+xml"),
     "gfet2018.pdf": ("https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf", None),
     "fe_circ_2020_13.pdf": ("https://cdn5.ogrlegal.com/files/forex/fepd/mar192020fepd13e.pdf", None),
+    # --- destination countries (English translations; the Arabic text prevails for the Gulf states) ---
+    "sa_labor_wipo.html": ("https://www.wipo.int/wipolex/edocs/lexdocs/laws/en/sa/sa055en.pdf", None),
+    "ae_labour_fao.pdf": ("https://faolex.fao.org/docs/pdf/uae217212E.pdf", None),
+    "qa_labour_embassy.pdf": ("https://dev.alkarama.org/sites/default/files/2016-11/QTR_LabourLaw_EN_0.pdf", None),
+    "om_labour_decree.html": ("https://decree.om/2023/rd20230053/", None),
+    # The Hungarian Embassy's copy is served behind a viewer page; the Internet Archive keeps the raw PDF.
+    "kw_labour_huembassy.pdf": (
+        "https://web.archive.org/web/20240909223937id_/https://kuwait.mfa.gov.hu/assets/03/54/68/2937dc434147a45919353f5d3aa861cc69e84dcf.pdf",
+        None,
+    ),
+    "bh_labour_lloc.docx": ("https://www.lloc.gov.bh/FullEn/K3612.docx", None),
+    "bh_lmra_lloc.docx": ("https://www.lloc.gov.bh/FullEn/K1906.docx", None),
+    # Singapore Statutes Online lazy-loads whole Acts; a single provision is served complete.
+    "sg_efma_s22a.html": ("https://sso.agc.gov.sg/Act/EFMA1990?ProvIds=pr22A-", None),
+    "sg_ea_s32.html": ("https://sso.agc.gov.sg/Act/EmA1968?ProvIds=pr32-", None),
+    "sg_pa_s47.html": ("https://sso.agc.gov.sg/Act/PA2007?ProvIds=pr47-", None),
+    # --- voluntary recruitment standards ---
+    "std_ilo_fair.pdf": (
+        "https://respect.international/wp-content/uploads/2019/07/General-Principles-and-Operational-Guidelines-for-Fair-Recruitment-and-Definition-of-Recruitment-Fees-and-Related-Costs.pdf",
+        None,
+    ),
+    "std_epp_lgrr.pdf": (
+        "https://ihrb-org.files.svdcdn.com/production/assets/uploads/member-uploads/Six_Steps_to_Responsible_Recruitment_-_Leadership_Group_for_Responsible_Recruitment.pdf?dm=1726489439",
+        None,
+    ),
+    "std_rba_8.pdf": ("https://www.responsiblebusiness.org/media/docs/RBACodeofConduct8.0_English.pdf", None),
 }
 
 

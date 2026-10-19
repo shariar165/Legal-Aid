@@ -37,6 +37,15 @@ export const STRINGS = {
       en: "Your name and passport number are kept private.",
     },
     disclaimer: { bn: "সিদ্ধান্তে সহায়তা, আইনি পরামর্শ নয়।", en: "Decision support, not legal advice." },
+    countryLabel: { bn: "কোন দেশে কাজ?", en: "Which country is the job in?" },
+    countryAuto: { bn: "চুক্তি দেখে বুঝে নিন", en: "Find it in the contract" },
+    policyAdd: { bn: "কোম্পানির নিজের নীতিমালা যোগ করুন (ঐচ্ছিক)", en: "Add the company's own policy (optional)" },
+    policySub: {
+      bn: "চুক্তি কোম্পানির নিজের প্রতিশ্রুতি ভাঙছে কি না দেখব",
+      en: "We check whether the contract breaks the company's own promises",
+    },
+    policyChosen: { bn: "কোম্পানির নীতিমালা:", en: "Company policy:" },
+    policyRemove: { bn: "বাদ দিন", en: "Remove" },
     samplesTitle: { bn: "অথবা একটি নমুনা চুক্তি দিয়ে দেখুন", en: "Or try a sample contract" },
     counselLink: { bn: "আইনজীবী / এনজিও মোড →", en: "Lawyer / NGO mode →" },
     saveLink: { bn: "অ্যাকাউন্ট খুলে ফলাফল সংরক্ষণ করুন", en: "Save my results in an account" },
@@ -60,7 +69,7 @@ export const STRINGS = {
     ocrYes: { bn: "হ্যাঁ, ঠিক আছে", en: "Yes, correct" },
     ocrConfirmed: { bn: "✓ ঠিক আছে", en: "✓ Correct" },
     ocrFix: { bn: "না, ঠিক করুন", en: "No, fix it" },
-    ocrInput: { bn: "সঠিক বেতন লিখুন (RM)", en: "Type the correct salary (RM)" },
+    ocrInput: { bn: "সঠিক বেতন লিখুন", en: "Type the correct salary" },
     ocrSave: { bn: "সংরক্ষণ করুন", en: "Save" },
     ocrNeeded: {
       bn: "ফলাফল দেখার আগে উপরের বেতনটি নিশ্চিত করুন।",
@@ -110,12 +119,26 @@ export const STRINGS = {
       en: "With the verification ledger and the Virtual Bench ruling",
     },
     noDanger: { bn: "বড় কোনো বিপদ পাওয়া যায়নি", en: "No serious danger found" },
+    workIn: { bn: "কাজের দেশ", en: "Country of work" },
+    helpThere: { bn: "সেখানে সাহায্যের জন্য:", en: "For help there:" },
     offlineMode: {
       bn: "অফলাইন ডেমো মোড: আইনের যাচাই আসল, ভাষা মডেলের উত্তর নমুনা।",
       en: "Offline demo mode: law checks are real, language-model answers are samples.",
     },
   },
 } as const;
+
+/** Which laws were checked for the country of work, or that we do not have its law yet. */
+export function countryCheckLine(dest: { name: L10n; of: L10n | null; supported: boolean }, lang: Lang): string {
+  if (dest.supported && dest.of) {
+    return lang === "bn"
+      ? `${dest.of.bn} শ্রম আইন, বাংলাদেশের আইন ও আইএলও মান দিয়ে যাচাই করা হয়েছে।`
+      : `Checked against ${dest.of.en} labour law, Bangladesh law and ILO standards.`;
+  }
+  return lang === "bn"
+    ? `${dest.name.bn}-এর শ্রম আইন আমাদের কাছে এখনো নেই। শুধু বাংলাদেশের আইন ও আইএলও মান দেখা হয়েছে।`
+    : `We do not have the labour law of ${dest.name.en} yet. Only Bangladesh law and ILO standards were checked.`;
+}
 
 export function bannerTitle(count: number, lang: Lang): string {
   if (count === 0) return lang === "bn" ? "বড় কোনো বিপদ পাওয়া যায়নি" : "No serious danger found";

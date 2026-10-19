@@ -39,9 +39,9 @@ export function CitizenApp() {
           lang={lang}
           onLangChange={changeLang}
           speech={speech}
-          onFile={(file) => {
+          onFile={(file, destination, policy) => {
             if (!file) return;
-            void analysis.start({ file });
+            void analysis.start({ file, destination, policy });
             go("analyzing");
           }}
           onSample={(sampleId) => {

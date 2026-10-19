@@ -32,7 +32,8 @@ def test_every_playbook_anchor_exists_with_verbatim_quote(corpus):
     assert len(rules) >= 12
     checked = 0
     for rule in rules:
-        anchors = list(rule.anchors) + [a for group in rule.anchors_by_pack.values() for a in group]
+        groups = list(rule.anchors_by_pack.values()) + list(rule.pack_anchors.values())
+        anchors = list(rule.anchors) + [a for group in groups for a in group]
         assert anchors, rule.id
         for a in anchors:
             sec = corpus.get(a["citation_id"])

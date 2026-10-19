@@ -108,11 +108,11 @@ export function useAnalysis(existingJobId?: string) {
   );
 
   const start = useCallback(
-    async (input: { file: File } | { sampleId: string }) => {
+    async (input: { file: File; destination?: string | null; policy?: File | null } | { sampleId: string }) => {
       close();
       setState({ ...INITIAL, status: "starting", name: "file" in input ? input.file.name : input.sampleId });
       try {
-        const job = "file" in input ? await api.analyzeFile(input.file) : await api.analyzeSample(input.sampleId);
+        const job = "file" in input ? await api.analyzeFile(input.file, input.destination, input.policy) : await api.analyzeSample(input.sampleId);
         setState((s) => ({ ...s, jobId: job.job_id, name: job.name, status: "running" }));
         follow(job.job_id);
         return job.job_id;

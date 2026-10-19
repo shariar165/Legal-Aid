@@ -33,6 +33,12 @@ export function RiskCard({ risk, index, issue, rows, clauses, active, onAskCounc
           <span className={styles.sevDot} data-sev={risk.severity} />
           {SEVERITY_LABEL[risk.severity]}
         </span>
+        {risk.origin === "policy" && (
+          <span className={styles.review}>
+            <Icon name="file" size={13} />
+            Employer&apos;s own policy
+          </span>
+        )}
         {risk.bench?.human_review && (
           <span className={styles.review}>
             <Icon name="shield" size={13} />
@@ -68,7 +74,7 @@ export function RiskCard({ risk, index, issue, rows, clauses, active, onAskCounc
                 {laws.map((v) => (
                   <a
                     key={v.claim.id}
-                    href={v.section!.url}
+                    href={v.section!.url || undefined}
                     target="_blank"
                     rel="noreferrer"
                     className={styles.citeChip}

@@ -4567,3 +4567,38 @@ button.clause:hover {
     gap: 2px;
   }
 }
+
+/* ================================================================ country of work */
+
+.countryRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-ink-2);
+}
+
+.countrySelect {
+  min-height: 40px;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--r);
+  border: 1px solid var(--c-line);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: inherit;
+  font-weight: 500;
+  padding: 0 10px;
+}
+
+.destLine {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-ink-2);
+}

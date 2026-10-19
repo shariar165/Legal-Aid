@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { AnalysisResult, CardKind } from "@/lib/api";
-import { bannerTitle, formatNumber, SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
+import { bannerTitle, countryCheckLine, formatNumber, SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
@@ -26,7 +26,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
   const [helpTapped, setHelpTapped] = useState(false);
   const [copied, setCopied] = useState(false);
   const heading = useScreenFocus<HTMLHeadingElement>();
-  const { citizen } = result;
+  const { citizen, destination } = result;
   const letter = citizen.letter[lang];
   const letterPlaying = speech.playingId === LETTER_ID;
 
@@ -77,6 +77,20 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
           <p className={styles.bannerTitle}>{bannerTitle(citizen.dangerCount, lang)}</p>
           <p className={styles.bannerBody}>{T.bannerBody[lang]}</p>
         </div>
+
+        {destination && (
+          <section className={styles.countryCard} data-supported={destination.supported} aria-label={T.workIn[lang]}>
+            <p className={styles.countryName}>
+              <PinGlyph /> {destination.name[lang]}
+            </p>
+            <p className={styles.countryLine}>{countryCheckLine(destination, lang)}</p>
+            {destination.help && (
+              <p className={styles.countryLine}>
+                {T.helpThere[lang]} <strong>{destination.help[lang]}</strong>
+              </p>
+            )}
+          </section>
+        )}
 
         {citizen.cards.map((card) => {
           const playing = speech.playingId === card.kind;
@@ -141,7 +155,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                             <span className={styles.citSym} aria-hidden="true">
                               {cit.status === "verified" ? "✓" : "⚠"}
                             </span>
-                            <a className={styles.citName} href={cit.url} target="_blank" rel="noreferrer" title={T.openSource[lang]}>
+                            <a className={styles.citName} href={cit.url || undefined} target="_blank" rel="noreferrer" title={cit.url ? T.openSource[lang] : undefined}>
                               {cit.name[lang]}
                             </a>
                             <span className={styles.citStatus}>{cit.status === "verified" ? T.verified[lang] : T.partial[lang]}</span>
@@ -215,5 +229,15 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
         )}
       </div>
     </div>
+  );
+}
+
+/* Inline SVG instead of a flag emoji: Windows and many Android fonts have no flag glyphs. */
+function PinGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
   );
 }

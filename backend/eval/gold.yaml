@@ -9,6 +9,16 @@ migrant_my_contract.txt:
     - {rule: PB-CLAIM-WAIVER}
     - {keywords: [return, repatriat, ফেরা]}
     - {keywords: [debt, bondage, penalty, exit]}
+migrant_sa_contract.txt:
+  expect:
+    - {rule: PB-PASSPORT}
+    - {rule: PB-RECRUIT-FEE}
+    - {rule: PB-DEDUCTION-CAP}
+    - {rule: PB-RETURN-TICKET}
+    - {rule: PB-END-OF-SERVICE}
+    - {rule: PB-CLAIM-WAIVER}
+  must_cite: [SA-LABOR-2005-a40, SA-LABOR-2005-a84, SA-LABOR-2005-a93]
+  must_not_cite_prefix: [MY-]
 rmg_dhaka_epz.txt:
   expect:
     - {rule: PB-EXPORT-PROCEEDS}

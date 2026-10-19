@@ -7,6 +7,7 @@ fill facts the regexes missed; it may add packs but can never re-enable an exclu
 
 from __future__ import annotations
 
+from ain import countries
 from ain.llm import LLM
 from ain.models import DocFacts, PackDecision, RouteDecision
 
@@ -16,11 +17,12 @@ PACK_LABELS = {
     "bd_epz": "Bangladesh EPZ Labour Act 2019",
     "bd_migration": "Overseas Employment & Migrants Act 2013 · Trafficking Act 2026",
     "ilo": "ILO Conventions C29 · C95 · C181",
-    "my_employment": "Malaysia Employment Act 1955 · Minimum Wages Order 2024",
     "bd_fx": "FER Act 1947 · Bangladesh Bank GFET 2018",
     "eu_dd": "EU CSDDD (Directive 2024/1760)",
     "bd_data": "Personal Data Protection Act 2026",
     "eu_data": "EU GDPR (Regulation 2016/679)",
+    "std_recruitment": "Fair-recruitment standards: ILO General Principles · Employer Pays Principle · RBA Code (voluntary, not law)",
+    **{c.pack: c.label for c in countries.load_countries()},  # one labour-law pack per destination country
 }
 
 FACTS_SYSTEM = """You extract facts from a contract for a legal-risk engine.
@@ -46,8 +48,10 @@ def decide(facts: DocFacts, text_lower: str) -> RouteDecision:
     if abroad or "recruiting agency" in text_lower or "রিক্রুটিং" in text_lower:
         add("bd_migration", f"Overseas employment of a Bangladeshi worker{' in ' + facts.destination_country if abroad else ''} through a recruiting agency.")
         add("ilo", "International labour standards on forced labour, wage protection and recruitment fees.")
-    if facts.destination_country == "Malaysia":
-        add("my_employment", "Place of work is Malaysia; Malaysian employment and minimum-wage law governs the job itself.")
+        add("std_recruitment", "Voluntary fair-recruitment standards that many foreign employers and buyers have signed up to.")
+    country = countries.by_name(facts.destination_country)
+    if country:
+        add(country.pack, f"Place of work is {country.name['en']}; its labour law governs the job itself.")
 
     employs_in_bd = facts.doc_type in ("employment", "mixed") and not abroad
     if employs_in_bd:
@@ -93,6 +97,9 @@ async def refine_facts(llm: LLM, facts: DocFacts, redacted_text: str) -> DocFact
     for key in ("destination_country", "epz_name", "governing_law", "salary_currency"):
         if getattr(merged, key) is None and isinstance(data.get(key), str) and data[key].strip():
             setattr(merged, key, data[key].strip())
+    country = countries.by_name(merged.destination_country)  # "KSA", "Dubai" -> the registry's name
+    if country:
+        merged.destination_country = country.name["en"]
     for key in ("salary_amount", "payment_terms_days", "notice_days", "maternity_days"):
         val = data.get(key)
         if getattr(merged, key) is None and isinstance(val, (int, float)) and val > 0:

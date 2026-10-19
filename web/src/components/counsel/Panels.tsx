@@ -43,7 +43,7 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
             <div className={styles.ledgerTop}>
               <span className={styles.claimId}>{v.claim.id}</span>
               {v.section ? (
-                <a href={v.section.url} target="_blank" rel="noreferrer" className={styles.citeLink}>
+                <a href={v.section.url || undefined} target="_blank" rel="noreferrer" className={styles.citeLink}>
                   {citeLabel(v.section)}
                 </a>
               ) : (

@@ -18,7 +18,7 @@ import re
 
 from rapidfuzz import fuzz
 
-from ain import config
+from ain import companies, config
 from ain.agents import bench as bench_mod
 from ain.llm import LLM
 from ain.models import Claim, GateResult, Risk, RouteDecision, Section, Verification
@@ -60,6 +60,12 @@ def gate_fidelity(claim: Claim, sec: Section) -> GateResult:
 
 
 def gate_currency(sec: Section) -> GateResult:
+    if sec.kind == "company_policy" and sec.jurisdiction == "COMPANY" and companies.is_stale(sec.retrieved_at):
+        return GateResult(gate="currency", status="warn", detail=f"The company's published policy was fetched on {sec.retrieved_at}, over a year ago; it may have changed. Re-check {sec.source}.")
+    if sec.kind == "company_policy":  # the employer's own words; they bind it as a promise, not as law
+        return GateResult(gate="currency", status="pass", detail=f"The employer's own policy text, not law ({sec.source}, {sec.retrieved_at}).")
+    if sec.kind == "standard":  # not law: "in force" means this is the current version of the standard
+        return GateResult(gate="currency", status="pass", detail=f"Current version of a voluntary standard, not law (retrieved {sec.retrieved_at} from {sec.source}).")
     if sec.status == "repealed":
         succ = f" It was superseded by the {SHORT_EN.get(sec.superseded_by, sec.superseded_by)} ({sec.superseded_by})." if sec.superseded_by else ""
         return GateResult(gate="currency", status="fail", detail=f"{sec.act_en} has been repealed.{succ}")

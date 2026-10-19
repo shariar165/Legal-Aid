@@ -659,7 +659,7 @@ function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section
       {ids.map((c) => {
         const s = sections.get(c);
         return s ? (
-          <a key={c} href={s.url} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified" title="Verified section · opens the official text">
+          <a key={c} href={s.url || undefined} target="_blank" rel="noreferrer" className={styles.citeChip} data-verdict="verified" title="Verified section · opens the official text">
             <Icon name="scale" size={13} />
             {citeLabel(s)}
             <Icon name="external" size={12} />
