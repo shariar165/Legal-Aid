@@ -15,7 +15,8 @@ import {
   type Section,
 } from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
-import { Icon, type IconName } from "./Icons";
+import { Icon } from "./Icons";
+import { PixelSticker } from "./PixelSticker";
 import styles from "./counsel.module.css";
 
 /* The three council members. Lenses, names and titles mirror backend/ain/agents/bench.py PERSONAS;
@@ -35,7 +36,8 @@ const ROLE_LINE: Record<PersonaId, string> = {
   proud: "Reads the statute strictly",
   gloomy: "Asks what can go wrong",
 };
-const GLYPH: Record<PersonaId, IconName> = { happy: "sun", proud: "shield", gloomy: "cloud" };
+/* the stickers' tilt in the empty-chat hero, as in the design */
+const TILT: Record<PersonaId, number> = { happy: -5, proud: 3, gloomy: -2 };
 
 export type CouncilTarget = PersonaId | "all";
 
@@ -59,25 +61,29 @@ export function memberLabel(id: PersonaId) {
 
 /* ------------------------------------------------------------------ Avatar */
 
-/* A monogram badge: initial on the persona's tint, with a small temperament glyph. */
-export function CouncilAvatar({ persona, size = 36 }: { persona: PersonaId; size?: number }) {
+/* The member's pixel mood sticker; animated only where it is the focus (empty chat, thinking). */
+export function CouncilAvatar({ persona, size = 36, animate = false }: { persona: PersonaId; size?: number; animate?: boolean }) {
   const m = FALLBACK[persona];
-  const glyph = Math.max(10, Math.round(size * 0.42));
   return (
-    <span
-      className={styles.avatar}
-      data-persona={persona}
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.44) }}
-      role="img"
-      aria-label={`${LENS[persona]}: ${m.name}, ${m.title}`}
-    >
-      {m.name[0]}
-      {size >= 28 && (
-        <span className={styles.avGlyph} style={{ width: glyph, height: glyph }} aria-hidden="true">
-          <Icon name={GLYPH[persona]} size={glyph - 4} />
-        </span>
-      )}
+    <span className={styles.sticker} data-persona={persona} style={{ width: size, height: size }} role="img" aria-label={`${LENS[persona]}: ${m.name}, ${m.title}`}>
+      <PixelSticker persona={persona} size={size} animate={animate} />
     </span>
+  );
+}
+
+/* The empty-chat hero: the three stickers, large, animated and captioned with their lens. */
+function CouncilStickers({ size }: { size: number }) {
+  return (
+    <div className={styles.stickerRow}>
+      {PERSONA_IDS.map((p) => (
+        <figure key={p} className={styles.stickerFig} data-persona={p}>
+          <span style={{ transform: `rotate(${TILT[p]}deg)` }}>
+            <CouncilAvatar persona={p} size={size} animate />
+          </span>
+          <figcaption>{LENS[p]}</figcaption>
+        </figure>
+      ))}
+    </div>
   );
 }
 
@@ -419,7 +425,7 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
           <div ref={logRef} className={styles.chatLog} aria-live="polite">
             {exchanges.length === 0 && (
               <div className={styles.emptyChat}>
-                <CouncilFaces size={40} />
+                <CouncilStickers size={phone ? 64 : 88} />
                 <p className={styles.emptyTitle}>The council is ready</p>
                 <p>Pick a starting question, or write your own below. With the entire council, you can then ask them to deliberate.</p>
                 <div className={styles.prompts}>
@@ -668,7 +674,7 @@ function Thinking({ members }: { members: PersonaId[] }) {
     <>
       {members.map((p) => (
         <div key={p} className={styles.msg} data-persona={p}>
-          <CouncilAvatar persona={p} size={32} />
+          <CouncilAvatar persona={p} size={32} animate />
           <span className={styles.typing} aria-label={`${memberLabel(p)} is thinking`}>
             <i />
             <i />
