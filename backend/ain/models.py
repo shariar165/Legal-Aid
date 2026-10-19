@@ -169,10 +169,12 @@ class BenchOpinion(BaseModel):
     model: str
     persona: str = ""  # council personality id: happy | proud | gloomy
     name: str = ""  # the persona's display name, e.g. "Sunny"
+    lens: str = ""  # the judge's reasoning lens, shown first: Remedies | Text | Enforcement
     verdict: Literal["supports", "neutral", "contradicts"]
     severity: Severity
     reasoning: str
     revised: bool = False
+    fallback: bool = False  # answered by a fallback or backup model, not the seat's configured one
 
 
 class BenchResult(BaseModel):
@@ -181,10 +183,17 @@ class BenchResult(BaseModel):
     majority_verdict: Literal["supports", "neutral", "contradicts"]
     majority_severity: Severity
     vote: str  # e.g. "2–1"
+    agreement: Literal["unanimous", "majority", "split", "no_quorum"] = "unanimous"  # on the verdict; a 1-1-1 split has no majority
+    severity_range: str | None = None  # "medium–high" when the judges are one notch apart
     majority_opinion: str
     dissent: str | None = None
     human_review: bool = False
+    review_reason: str | None = None  # why human review was flagged
     chairman_model: str
+    peer_review: bool = True  # False when the first opinions were unanimous and the review round was skipped
+    same_family: list[str] = Field(default_factory=list)  # judges whose answering models share a family (after a fallback)
+    no_opinion: list[str] = Field(default_factory=list)  # judges whose call failed on every route; they do not vote
+    quorum: bool = True  # False when fewer than two judges answered: the single-judge check (Gate 3) decides instead
 
 
 class Verification(BaseModel):
@@ -348,10 +357,11 @@ class AnalysisResult(BaseModel):
 class CouncilMember(BaseModel):
     id: str  # happy | proud | gloomy
     name: str
-    title: str  # e.g. "the Happy AI"
+    title: str  # e.g. "the Constructive AI"
     tagline: str
     seat: str
     model: str
+    lens: str = ""  # Remedies | Text | Enforcement - shown before the name
 
 
 class ChatTurn(BaseModel):

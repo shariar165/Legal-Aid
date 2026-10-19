@@ -73,6 +73,11 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
                 );
               })}
               <span className={styles.originTag}>from {ORIGIN_LABEL[v.claim.origin]}</span>
+              {v.bench?.same_family && v.bench.same_family.length > 0 && (
+                <span className={styles.chip} data-tone="warn" title={`${v.bench.same_family.join(" and ")} answered with models of one family after a fallback`}>
+                  same family (fallback)
+                </span>
+              )}
             </div>
             {v.gates
               .filter((g) => g.status === "fail" || g.status === "warn")

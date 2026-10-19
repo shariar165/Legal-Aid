@@ -126,7 +126,7 @@
     my_employment:
       - citation_id: MY-MWO-2024-p3
         proposition: Under Malaysia's Minimum Wages Order 2024 (P.U.(A) 376), from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
-        quote: Minimum Wages Rate Monthly Daily Hourly RM1,700
+        quote: "Minimum Wages Rate: Monthly: RM1,700"
   why_non_obvious: The salary looks like a normal figure in local currency; only the official wage order shows it is below the legal floor.
   citizen_line: {bn: "আপনার বেতন {country_of} আইনে ন্যূনতম বেতনের চেয়ে কম।", en: "Your salary is less than {country_of} legal minimum wage."}
   action: {bn: "কমপক্ষে {currency} {min_wage} মূল বেতন লিখে দিতে বলুন।", en: "Ask for a basic salary of at least {currency} {min_wage} in writing."}

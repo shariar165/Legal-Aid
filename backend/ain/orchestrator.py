@@ -257,7 +257,11 @@ async def _run(
         kind = {"verified": "claim_verified", "partial": "claim_partial", "dropped": "claim_dropped"}[v.verdict]
         job.say(kind, "Citation Verifier", f"{v.claim.citation_id}: {v.verdict}", claim_id=v.claim.id, citation_id=v.claim.citation_id, gates={g.gate: g.status for g in v.gates})
         if v.bench:
-            job.say("bench_ruling", "Virtual Bench", f"{v.bench.vote} {v.bench.majority_verdict}, severity {v.bench.majority_severity}" + (" · dissent" if v.bench.human_review else ""), claim_id=v.claim.id, human_review=v.bench.human_review)
+            b = v.bench
+            verdict = "split, no majority" if b.agreement == "split" else f"{b.vote} {b.majority_verdict}"
+            msg = f"{verdict}, severity {b.severity_range or b.majority_severity}" + (f" · human review: {b.review_reason}" if b.human_review else "")
+            msg += " · same family (fallback): " + " & ".join(b.same_family) if b.same_family else ""
+            job.say("bench_ruling", "Virtual Bench", msg, claim_id=v.claim.id, human_review=b.human_review, same_family=b.same_family)
 
     ledger = await verifier.verify_all(llm, corpus, route, risks, claims, on_result=on_verified)
     proc_ledger = await verifier.verify_all(llm, corpus, route, [], proc_claims)

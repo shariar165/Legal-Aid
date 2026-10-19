@@ -154,6 +154,7 @@ class LLM:
         self.mode = mode or config.llm_mode()
         self.calls: list[OutboundCall] = []
         self.blocked = 0
+        self.json_retries = 0  # answers that were not valid JSON and had to be asked again
         self._on_call = on_call
         self._sem = asyncio.Semaphore(6)
         self._per_model: dict[tuple[str, str], asyncio.Semaphore] = {}
@@ -183,7 +184,9 @@ class LLM:
         fake: Callable[[], dict] | None = None,
         temperature: float = 0.1,
         max_tokens: int = 2500,
+        info: dict | None = None,
     ) -> dict[str, Any]:
+        """`info`, if given, is filled with the provider, model and fallback flag of the call that actually answered."""
         leaks = find_pii(system) + find_pii(user)
         if leaks:
             self.blocked += 1
@@ -193,7 +196,7 @@ class LLM:
         if self.mode == "fake":
             if fake is None:
                 raise LLMError(f"No fake response for task {task}")
-            self._record(OutboundCall(agent=agent, role=role, provider="fake", model="fake", chars=len(system) + len(user)))
+            self._record(info, OutboundCall(agent=agent, role=role, provider="fake", model="fake", chars=len(system) + len(user)))
             return fake()
 
         chars = len(system) + len(user)
@@ -207,11 +210,11 @@ class LLM:
             hit = cache.get(key(r))
             if hit is not None:
                 data, used = _unwrap(hit, r.model)
-                self._record(OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, cached=True, fallback=_is_fallback(r, used)))
+                self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, cached=True, fallback=_is_fallback(r, used)))
                 return data
         if self.mode == "replay":
             if fake is not None:
-                self._record(OutboundCall(agent=agent, role=role, provider="fake", model="fake", chars=0))
+                self._record(info, OutboundCall(agent=agent, role=role, provider="fake", model="fake", chars=0))
                 return fake()
             raise LLMError(f"replay mode: no cached answer for {agent}/{task}")
 
@@ -226,7 +229,7 @@ class LLM:
                 errors.append(str(e))
                 continue
             cache[key(r)] = {"__ain__": 1, "data": data, "model": used}
-            self._record(OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, fallback=_is_fallback(r, used)))
+            self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, fallback=_is_fallback(r, used)))
             return data
         raise LLMError(f"{agent}: every route for role '{role}' failed: " + " | ".join(errors))
 
@@ -235,7 +238,9 @@ class LLM:
             return contextlib.nullcontext()
         return self._per_model.setdefault((r.prov.name, r.model), asyncio.Semaphore(r.prov.max_parallel))
 
-    def _record(self, call: OutboundCall) -> None:
+    def _record(self, info: dict | None, call: OutboundCall) -> None:
+        if info is not None:
+            info.update(provider=call.provider, model=call.model, fallback=call.fallback, cached=call.cached)
         self.calls.append(call)
         if self._on_call:
             self._on_call(call)
@@ -278,6 +283,9 @@ class LLM:
                 if r.status_code == 429 and "per-day" in r.text:
                     trip(prov.name, _quota_reset(r))
                     raise _RouteFailed(f"{where}: daily free quota exhausted")
+                if r.status_code == 429 and "per day" in r.text:
+                    # one model's daily token/request limit (Groq: "tokens per day (TPD)"); its siblings still work
+                    raise _RouteFailed(f"{where}: daily limit for this model reached")
                 if r.status_code == 429 or r.status_code >= 500:
                     wait = float(r.headers.get("retry-after") or 0) or min(30, 2 ** attempt)
                     last_err = LLMError(f"{r.status_code}: {r.text[:200]}")
@@ -299,6 +307,7 @@ class LLM:
                 try:
                     return parse_json(content), used
                 except json.JSONDecodeError as e:
+                    self.json_retries += 1
                     last_err = e
                     await asyncio.sleep(min(20, 2 ** attempt))
         raise _RouteFailed(f"{where} failed after retries: {last_err}")

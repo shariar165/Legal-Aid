@@ -131,6 +131,8 @@ def test_routed_free_model_is_not_a_fallback():
 
 
 def test_judge_seats_never_share_a_model():
+    # every model a seat can land on (primary, OpenRouter fallbacks, backup) belongs to that seat alone; a shared
+    # *family* after a fallback is allowed but marked on the ruling (see test_bench_savers)
     chains = [{m for r in llm_mod.all_routes(role) for m in (r.model, *r.fallbacks)} for role in ("bench_a", "bench_b", "bench_c")]
     assert not (chains[0] & chains[1]) and not (chains[0] & chains[2]) and not (chains[1] & chains[2])
     assert all("openrouter/free" not in c for c in chains)
@@ -172,3 +174,18 @@ async def test_no_usable_route_is_an_error(live, monkeypatch):
     llm_mod.trip("openrouter")
     with pytest.raises(llm_mod.LLMError, match="No usable provider"):
         LLM(mode="live").resolve("bench_a")
+
+
+async def test_one_models_daily_limit_fails_that_route_at_once(live, monkeypatch):
+    def handler(req, body):
+        if req.url.host == "api.groq.com":
+            return httpx.Response(429, headers={"retry-after": "900"}, json={"error": {"message": "Rate limit reached on tokens per day (TPD): Limit 200000"}})
+        return answer(body["model"])
+
+    seen = serve(monkeypatch, handler)
+    llm = LLM(mode="live")
+    await call(llm, role="fast")
+    # one Groq request, no 15-minute sleep, then the OpenRouter backup; Groq's other models stay usable
+    assert sum(h == "api.groq.com" for h, _ in seen) == 1
+    assert llm.calls[-1].provider == "openrouter" and llm.calls[-1].fallback
+    assert not llm_mod.is_tripped("groq")

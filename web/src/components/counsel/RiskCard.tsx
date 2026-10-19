@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Clause, MemoIssue, Risk, Verification } from "@/lib/api";
-import { CouncilFaces, MemberVotes } from "./Council";
+import { benchOutcome, CouncilFaces, MemberVotes } from "./Council";
 import { citeLabel, SEVERITY_LABEL } from "./format";
 import { Icon } from "./Icons";
 import styles from "./counsel.module.css";
@@ -94,8 +94,8 @@ export function RiskCard({ risk, index, issue, rows, clauses, active, onAskCounc
               <dt>Council</dt>
               <dd className={styles.councilVote} title={risk.bench.majority_opinion}>
                 <CouncilFaces size={20} />
-                Voted {risk.bench.vote}
-                {risk.bench.dissent && <span className={styles.splitTag}>Split view</span>}
+                {benchOutcome(risk.bench)}
+                {risk.bench.agreement && risk.bench.agreement !== "unanimous" && risk.bench.agreement !== "no_quorum" && <span className={styles.splitTag}>Split view</span>}
               </dd>
             </div>
           )}

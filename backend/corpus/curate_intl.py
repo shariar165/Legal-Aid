@@ -72,6 +72,37 @@ def cut(name: str, start: str, end: str | None, occurrence: int = 0) -> str:
     return text[idx:j].strip()
 
 
+def table(name: str, page: int, index: int, title: str) -> str:
+    """One table of a PDF, read cell by cell and written out row by row: "Title: Head: value | Head (sub-head): key: value; ...".
+
+    Only the cells' own text is used (joined with ":", ";" and "|"), so nothing is typed by hand. The table must start with a
+    row holding just `title`, then a row of column heads; a head spanning several columns (e.g. "Daily" over one column per
+    number of working days) is followed by a sub-head row, a row of keys and a row of values. Anything else fails loudly.
+    """
+    with pymupdf.open(RAW / name) as doc:
+        rows = [[_ws(c) if c else None for c in r] for r in doc[page].find_tables().tables[index].extract()]
+    rows = [r for r in rows if any(r)]
+    if rows[0][0] != title or any(rows[0][1:]):
+        raise SystemExit(f"table {name} p.{page} #{index}: first row is not the title {title!r}: {rows[0]}")
+    heads = [i for i, c in enumerate(rows[1]) if c]
+    spans = [range(a, b) for a, b in zip(heads, [*heads[1:], len(rows[1])])]
+    parts = []
+    for cols in spans:
+        head = rows[1][cols[0]]
+        cells = [[r[c] for c in cols] for r in rows[2:]]
+        if len(cols) == 1:
+            vals = [c[0] for c in cells if c[0]]
+            if len(vals) != 1:
+                raise SystemExit(f"table {name}: column {head!r} has {len(vals)} values")
+            parts.append(f"{head}: {vals[0]}")
+            continue
+        sub_head, keys, vals = cells[0][0], cells[1], cells[2]
+        if not sub_head or any(cells[0][1:]) or not all(keys) or not all(vals):
+            raise SystemExit(f"table {name}: column group {head!r} is not sub-head / keys / values: {cells}")
+        parts.append(f"{head} ({sub_head}): " + "; ".join(f"{k}: {v}" for k, v in zip(keys, vals)))
+    return f"{title}: " + " | ".join(parts)
+
+
 def _law(common: dict, *sections: dict) -> list[dict]:
     """Several excerpts of one act: the act-level fields are shared, each section adds its own."""
     return [{**common, **sec} for sec in sections]
@@ -108,7 +139,10 @@ SPECS = [
          start="Minimum wages rates and rate of wages paid to employee based only on piece rate, tonnage, etc. with effect from 1 February 2025",
          end="Minimum wages rates and rate of wages paid to employee based only on piece rate, tonnage, etc. for the period",
          url="https://amcham.com.my/wp-content/uploads/PUA-376.pdf", via=None, packs=["my_employment"],
-         extra_start="Minimum Wages Rate Monthly Daily Hourly RM1,700", extra_end=" Minimum Wages Rate Monthly Daily Hourly RM1,500",
+         # para 3(1)'s rate table heads the next page; the plain text flattens it ("Monthly Daily Hourly RM1,700 ... RM98.08"),
+         # so it is read cell by cell and put back where 3(1) introduces it
+         table=dict(page=6, index=0, title="Minimum Wages Rate", after="shall be as follows:"),
+         drop=r" P\.U\. \(A\) 376 \d+(?= \()",  # the gazette's running page header, not part of the text
          note="Federal Government Gazette, 4 December 2024; revokes Minimum Wages Order 2022."),
     dict(citation_id="MY-EA-1955-s90B", jurisdiction="MY", act_key="MY-EA-1955", act="Employment Act 1955 (Act 265), Malaysia",
          year=1955, section="90B", heading="Forced labour", file="my_ea_mohr.pdf",
@@ -291,6 +325,13 @@ def main() -> None:
         text = cut(s["file"], s["start"], s["end"])
         if s.get("extra_start"):
             text += " " + cut(s["file"], s["extra_start"], s["extra_end"])
+        if s.get("drop"):
+            text = re.sub(s["drop"], "", text)
+        if s.get("table"):
+            t = s["table"]
+            if text.count(t["after"]) != 1:
+                raise SystemExit(f"{s['citation_id']}: table anchor {t['after']!r} must occur exactly once")
+            text = text.replace(t["after"], f"{t['after']} {table(s['file'], t['page'], t['index'], t['title'])}")
         out.append(
             {
                 "citation_id": s["citation_id"],

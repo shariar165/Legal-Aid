@@ -60,6 +60,15 @@ def is_free_model(model: str) -> bool:
     return model.endswith(":free") or model == "openrouter/free"
 
 
+# Model families, matched on the model name: two judges from one family share training data and blind spots.
+FAMILIES = ("gpt-oss", "qwen", "llama", "gemma", "gemini", "claude", "deepseek", "mistral", "dots", "xing", "allam", "nemotron", "glm", "kimi")
+
+
+def model_family(model: str) -> str:
+    name = model.lower().split("/")[-1]
+    return next((f for f in FAMILIES if f in name), model.lower().split("/")[0])
+
+
 def validate(raw: dict) -> None:
     """Refuse a routing table that could spend money on a free-only provider."""
     providers = raw["providers"]
@@ -119,6 +128,10 @@ def provider(name: str) -> ProviderConfig:
 
 def bench_severities() -> set[str]:
     return set(_raw()["bench"]["severities"])
+
+
+def bench_settings() -> dict:
+    return dict(_raw()["bench"])
 
 
 def quote_threshold() -> int:

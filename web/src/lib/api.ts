@@ -67,10 +67,12 @@ export interface BenchOpinion {
   model: string;
   persona: PersonaId | "";
   name: string;
+  lens?: string; // Remedies | Text | Enforcement
   verdict: "supports" | "neutral" | "contradicts";
   severity: Severity;
   reasoning: string;
   revised: boolean;
+  fallback?: boolean;
 }
 
 export interface BenchResult {
@@ -79,10 +81,17 @@ export interface BenchResult {
   majority_verdict: string;
   majority_severity: Severity;
   vote: string;
+  agreement?: "unanimous" | "majority" | "split" | "no_quorum"; // on the verdict; no_quorum: fewer than two judges answered
+  severity_range?: string | null; // "medium–high" when the judges are one notch apart
   majority_opinion: string;
   dissent: string | null;
   human_review: boolean;
+  review_reason?: string | null;
   chairman_model: string;
+  peer_review?: boolean; // false when the first opinions were unanimous and the review round was skipped
+  same_family?: string[]; // judges whose answering models share a family after a fallback
+  no_opinion?: string[]; // judges whose call failed on every route; they did not vote
+  quorum?: boolean; // false: the single-judge check decided instead of the bench
 }
 
 export interface Verification {
@@ -300,6 +309,7 @@ export interface CouncilMember {
   tagline: string;
   seat: string;
   model: string;
+  lens?: string;
 }
 
 export interface ChatTurn {

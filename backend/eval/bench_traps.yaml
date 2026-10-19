@@ -1,0 +1,286 @@
+# Labelled trap set for eval/bench_quality.py: claim/statute pairs with a known right answer.
+# The statute text always comes from the corpus by citation_id; only the propositions and contract findings are written
+# here. `expect` is what the bench must decide from the text alone:
+#   supports     the text states the proposition                          (kind: correct)
+#   neutral      the text is about something else                         (kind: wrong_section)
+#   contradicts  the text says otherwise: other numbers, or a proviso      (kind: contradicted, proviso)
+#                or exception defeats the claimed rule
+#   dropped      the act is repealed: the currency gate drops the claim before any judge sees it  (kind: repealed)
+# For neutral/contradicts traps the hard requirement is "not supports"; the exact label is reported separately.
+# `bangla: true` marks a Bangla statute text (checked against the corpus by the eval).
+
+# ------------------------------------------------------------------ correct propositions
+- id: T01
+  kind: correct
+  citation_id: BD-OEMA-2013-s31
+  bangla: true
+  proposition: Under the Overseas Employment and Migrants Act 2013 s.31(গ), withholding a migrant worker's passport, visa or migration documents without lawful reason is an offence punishable with up to 5 years' imprisonment and a fine of not less than Tk 1 lakh.
+  finding: "Clause 7: the recruiting agent keeps the worker's passport and visa \"for safekeeping\" until the contract ends."
+  expect: supports
+- id: T02
+  kind: correct
+  citation_id: BD-OEMA-2013-s28
+  bangla: true
+  proposition: Under OEMA 2013 s.28, a migrant worker harmed by a breach of the Act or of the employment contract may file a civil suit for compensation, without prejudice to criminal proceedings.
+  finding: "Clause 14: the worker waives every claim against the agency and the employer."
+  expect: supports
+- id: T03
+  kind: correct
+  citation_id: BD-EPZLABOUR-2019-s22
+  bangla: true
+  proposition: Under the Bangladesh EPZ Labour Act 2019 s.22(1), an employer may terminate a permanent worker only by giving 120 days' written notice (or wages in lieu).
+  finding: "Clause 9: the employer may end a permanent worker's job with 30 days' notice."
+  expect: supports
+- id: T04
+  kind: correct
+  citation_id: BD-EPZLABOUR-2019-s30
+  bangla: true
+  proposition: Under the Bangladesh EPZ Labour Act 2019 s.30(1), a female worker is entitled to maternity benefit from her employer for the 8 weeks before the expected date of delivery and the 8 weeks after delivery.
+  finding: "Clause 11: maternity leave is unpaid."
+  expect: supports
+- id: T05
+  kind: correct
+  citation_id: BD-LABOUR-2006-s26
+  bangla: true
+  proposition: Under Bangladesh Labour Act 2006 s.26(1), an employer may terminate a permanent monthly-rated worker only by giving 120 days' written notice (or wages in lieu).
+  finding: "Clause 9: monthly-paid permanent staff may be dismissed on 30 days' notice."
+  expect: supports
+- id: T06
+  kind: correct
+  citation_id: ILO-C181-a7
+  bangla: false
+  proposition: Under ILO Convention 181 Art. 7(1), private employment agencies shall not charge, directly or indirectly, in whole or in part, any fees or costs to workers.
+  finding: "Clause 3: the worker pays the agency a service fee equal to three months' wages."
+  expect: supports
+- id: T07
+  kind: correct
+  citation_id: MY-EA-1955-s24
+  bangla: false
+  proposition: Under the Malaysian Employment Act 1955 s.24(8), the total deductions from an employee's wages in any one month shall not exceed fifty per cent of the wages earned in that month.
+  finding: "Clause 6: the employer may deduct up to 80% of monthly wages for housing and loan repayments."
+  expect: supports
+- id: T08
+  kind: correct
+  citation_id: SA-LABOR-2005-a84
+  bangla: false
+  proposition: Under the Saudi Labor Law Art. 84, when the work relation ends the employer must pay the worker an end-of-service award of half a month's wage for each of the first five years and one month's wage for each following year.
+  finding: "Clause 12: no end-of-service payment is due."
+  expect: supports
+- id: T09
+  kind: correct
+  citation_id: AE-LABOUR-2021-a25
+  bangla: false
+  proposition: Under UAE Federal Decree-Law 33/2021 Art. 25(2), where there are several reasons for deduction or withholding, the total deducted or withheld may in all cases not exceed 50% of the wage.
+  finding: "Clause 6: deductions for fines, housing and loans together may reach 70% of the wage."
+  expect: supports
+- id: T10
+  kind: correct
+  citation_id: BD-CONTRACT-1872-s74
+  bangla: false
+  proposition: Under Contract Act 1872 s.74, where a contract names a sum or penalty for breach, the injured party is entitled only to reasonable compensation not exceeding the amount so named.
+  finding: "Clause 15: a worker who leaves before two years pays a fixed penalty of Tk 5 lakh."
+  expect: supports
+- id: T11
+  kind: correct
+  citation_id: MY-MWO-2024-p3
+  bangla: false
+  proposition: Under Malaysia's Minimum Wages Order 2024 (P.U.(A) 376), from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
+  finding: "Clause 5: basic monthly wage RM1,200."
+  expect: supports
+- id: T12
+  kind: correct
+  citation_id: AE-LABOUR-2021-a13
+  bangla: false
+  proposition: Under UAE Federal Decree-Law 33/2021 Art. 13(12), the employer bears the worker's repatriation expenses to the place of recruitment or another agreed place, unless the worker has joined another employer or the contract ended for a reason attributable to the worker.
+  finding: "Clause 13: the worker pays for his own ticket home in all cases."
+  expect: supports
+- id: T13
+  kind: correct
+  citation_id: SA-LABOR-2005-a93
+  bangla: false
+  proposition: Under the Saudi Labor Law Art. 93, deductions from the worker's wage may in all cases not exceed half of the wage due, unless the Commission for the Settlement of Labor Disputes decides otherwise.
+  finding: "Clause 6: the employer may deduct up to 70% of the wage for advances and damage."
+  expect: supports
+
+# ------------------------------------------------------------------ wrong section (a true rule, cited to a section that is about something else)
+- id: T14
+  kind: wrong_section
+  citation_id: BD-OEMA-2013-s28
+  bangla: true
+  proposition: Withholding a migrant worker's passport, visa or migration documents without lawful reason is an offence punishable with up to 5 years' imprisonment and a fine of not less than Tk 1 lakh.
+  finding: "Clause 7: the recruiting agent keeps the worker's passport until the contract ends."
+  expect: neutral
+- id: T15
+  kind: wrong_section
+  citation_id: BD-EPZLABOUR-2019-s22
+  bangla: true
+  proposition: A female worker is entitled to maternity benefit from her employer for the 8 weeks before the expected date of delivery and the 8 weeks after delivery.
+  finding: "Clause 11: maternity leave is unpaid."
+  expect: neutral
+- id: T16
+  kind: wrong_section
+  citation_id: SA-LABOR-2005-a84
+  bangla: false
+  proposition: Private employment agencies shall not charge, directly or indirectly, in whole or in part, any fees or costs to workers.
+  finding: "Clause 3: the worker pays the agency a service fee equal to three months' wages."
+  expect: neutral
+- id: T17
+  kind: wrong_section
+  citation_id: BD-CONTRACT-1872-s74
+  bangla: false
+  proposition: Every agreement by which anyone is restrained from exercising a lawful profession, trade or business of any kind is void to that extent.
+  finding: "Clause 16: the worker may not work for any competitor anywhere in Bangladesh for 3 years after leaving."
+  expect: neutral
+- id: T18
+  kind: wrong_section
+  citation_id: MY-EA-1955-s24
+  bangla: false
+  proposition: From 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,700.
+  finding: "Clause 5: basic monthly wage RM1,200."
+  expect: neutral
+- id: T19
+  kind: wrong_section
+  citation_id: BD-EPZLABOUR-2019-s30
+  bangla: true
+  proposition: An employer may terminate a permanent worker only by giving 120 days' written notice (or wages in lieu).
+  finding: "Clause 9: the employer may end a permanent worker's job with 30 days' notice."
+  expect: neutral
+
+# ------------------------------------------------------------------ contradicted (the text gives other numbers)
+- id: T20
+  kind: contradicted
+  citation_id: MY-EA-1955-s24
+  bangla: false
+  proposition: Under the Malaysian Employment Act 1955 s.24(8), the total deductions from an employee's wages in any one month may reach seventy-five per cent of the wages earned in that month.
+  finding: "Clause 6: the employer may deduct up to 75% of monthly wages."
+  expect: contradicts
+- id: T21
+  kind: contradicted
+  citation_id: BD-EPZLABOUR-2019-s22
+  bangla: true
+  proposition: Under the Bangladesh EPZ Labour Act 2019 s.22(1), an employer may terminate a permanent worker by giving 30 days' written notice.
+  finding: "Clause 9: the employer may end a permanent worker's job with 30 days' notice."
+  expect: contradicts
+- id: T22
+  kind: contradicted
+  citation_id: BD-OEMA-2013-s31
+  bangla: true
+  proposition: Under OEMA 2013 s.31, withholding a migrant worker's passport without lawful reason is punishable with at most 6 months' imprisonment or a fine of up to Tk 10,000.
+  finding: "Clause 7: the recruiting agent keeps the worker's passport until the contract ends."
+  expect: contradicts
+- id: T23
+  kind: contradicted
+  citation_id: SA-LABOR-2005-a84
+  bangla: false
+  proposition: Under the Saudi Labor Law Art. 84, the end-of-service award is one quarter of a month's wage for each of the first five years of service.
+  finding: "Clause 12: the end-of-service award is a quarter month's wage per year."
+  expect: contradicts
+- id: T24
+  kind: contradicted
+  citation_id: MY-MWO-2024-p3
+  bangla: false
+  proposition: Under Malaysia's Minimum Wages Order 2024, from 1 February 2025 the monthly minimum wage payable by an employer with five or more employees is RM1,500.
+  finding: "Clause 5: basic monthly wage RM1,500."
+  expect: contradicts
+- id: T25
+  kind: contradicted
+  citation_id: BD-EPZLABOUR-2019-s30
+  bangla: true
+  proposition: Under the Bangladesh EPZ Labour Act 2019 s.30(1), a female worker is entitled to maternity benefit for 4 weeks before and 4 weeks after delivery.
+  finding: "Clause 11: maternity benefit is paid for 4 weeks before and 4 weeks after delivery."
+  expect: contradicts
+- id: T26
+  kind: contradicted
+  citation_id: BD-LABOUR-2006-s26
+  bangla: true
+  proposition: Under Bangladesh Labour Act 2006 s.26(4), a permanent worker whose employment is terminated under the section receives compensation of 14 days' wages for every completed year of service.
+  finding: "Clause 10: severance is 14 days' wages per year of service."
+  expect: contradicts
+
+# ------------------------------------------------------------------ repealed act (right text, but no longer law)
+- id: T27
+  kind: repealed
+  citation_id: BD-TRAFFICKING-2012-s9
+  bangla: true
+  proposition: Under the Prevention and Suppression of Human Trafficking Act 2012 s.9, unlawfully forcing a person to work or provide labour or services, or holding them in debt bondage, is punishable with 5 to 12 years' rigorous imprisonment and a fine of at least Tk 50,000.
+  finding: "Clause 8: the worker may not leave until the recruitment loan is repaid."
+  expect: dropped
+- id: T28
+  kind: repealed
+  citation_id: BD-TRAFFICKING-2012-s6
+  bangla: true
+  proposition: Under the Prevention and Suppression of Human Trafficking Act 2012 s.6, human trafficking is punishable with up to life imprisonment, at least 5 years' rigorous imprisonment and a fine of at least Tk 50,000.
+  finding: "Clause 2: the agent may transfer the worker to any employer abroad without the worker's consent."
+  expect: dropped
+
+# ------------------------------------------------------------------ defeated by a proviso or exception in the same text
+- id: T29
+  kind: proviso
+  citation_id: BD-CONTRACT-1872-s27
+  bangla: false
+  proposition: Under Contract Act 1872 s.27, a seller of a business's goodwill can never validly agree with the buyer to refrain from carrying on a similar business, even within reasonable local limits.
+  finding: "Clause 16: on selling his shop, the seller agrees not to open a similar shop in the same district."
+  expect: contradicts
+- id: T30
+  kind: proviso
+  citation_id: BD-CONTRACT-1872-s28
+  bangla: false
+  proposition: Under Contract Act 1872 s.28, a written contract to refer a dispute that has already arisen to arbitration is void.
+  finding: "Clause 18: the parties agree in writing to send their existing wage dispute to arbitration."
+  expect: contradicts
+- id: T31
+  kind: proviso
+  citation_id: SA-LABOR-2005-a40
+  bangla: false
+  proposition: Under the Saudi Labor Law Art. 40, the employer must pay the worker's return ticket in every case, even when the worker wishes to return home without a legitimate reason.
+  finding: "Clause 13: a worker who resigns without reason pays his own ticket home."
+  expect: contradicts
+- id: T32
+  kind: proviso
+  citation_id: OM-LABOUR-2023-a6
+  bangla: false
+  proposition: Under Oman's Labour Law 2023 Art. 6, the employer may not keep the worker's passport under any circumstances, even with the worker's written consent.
+  finding: "Clause 7: the worker consents in writing to the employer holding the passport in the company safe."
+  expect: contradicts
+- id: T33
+  kind: proviso
+  citation_id: BD-EPZLABOUR-2019-s30
+  bangla: true
+  proposition: Under the Bangladesh EPZ Labour Act 2019 s.30(1), every female worker is entitled to maternity benefit, however short a time she has worked for the employer before the delivery.
+  finding: "Clause 11: maternity benefit is paid only after 6 months of service."
+  expect: contradicts
+- id: T34
+  kind: proviso
+  citation_id: AE-LABOUR-2021-a13
+  bangla: false
+  proposition: Under UAE Federal Decree-Law 33/2021 Art. 13(12), the employer must bear the worker's repatriation expenses in every case, including where the contract was terminated for a reason attributable to the worker.
+  finding: "Clause 13: a worker dismissed for misconduct pays his own ticket home."
+  expect: contradicts
+- id: T35
+  kind: proviso
+  citation_id: STD-RBA-2024-A1
+  bangla: false
+  proposition: Under the RBA Code of Conduct §A.1, employers may never hold workers' identity documents, even where holding them is necessary to comply with local law.
+  finding: "Clause 7: the employer holds work permits because local law requires it, and workers may see them on request."
+  expect: contradicts
+- id: T36
+  kind: proviso
+  citation_id: SA-LABOR-2005-a93
+  bangla: false
+  proposition: Under the Saudi Labor Law Art. 93, deductions may never exceed half the wage, and no authority may allow further deductions.
+  finding: "Clause 6: deductions are capped at half the wage."
+  expect: contradicts
+- id: T37
+  kind: proviso
+  citation_id: MY-EA-1955-s24
+  bangla: false
+  proposition: Under the Malaysian Employment Act 1955 s.24, an employer may never deduct accommodation rent from wages, even at the employee's written request and with the Director General's prior written permission.
+  finding: "Clause 6: rent for the company hostel is deducted from wages at the worker's written request, with the Director General's approval."
+  expect: contradicts
+- id: T38
+  kind: proviso
+  citation_id: BD-LABOUR-2006-s26
+  bangla: true
+  proposition: Under Bangladesh Labour Act 2006 s.26(2), an employer must always give a temporary monthly-rated worker 30 days' written notice, even when the employment ends because the temporary work has been completed.
+  finding: "Clause 9: a temporary worker's job ends without notice when the project is completed."
+  expect: contradicts

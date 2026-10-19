@@ -21,9 +21,9 @@ roles:
              fallbacks: ["google/gemma-4-26b-a4b-it:free"],
              backup: {provider: groq, model: qwen/qwen3.8-27b}}
   bench_b:  {provider: openrouter, model: "dots-studio/dots-3-note-preview:free",   # Regal - rednote
-             backup: {provider: groq, model: openai/gpt-oss-120b}}
+             backup: {provider: groq, model: openai/gpt-oss-20b}}  # wanted: llama-3.3-70b (retired on Groq, no free OpenRouter endpoint)
   bench_c:  {provider: openrouter, model: "xingchen-agi/xing4.0-29b-a4b:free",      # Grey - Xingchen
-             backup: {provider: groq, model: openai/gpt-oss-20b}}
+             backup: {provider: groq, model: openai/gpt-oss-120b}}
   # The Chief Justice only writes the ruling from the judges' votes, so it runs on Groq: reliable, and it saves
   # one of every seven OpenRouter free requests a bench would otherwise spend.
   chairman: {provider: groq, model: openai/gpt-oss-120b,
@@ -39,6 +39,18 @@ providers:
 bench:
   # The Virtual Bench sits on the entailment gate and severity adjudication for these severities only.
   severities: [critical, high]
+  # OpenRouter quota savers. Each stays off until eval/bench_quality.py shows it leaves the answers unchanged
+  # (no gold recall/precision drop, no false "supports", verdict flips within run-to-run noise, severity within one
+  # notch of the baseline for >= 90% of opinions).
+  review_only_on_disagreement: false  # skip peer review when all three first opinions agree on verdict and severity
+  batch_bench: false                  # one call per judge for up to batch_size claims; answers must quote their own text
+  batch_size: 4
+  statute_window: false               # trim long sections to whole sub-sections, always keeping provisos/exceptions
+  window_chars: 1500
+  # Council ruling (2026-10-19), behind flags until the eval passes:
+  bench_leans: true                   # false: drop the one-notch borderline severity lean from the judges' prompts
+  human_review_on_wide_spread: false  # true: flag human review only on a verdict split or a severity spread of 2+ notches
+  severity_rubric: false              # true: one written severity rubric for all judges; the lens shapes only reasoning/advice
 
 verifier:
   quote_fidelity_threshold: 90

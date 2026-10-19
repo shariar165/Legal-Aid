@@ -28,7 +28,7 @@ async def test_dissent_flags_human_review(corpus):
     assert r.human_review and r.dissent
     assert {o.seat for o in r.opinions} == {"Justice A", "Justice B", "Justice C"}
     assert [(o.persona, o.name) for o in r.opinions] == [("happy", "Sunny"), ("proud", "Regal"), ("gloomy", "Grey")]
-    assert "Grey (Justice C)" in r.dissent
+    assert "Enforcement (Grey, Justice C)" in r.dissent
 
 
 async def test_each_judge_has_its_own_personality(corpus):
@@ -36,7 +36,7 @@ async def test_each_judge_has_its_own_personality(corpus):
     await bench.convene(llm, CLAIM, corpus.get("BD-EPZLABOUR-2019-s22"), _risk(), "supports")
     for task in ("bench_opinion", "bench_review"):
         systems = {p["role"]: p["system"] for p in llm.payloads if p["task"] == task}
-        assert "Sunny, the Happy AI" in systems["bench_a"]
+        assert "Sunny, the Constructive AI" in systems["bench_a"]
         assert "Regal, the Proud AI" in systems["bench_b"]
         assert "Grey, the Gloomy AI" in systems["bench_c"]
         assert all("Decide ONLY from the statute text" in s or "do not use outside" in s for s in systems.values())
