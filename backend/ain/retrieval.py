@@ -138,17 +138,40 @@ def get_corpus() -> Corpus:
     return Corpus(_load_sections())
 
 
+def passage(s: Section) -> str:
+    return f"passage: {s.act_en} s.{s.section} {s.heading}. {s.text[:1500]}"
+
+
+def passage_key(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
 def build_embeddings() -> None:
-    """Encode every section once (CPU, ~1-2 min) and store vectors next to the corpus."""
+    """Encode the corpus for dense search and store the vectors next to it.
+
+    The meta file keeps one key per row (a hash of the encoded passage), so a rebuild reuses every vector whose
+    passage did not change and encodes only new or edited sections. They are encoded one at a time: a full batch
+    run needs more memory than small machines have."""
     from sentence_transformers import SentenceTransformer
 
     sections = _load_sections()
-    model = SentenceTransformer(EMBED_MODEL, device="cpu")
-    texts = [f"passage: {s.act_en} s.{s.section} {s.heading}. {s.text[:1500]}" for s in sections]
-    emb = model.encode(texts, batch_size=32, normalize_embeddings=True, show_progress_bar=True)
-    np.save(config.EMBEDDINGS_FILE, emb.astype(np.float32))
-    config.EMBEDDINGS_FILE.with_suffix(".json").write_text(json.dumps({"model": EMBED_MODEL, "corpus_hash": corpus_hash(), "n": len(sections)}))
-    print(f"embedded {len(sections)} sections -> {config.EMBEDDINGS_FILE}")
+    texts = [passage(s) for s in sections]
+    keys = [passage_key(t) for t in texts]
+    meta_file = config.EMBEDDINGS_FILE.with_suffix(".json")
+    old: dict[str, np.ndarray] = {}
+    if config.EMBEDDINGS_FILE.exists() and meta_file.exists():
+        meta = json.loads(meta_file.read_text())
+        if meta.get("model") == EMBED_MODEL and meta.get("keys"):
+            old = dict(zip(meta["keys"], np.load(config.EMBEDDINGS_FILE)))
+    todo = [i for i, k in enumerate(keys) if k not in old]
+    if todo:
+        model = SentenceTransformer(EMBED_MODEL, device="cpu")
+        fresh = model.encode([texts[i] for i in todo], batch_size=1, normalize_embeddings=True, show_progress_bar=True)
+        old.update({keys[i]: v for i, v in zip(todo, fresh)})
+    emb = np.stack([old[k] for k in keys]).astype(np.float32)
+    np.save(config.EMBEDDINGS_FILE, emb)
+    meta_file.write_text(json.dumps({"model": EMBED_MODEL, "corpus_hash": corpus_hash(), "n": len(sections), "keys": keys}))
+    print(f"embedded {len(sections)} sections ({len(todo)} encoded, {len(sections) - len(todo)} reused) -> {config.EMBEDDINGS_FILE}")
 
 
 if __name__ == "__main__":

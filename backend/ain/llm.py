@@ -87,12 +87,58 @@ class _Pacer:
             await asyncio.sleep(slot - now)
 
 
+def estimate_tokens(text: str) -> int:
+    """Rough token count: ~4 chars per token for Latin text, ~2 for Bangla (it tokenizes into many more pieces)."""
+    ascii_chars = sum(ch < "\x80" for ch in text)
+    return ascii_chars // 4 + (len(text) - ascii_chars) // 2 + 1
+
+
+class _TokenBucket:
+    """Tokens-per-minute budget for one model (Groq's free tier: ~8k TPM per model), shared by every job.
+
+    Reservations are synchronous, so concurrent calls queue up without a lock. The level may go negative: later
+    callers then wait for the debt to refill. After each answer the level is re-synced from the provider's own
+    `x-ratelimit-remaining-tokens` header, so a wrong estimate corrects itself."""
+
+    def __init__(self, tpm: int) -> None:
+        self.tpm = tpm
+        self.level = float(tpm)
+        self.at = time.monotonic()
+
+    def _refill(self) -> None:
+        now = time.monotonic()
+        self.level = min(self.tpm, self.level + (now - self.at) * self.tpm / 60)
+        self.at = now
+
+    def reserve(self, tokens: int) -> float:
+        """Take `tokens` (capped at one minute's budget) and return how long to wait before sending."""
+        self._refill()
+        self.level -= min(tokens, self.tpm)
+        return max(0.0, -self.level * 60 / self.tpm)
+
+    def sync(self, remaining: str | None) -> None:
+        try:
+            left = float(remaining) if remaining is not None else None
+        except ValueError:
+            return
+        if left is not None:
+            self._refill()
+            self.level = min(self.level, left)
+
+
 _pacers: dict[str, _Pacer] = {}
+_buckets: dict[tuple[str, str], _TokenBucket] = {}
 _tripped: dict[str, float] = {}  # provider -> wall-clock time its daily quota resets
 
 
 def _pacer(name: str) -> _Pacer:
     return _pacers.setdefault(name, _Pacer())
+
+
+def _bucket(prov: config.ProviderConfig, model: str) -> _TokenBucket | None:
+    if not prov.tpm:
+        return None
+    return _buckets.setdefault((prov.name, model), _TokenBucket(prov.tpm))
 
 
 def is_tripped(name: str) -> bool:
@@ -115,6 +161,7 @@ def trip(name: str, until: float | None = None) -> None:
 def reset_breakers() -> None:
     _tripped.clear()
     _pacers.clear()
+    _buckets.clear()
 
 
 def _quota_reset(r: httpx.Response) -> float | None:
@@ -269,17 +316,27 @@ class LLM:
 
         where = f"{prov.name}/{model}"
         last_err: Exception | None = None
+        bucket = _bucket(prov, model)
+        # prompt + a typical answer; the provider's header corrects the level after the call
+        need = sum(estimate_tokens(m["content"]) for m in messages) + min(body["max_tokens"], 1000)
         # with a backup route waiting, fail over fast instead of sitting out a long backoff
         attempts = 6 if last else 3
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=15.0)) as client:
             for attempt in range(attempts):
                 await _pacer(prov.name).wait(prov.rpm)
+                if bucket:
+                    await asyncio.sleep(bucket.reserve(need))
                 try:
                     r = await client.post(f"{prov.base_url}/chat/completions", json=body, headers=headers)
                 except httpx.TransportError as e:
                     last_err = e
                     await asyncio.sleep(min(20, 2 ** attempt))
                     continue
+                if bucket:
+                    bucket.sync(r.headers.get("x-ratelimit-remaining-tokens"))
+                if r.status_code == 413:
+                    # one request bigger than this model's whole per-minute token budget: it can never pass here
+                    raise _RouteFailed(f"{where}: request too large for the per-minute token limit: {r.text[:200]}")
                 if r.status_code == 429 and "per-day" in r.text:
                     trip(prov.name, _quota_reset(r))
                     raise _RouteFailed(f"{where}: daily free quota exhausted")

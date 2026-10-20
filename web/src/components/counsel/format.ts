@@ -39,6 +39,7 @@ export const OUTCOME: Record<AblationRow["outcome"], { label: string; ok: boolea
 export function citeLabel(s: Section): string {
   const act = s.act_en.replace(/^The\s+/, "").replace(/,/g, "") + (s.kind === "standard" ? " (voluntary standard)" : "");
   if (s.act_key === "STD-EPP") return act;
+  if (s.kind === "supervisory") return `${act} · ${s.heading} (ILO supervisory, interpretive)`;
   if (s.kind === "company_policy" && s.act_key.startsWith("CO-")) return `${s.act_en.split(": ")[0]} · published policy · clause ${s.section}`;
   if (s.kind === "company_policy") return `${act} · clause ${s.section}`;
   const unit = /^STD-ILO-FAIR/.test(s.act_key)

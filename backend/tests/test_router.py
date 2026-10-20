@@ -1,3 +1,5 @@
+import pytest
+
 from ain.agents.ingestion import build_document
 from ain.agents.router import decide
 from ain.models import DocFacts
@@ -21,6 +23,16 @@ def test_non_epz_domestic_employment_uses_labour_act():
     facts = DocFacts(doc_type="employment", is_epz=False)
     route = decide(facts, "appointment letter gazipur factory")
     assert "bd_labour" in route.pack_ids and "bd_epz" not in route.pack_ids
+
+
+def test_document_outside_the_niche_gets_a_scope_note():
+    route = decide(DocFacts(doc_type="commercial"), "mutual non-disclosure agreement between two software companies")
+    assert route.scope_note and "employment" in route.scope_note.en and route.scope_note.bn
+
+
+@pytest.mark.parametrize("name", ["migrant_my_contract.txt", "migrant_sa_contract.txt", "rmg_dhaka_epz.txt", "long_migrant_msa.txt"])
+def test_niche_documents_have_no_scope_note(docs, name):
+    assert _route(docs / name).scope_note is None
 
 
 def test_outside_epz_wording_is_not_mistaken_for_epz(docs):

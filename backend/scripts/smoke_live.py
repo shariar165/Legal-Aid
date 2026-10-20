@@ -3,6 +3,7 @@ and warms the LLM cache so the demo can later run with AIN_LLM_MODE=replay (no n
 
     python -m scripts.smoke_live            (from backend/, with keys in ../.env)
     python -m scripts.smoke_live --docs 1   (warm one hero doc: the OpenRouter free tier allows 50 requests/day)
+    python -m scripts.smoke_live --doc long_migrant_msa.txt   (one named document, e.g. the ~25 page long-context sample)
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from ain import config
 from ain.llm import all_routes
 from ain.orchestrator import new_job, run_pipeline
 
-DOCS = ["migrant_my_contract.txt", "rmg_dhaka_epz.txt", "migrant_my_contract_photo.jpg"]
+DOCS = ["migrant_my_contract.txt", "rmg_dhaka_epz.txt", "migrant_my_contract_photo.jpg", "migrant_sa_contract.txt"]
 
 
 def check_models() -> bool:
@@ -63,7 +64,12 @@ async def run_docs(docs: list[str]) -> None:
         r = await run_pipeline(new_job(name), path.read_bytes(), name, llm_mode="live", confirm_timeout=1)
         s = r.stats
         fallbacks = sum(c.fallback for c in r.privacy.outbound_calls)
-        print(f"\n== {name}: {s.risks_confirmed} risks | {s.verified} verified, {s.partial} partial, {s.dropped} dropped | {s.llm_calls} calls ({fallbacks} via fallback), {s.seconds}s")
+        adv = sum(k.origin == "adversary" and k.status != "dropped" for k in r.risks)
+        restated = [e.message for e in r.trace if e.type == "hypothesis_dropped"]
+        print(f"\n== {name}: {len(path.read_bytes()):,} bytes, {len(r.document.clauses)} clauses | {s.risks_confirmed} risks ({adv} off-playbook) | "
+              f"{s.verified} verified, {s.partial} partial, {s.dropped} dropped | {s.llm_calls} calls ({fallbacks} via fallback), {s.seconds}s")
+        for m in restated:
+            print(f"   - adversary hypothesis dropped (restates the playbook): {m}")
         for k in r.risks:
             bench = f" bench {k.bench.vote}{' DISSENT' if k.bench.human_review else ''}" if k.bench else ""
             print(f"   {k.id:<4} {k.status:<9} {k.severity:<8} {k.origin:<10} {k.title.en}{bench}")
@@ -78,13 +84,14 @@ async def run_docs(docs: list[str]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--docs", type=int, default=len(DOCS), help="how many hero documents to run")
+    ap.add_argument("--doc", action="append", help="run this document from demo/docs instead (repeatable)")
     args = ap.parse_args()
     print("Checking providers and model ids…")
     if not check_models():
         print("\nFix the issues above (keys in .env, model ids in ain/config.yaml) and re-run.")
         sys.exit(1)
     free_quota()
-    asyncio.run(run_docs(DOCS[: args.docs]))
+    asyncio.run(run_docs(args.doc or DOCS[: args.docs]))
     free_quota()
     print("\nCache warmed. To demo without network: set AIN_LLM_MODE=replay")
 

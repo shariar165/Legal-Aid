@@ -88,6 +88,31 @@ def ocr_image(data: bytes) -> list[OcrLine]:
     return out
 
 
+PAGE_NUMBER = re.compile(r"^\s*(?:page\s+)?[-–(]?\s*[0-9০-৯]{1,3}\s*(?:of\s+[0-9]{1,3})?\s*[-–)]?\s*$", re.I)
+
+
+def strip_page_furniture(pages: list[str]) -> list[str]:
+    """Drop bare page numbers and running headers/footers (a top or bottom line repeated on at least half the pages,
+    ignoring digits), so a long PDF does not glue "CONFIDENTIAL - Page 7" into the middle of a clause."""
+    if len(pages) < 3:
+        return ["\n".join(ln for ln in p.splitlines() if not PAGE_NUMBER.match(ln)) for p in pages]
+
+    def key(line: str) -> str:
+        return re.sub(r"[0-9০-৯]+", "#", line.strip().lower())
+
+    edges: dict[str, int] = {}
+    for p in pages:
+        lines = [ln for ln in p.splitlines() if ln.strip()]
+        for k in {key(ln) for ln in lines[:2] + lines[-2:] if not CLAUSE_START.match(ln)}:
+            edges[k] = edges.get(k, 0) + 1
+    furniture = {k for k, n in edges.items() if k and n >= max(3, len(pages) // 2)}
+    out = []
+    for p in pages:
+        lines = p.splitlines()
+        out.append("\n".join(ln for ln in lines if not PAGE_NUMBER.match(ln) and key(ln) not in furniture))
+    return out
+
+
 def extract(data: bytes, filename: str) -> Extracted:
     ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
     if ext in IMAGE_EXT:
@@ -108,7 +133,7 @@ def extract(data: bytes, filename: str) -> Extracted:
                     ocr_lines += lines
                     parts.append("\n".join(line.text for line in lines))
             pages = doc.page_count
-        return Extracted(text="\n\n".join(parts), kind="pdf", pages=pages, ocr_lines=ocr_lines)
+        return Extracted(text="\n\n".join(strip_page_furniture(parts)), kind="pdf", pages=pages, ocr_lines=ocr_lines)
     if ext == ".docx":
         import docx
 
@@ -120,8 +145,40 @@ def extract(data: bytes, filename: str) -> Extracted:
 # ------------------------------------------------------------------ clauses
 
 CLAUSE_START = re.compile(
-    r"^\s*(?:PART\s+[A-Z]\b|Clause\s+\d+|Article\s+\d+|\d{1,2}\s*[\.\)]\s+\S|[০-৯]{1,2}\s*[\.।]\s+\S)", re.I
+    r"^\s*(?:PART\s+(?:[A-Z]|\d{1,2})\b|(?:SCHEDULE|ANNEX(?:URE)?|APPENDIX)\s+[A-Z0-9]{1,3}\b|Clause\s+\d+|Article\s+\d+"
+    r"|\d{1,2}\.\d{1,2}(?:\.\d{1,2})?\s+\S|\d{1,2}\s*[\.\)]\s+\S|[০-৯]{1,2}\s*[\.।]\s+\S)",
+    re.I,
 )
+# A clause longer than this (a long schedule, or sub-clauses without numbers) is split at paragraph breaks, so no
+# single clause can blow a model's per-call token budget.
+MAX_CLAUSE_CHARS = 2500
+
+
+def _split_long(body: str, start: int) -> list[tuple[str, int, int]]:
+    """Cut an over-long clause at blank lines (else at line ends) into pieces of at most MAX_CLAUSE_CHARS."""
+    if len(body) <= MAX_CLAUSE_CHARS:
+        return [(body, start, start + len(body))]
+    units = re.split(r"(?<=\n)(?=\s*\n)", body) if "\n\n" in body else body.splitlines(keepends=True)
+    pieces: list[tuple[str, int, int]] = []
+    cur, cur_start, pos = "", start, start
+    for u in units:
+        if cur and len(cur) + len(u) > MAX_CLAUSE_CHARS:
+            pieces.append((cur, cur_start, pos))
+            cur, cur_start = "", pos
+        cur += u
+        pos += len(u)
+    if cur.strip():
+        pieces.append((cur, cur_start, pos))
+    # a single unit that is still too long (one giant paragraph) is cut at sentence ends
+    out: list[tuple[str, int, int]] = []
+    for text, s, e in pieces:
+        while len(text) > MAX_CLAUSE_CHARS:
+            cut = max(text.rfind(". ", 0, MAX_CLAUSE_CHARS), text.rfind("। ", 0, MAX_CLAUSE_CHARS))
+            cut = cut + 2 if cut > MAX_CLAUSE_CHARS // 2 else MAX_CLAUSE_CHARS
+            out.append((text[:cut], s, s + cut))
+            text, s = text[cut:], s + cut
+        out.append((text, s, e))
+    return [(t.strip(), s, e) for t, s, e in out if t.strip()]
 
 
 def segment(text: str) -> list[Clause]:
@@ -133,7 +190,8 @@ def segment(text: str) -> list[Clause]:
     def flush(end: int) -> None:
         body = "\n".join(buf).strip()
         if body:
-            clauses.append(Clause(id=f"C{len(clauses) + 1}", index=len(clauses), text=body, start=buf_start, end=end))
+            for piece, s, e in _split_long(body, buf_start):
+                clauses.append(Clause(id=f"C{len(clauses) + 1}", index=len(clauses), text=piece, start=s, end=min(e, end)))
 
     for line in text.splitlines(keepends=True):
         stripped = line.strip()

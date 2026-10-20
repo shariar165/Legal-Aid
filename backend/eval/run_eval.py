@@ -50,12 +50,17 @@ async def evaluate() -> dict:
             checks.append((f"cites {c}", c in memo_cites))
         for p in spec.get("must_not_cite_prefix", []):
             checks.append((f"never relies on {p}", not any(c.startswith(p) for c in memo_cites)))
+        adv = sum(k.origin == "adversary" for k in live)
+        if "min_adversary" in spec:
+            checks.append((f">= {spec['min_adversary']} off-playbook risks", adv >= spec["min_adversary"]))
         ab = await ablation.run(LLM(mode=r.llm_mode), corpus, r) if live else None
         rows.append(
             {
                 "document": name,
                 "risks_confirmed": len(live),
-                "adversary_risks": sum(k.origin == "adversary" for k in live),
+                "adversary_risks": adv,
+                # Adversary hypotheses dropped in code because they only restated a playbook risk or rule
+                "restated": sum(e.type == "hypothesis_dropped" for e in r.trace),
                 "recall": round(found / len(expected), 3) if expected else None,
                 "precision": round(correct / len(live), 3) if live else (1.0 if not expected else 0.0),
                 "memo_citations": len(memo_cites),
@@ -76,10 +81,10 @@ async def evaluate() -> dict:
 
 def main() -> None:
     out = asyncio.run(evaluate())
-    print(f"{'document':<28}{'risks':>6}{'adv':>5}{'recall':>8}{'prec':>7}{'cite-ok':>9}{'drop':>7}{'secs':>8}  plain-LLM")
+    print(f"{'document':<28}{'risks':>6}{'adv':>5}{'rest':>5}{'recall':>8}{'prec':>7}{'cite-ok':>9}{'drop':>7}{'secs':>8}  plain-LLM")
     for r in out["results"]:
         fmt = lambda x: "-" if x is None else f"{x:.0%}" if isinstance(x, float) else str(x)  # noqa: E731
-        print(f"{r['document']:<28}{r['risks_confirmed']:>6}{r['adversary_risks']:>5}{fmt(r['recall']):>8}{fmt(r['precision']):>7}"
+        print(f"{r['document']:<28}{r['risks_confirmed']:>6}{r['adversary_risks']:>5}{r['restated']:>5}{fmt(r['recall']):>8}{fmt(r['precision']):>7}"
               f"{fmt(r['citation_validity']):>9}{fmt(r['drop_rate']):>7}{r['seconds']:>8}  {r['ablation_plain_supported'] or '-'}")
         for k, v in r["checks"].items():
             print(f"    {'PASS' if v else 'FAIL'}  {k}")

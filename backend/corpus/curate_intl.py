@@ -108,7 +108,13 @@ def _law(common: dict, *sections: dict) -> list[dict]:
     return [{**common, **sec} for sec in sections]
 
 
-BH_NOTE = "Legislation & Legal Opinion Commission English version for reference (published May 2024); the Arabic text in the Official Gazette prevails."
+# the compilation's running page header and footnote links, which can fall inside a cut that crosses a page
+CEACR_PAGE_FURNITURE = (
+    r" ?►Compilation of selected observations and direct requests of the Committee of Experts on the Application of Conventions"
+    r" and Recommendations: Bangladesh \d+| ?\d+ https://www\.ilo\.org/\S+"
+)
+
+BH_NOTE ="Legislation & Legal Opinion Commission English version for reference (published May 2024); the Arabic text in the Official Gazette prevails."
 
 SPECS = [
     # --- ILO ---------------------------------------------------------------------------
@@ -286,6 +292,28 @@ SPECS = [
          start="1) Prohibition of Forced Labor Forced labor in any form", end=" 2) Young Workers",
          url="https://www.responsiblebusiness.org/code-of-conduct/", via="https://www.responsiblebusiness.org/media/docs/RBACodeofConduct8.0_English.pdf",
          packs=["std_recruitment"], kind="standard", note="Industry code binding RBA members and their suppliers by contract; in effect from 1 January 2024."),
+    # --- ILO supervisory comments (CEACR observations on Bangladesh; interpretive, not binding) ---
+    *_law(
+        dict(jurisdiction="INTL", file="ilo_ceacr_bd_2024.pdf", packs=["ilo_supervisory"], kind="supervisory",
+             via="https://tradefordecentwork.ilo.org/wp-content/uploads/2024/09/Compilation-of-selected-observations-and-direct-requests-of-the-Committee-of-Experts-on-the-Application-of-Conventions-and-Recommendations-Bangladesh.pdf",
+             drop=CEACR_PAGE_FURNITURE,
+             note="Observation of the ILO Committee of Experts on the Application of Conventions and Recommendations (CEACR), from the ILO's own compilation (2024). Interpretive, not binding; a later comment may exist on NORMLEX."),
+        dict(citation_id="ILO-CEACR-C087-2023-EPZ", act_key="ILO-CEACR-C087-2023",
+             act="ILO CEACR Observation on Convention No. 87 (Freedom of Association), Bangladesh, adopted 2023", year=2023, section="EPZ",
+             heading="Right to organise in export processing zones", url=NORMLEX.format(code="C087"),
+             start="Right to organize in export processing zones. In its previous comment",
+             end=" In its previous comment, the Committee also encouraged the Government to continue to review the inspection framework"),
+        dict(citation_id="ILO-CEACR-C098-2023-EPZ", act_key="ILO-CEACR-C098-2023",
+             act="ILO CEACR Observation on Convention No. 98 (Right to Organise and Collective Bargaining), Bangladesh, adopted 2023", year=2023,
+             section="EPZ", heading="Protection against anti-union discrimination in export processing zones", url=NORMLEX.format(code="C098"),
+             start="Protection of workers in export-processing zones (EPZs) against acts of anti-union discrimination.",
+             end=" The Committee also requested the Government to provide its observations on the allegations"),
+        dict(citation_id="ILO-CEACR-C029-2021-FL", act_key="ILO-CEACR-C029-2021",
+             act="ILO CEACR Observation on Convention No. 29 (Forced Labour), Bangladesh, adopted 2021", year=2021, section="2",
+             heading="Forced labour practices", url="https://www.ilo.org/dyn/normlex/en/f?p=1000:13100:0::NO:13100:P13100_COMMENT_ID,P13100_COUNTRY_ID:4116528,103500",
+             start="2. Forced labour practices. The Committee previously noted",
+             end=" The Committee is raising other matters in a request addressed directly"),
+    ),
     # --- EU ------------------------------------------------------------------------------
     dict(citation_id="EU-CSDDD-2024-a10", jurisdiction="EU", act_key="EU-CSDDD-2024",
          act="Directive (EU) 2024/1760 on corporate sustainability due diligence (CSDDD)", year=2024, section="10",

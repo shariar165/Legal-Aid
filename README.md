@@ -11,6 +11,12 @@
 
 > Decision support, not legal advice.
 
+### Scope: a focused niche, on purpose
+
+Ain is built for one kind of document: **employment and migrant-worker contracts**, plus the buyer–supplier agreements that bind Bangladeshi factories (RMG, EPZ). About a million Bangladeshis go abroad for work each year, and most sign an English contract they cannot read. Garment workers' rights depend on whether the factory is inside an EPZ. Its playbook, corpus and verifier cover exactly that ground: labour, migration, trafficking, wage, FX and data law of Bangladesh, the ILO conventions and the law of the 8 main destination countries.
+
+A general commercial document (NDA, MSA, lease) still runs, but only the general checks apply: Contract Act, foreign exchange and data transfer. The Router marks it **"Outside Ain's focus"** in both views instead of pretending to a full review.
+
 ---
 
 ## Why it is different
@@ -26,7 +32,9 @@
 | **Employer's own promises** | The contract is checked against (1) **fair-recruitment standards** many employers sign up to (ILO General Principles, Employer Pays Principle, RBA Code; always marked *voluntary standard, not law*), (2) an **employer policy or handbook the user uploads**, and (3) the **published policy of a named company** (`corpus/companies.yaml`). A contradiction is shown only if the policy quote passes the same 4 gates as a statute: "The employer's policy says X; this contract says Y." |
 | **Regime switch** | For a factory inside an EPZ, the Router turns **off** the Labour Act 2006 and applies the BEPZ Labour Act 2019 (s.3 gives it overriding effect). A Labour Act citation in an EPZ document fails G1. |
 | **Valid abroad, void in BD** | A clash badge marks clauses that are normal under English or EU law but void in Bangladesh: non-competes (Contract Act s.27), shortened limitation periods (s.28), 150-day payment terms (Bangladesh Bank's four-month repatriation rule). |
-| **Off-playbook risks** | Adversarial Counsel runs agentic RAG with bilingual queries, so it finds risks the YAML playbook doesn't cover. Examples: silence on return airfare combined with termination at will; an exit penalty combined with withheld wages (debt bondage); a buyer's multi-union clause that can't be performed inside an EPZ. |
+| **Off-playbook risks** | Adversarial Counsel runs agentic RAG with bilingual queries, so it finds risks the YAML playbook doesn't cover. It gets the playbook's findings *and* its rule list, and must propose **clause interactions** (≥2 clauses and the mechanism), **dangerous gaps** or **regime conflicts**. A hypothesis that only restates a playbook risk or rule is dropped in code, and the drop is shown in the trace. Each search query gets its own share of the candidate sections, and the grounding model reads each section windowed on the hypothesis, not just its first lines. Every hero document yields at least 3 such risks (a test enforces it). Examples: the passport kept by the employer while the worker must renew his own iqama; foreign governing law plus a ban on complaints in Bangladesh, which leaves no forum (the Dhaka agency stays jointly liable); a Bangla "read and understood" line under English-only terms; a 30-day termination clause that could be used to dismiss a pregnant worker before maternity benefit is due; a buyer's multi-union clause that can't be performed inside an EPZ. |
+| **Long documents** | Clauses are split at numbered sub-clauses ("12.3"), schedules and annexes. Any clause over 2,500 characters is cut at paragraph breaks. PDF running headers, footers and page numbers are removed. The Adversary reads a long contract **map → reduce**: each part (≈8,000 characters) is hypothesised on its own and returns a digest of its material terms. One reduce call then merges the parts and looks *across* the digests for interactions between far-apart clauses. Groq calls are paced under each model's tokens-per-minute budget, re-synced from Groq's own rate-limit headers. A request too big for that budget (413) goes to the backup provider. The ~25-page sample `long_migrant_msa.txt` hides a passport-deposit clause in Part 3 and an "absconding" penalty in Schedule 4; only the reduce step can link them. |
+| **ILO supervisory comments** | Besides statutes and standards, the corpus holds verbatim **ILO Committee of Experts (CEACR) observations on Bangladesh**: C87 and C98 (2023, freedom of association and anti-union discrimination in EPZs) and C29 (2021, forced labour). They are cut from the ILO's own compilation. They pass the same 4 gates and are always labelled *ILO supervisory, interpretive, not binding*. |
 | **Wage Truth Calculator** | Uses arithmetic only, no LLM. Example: RM 1,200 − RM 650 in deductions = **RM 550 take-home**, against the RM 1,700 legal minimum and the 50% deduction cap. |
 | **Privacy** | OCR runs locally (EasyOCR on CPU), so the photo never leaves the machine. A PII Shield redacts names, passport, NID, phone, address and DOB before any model call. A guard in the LLM layer blocks any payload that still contains an identifier, including council chat messages (rejected with HTTP 422). OpenRouter calls request `data_collection: deny`. |
 
@@ -36,7 +44,7 @@
 upload ─► Ingestion (PyMuPDF · python-docx · EasyOCR bn+en, cached) → clauses + facts
        ─► PII Shield → placeholders; only redacted text ever leaves the machine
        ─► Jurisdiction Router → law packs (EPZ ⇒ BEPZ Labour Act replaces Labour Act; country of work ⇒ its labour law)
-       ─► Risk Analyst (YAML playbook) ║ Adversarial Counsel (agentic RAG) ║ Wage Calculator (waits for the human salary check)
+       ─► Risk Analyst (YAML playbook) ║ Adversarial Counsel (agentic RAG; long docs map → reduce) ║ Wage Calculator (waits for the human salary check)
        ─► Policy Check: contract vs the employer's own policy (uploaded, or the named company's published one)
        ─► Citation Verifier: G1 existence/applicability · G2 fidelity · G3 entailment · G4 currency
             └─ high/critical → Virtual Bench (Remedies · Text · Enforcement + Chief Justice, OpenRouter)
@@ -70,11 +78,12 @@ How a call is routed:
 - **OpenRouter uses free models only.** `config.py` refuses to load a routing table that names a paid OpenRouter model. Every call sends `data_collection: deny`, so only free endpoints that do not train on prompts are used; OpenRouter's Nvidia and Poolside free endpoints are filtered out by that policy.
 - **Same-provider fallbacks** are sent as OpenRouter's `models: [...]` list, so OpenRouter retries the next model itself when a free endpoint is rate-limited upstream.
 - **The judges' chains do not overlap**, so two seats never land on the same model. `openrouter/free` is not used as a judge fallback because it routes to whatever free model is up, coding models included. Free endpoints are rate-limited per model, so at most `max_parallel` calls per model run at once.
+- **Token pacing.** Groq's free tier allows about 8,000 tokens a minute per model (`tpm` in `config.yaml`). Calls wait for their share of that budget, and the budget is re-synced from Groq's `x-ratelimit-remaining-tokens` header after each answer, so a long document queues instead of failing with 429s.
 - **Backup provider.** The backup is used when the primary provider has no key, is out of its daily free quota, keeps failing, or returns an empty answer. A daily-quota error trips a breaker that skips OpenRouter until the quota resets. Fallback answers are marked "fallback" in the trace and the privacy receipt.
 - **Free tier limits.** OpenRouter's free tier allows 50 free-model requests a day (1000 a day once $10 of credit has ever been bought; calls still use free models only). A full bench costs 6 OpenRouter calls (3 opinions, 3 reviews); the ruling runs on Groq. Gemma's free endpoint is often rate-limited upstream, so Sunny's seat falls back to its Groq backup more often than the others. Requests are paced under each provider's per-minute limit (`rpm` in `config.yaml`). A Groq model that reaches its own daily token limit fails over at once instead of waiting out a long `retry-after`.
 - **Quota savers and ruling changes, off until proven.** Three flags under `bench:` in `config.yaml` cut OpenRouter calls: `review_only_on_disagreement` skips peer review when all three first opinions already agree on verdict *and* severity; `batch_bench` asks each judge about up to 4 claims in one call (in a different order for each judge), and every answer must quote a phrase from its own statute text, checked in code, or that claim is asked again on its own; `statute_window` cuts long sections down to whole sub-sections, always keeping the sub-section the claim cites (e.g. "s.24(8)", "Art. 13(12)", "s.31(গ)"), the claim's quote, the definitions they use, and every proviso and exception, and never cutting a sentence (it saves tokens, not requests). Without it, the judges, the single-judge verifier and the council read the whole cited section; only the few sections over 8,000 characters (long definition and schedule sections) go through the same anchored window, and a test checks that no judge or verifier prompt drops part of any section the playbook or the trap set cites. Each stays off until `eval/bench_quality.py` shows it leaves the answers unchanged. So do `bench_leans: false`, `severity_rubric: true` (which must instead match the playbook rules' own severities at least as well) and `human_review_on_wide_spread: true`.
 
-### Corpus (`backend/corpus/processed/corpus.jsonl`, 1,154 sections)
+### Corpus (`backend/corpus/processed/corpus.jsonl`, 1,157 sections)
 - **Bangladesh**, scraped from [bdlaws.minlaw.gov.bd](http://bdlaws.minlaw.gov.bd) with deep links to each section:
   - Contract Act 1872; Stamp Act 1899; CPC 1908 (ss.13, 14, 44A); FER Act 1947
   - Labour Act 2006 (as amended 2026); BEPZ Labour Act 2019
@@ -98,19 +107,20 @@ How a call is routed:
   | Bahrain | Labour Law 36/2012, Labour Market Law 19/2006 (LLOC English versions) | no money for a permit or job (Art. 23), loan deductions ≤ 10% (44), attachment ≤ 25% (45), leaving indemnity (116) |
 
   Gulf laws are official or embassy English translations; the Arabic text prevails, and older translations are marked *amended*, so the currency gate shows a warning.
+- **ILO supervisory comments** (interpretive, not binding): CEACR observations on Bangladesh, from the ILO's [compilation of selected observations](https://tradefordecentwork.ilo.org/wp-content/uploads/2024/09/Compilation-of-selected-observations-and-direct-requests-of-the-Committee-of-Experts-on-the-Application-of-Conventions-and-Recommendations-Bangladesh.pdf) (2024). They cover C87 (right to organise in EPZs, 2023), C98 (anti-union discrimination in EPZs, 2023) and C29 (forced labour practices, 2021). There are no court judgments yet: see the limitations.
 - **Fair-recruitment standards** (voluntary, not law): ILO General Principles and Operational Guidelines for Fair Recruitment (2019), Employer Pays Principle, RBA Code of Conduct 8.0 §A.1.
 - **Companies' published policies** (`corpus/companies.yaml`, cut by `corpus/curate_companies.py`): IOI Corporation (recruitment guideline) and Top Glove (zero-cost recruitment and passport policies).
 
 No statute text or section number is typed by hand. A test checks that every playbook quote appears verbatim in its source section.
 
-Rebuild after changing a source (from `backend/`):
+Rebuild after changing a source (from `backend/`, with the venv active, see [Run it](#run-it)):
 
 ```bash
-..\.venv\Scripts\python -m corpus.fetch_intl          # download international and country sources into corpus/raw/
-..\.venv\Scripts\python -m corpus.curate_intl         # cut the verbatim excerpts (fails loudly on a missing marker)
-..\.venv\Scripts\python -m corpus.curate_companies    # companies' published policies
-..\.venv\Scripts\python -m corpus.build_corpus        # merge everything into corpus.jsonl
-..\.venv\Scripts\python -m ain.retrieval              # rebuild the dense embeddings
+python -m corpus.fetch_intl          # download international and country sources into corpus/raw/
+python -m corpus.curate_intl         # cut the verbatim excerpts (fails loudly on a missing marker)
+python -m corpus.curate_companies    # companies' published policies
+python -m corpus.build_corpus        # merge everything into corpus.jsonl
+python -m ain.retrieval              # dense embeddings: only new or changed sections are encoded
 ```
 
 ### Adding or correcting a company
@@ -131,24 +141,52 @@ backend/
     countries.yaml  destination countries (aliases, currency, wage figures, help contacts)
     playbook/     rules.yaml (the risk playbook)
   corpus/         bdlaws scraper, international + country + company excerpt curation, companies.yaml, processed corpus + embeddings
-  demo/           hero documents, the sample contract photo, pre-warmed OCR cache
+  demo/           hero documents, the ~25-page long-context sample, the sample contract photo, pre-warmed OCR cache
   eval/           gold set and evaluation runner
-  scripts/        smoke_live.py (live model check + cache warm-up), make_photo_sample.py
+  scripts/        smoke_live.py (live model check + cache warm-up), make_photo_sample.py, make_long_sample.py
+Dockerfile        one-container build (FastAPI + Next.js on port 7860) for Docker / Hugging Face Spaces; docker/start.sh
   tests/          offline pytest suite
 web/              Next.js app: citizen UI (/) and Counsel workspace (/counsel)
 ```
 
 ## Run it
 
-Prerequisites: Python 3.13 (the project's `.venv`) and Node 22.
+### Hosted demo (one container)
+
+The repo builds into one Docker image: FastAPI runs inside, and Next.js serves the UI on port 7860 and proxies `/api` to it. The browser only sees one origin, so the login cookie stays first-party.
 
 ```bash
+docker build -t ain-copilot .
+docker run -p 7860:7860 --env-file .env ain-copilot     # http://localhost:7860  ·  /counsel
+```
+
+**Hugging Face Spaces** (free CPU tier, 16 GB RAM): create a *Docker* Space and push this repo to it. The Space's `README.md` must start with this header:
+
+```yaml
+---
+title: Ain Copilot
+sdk: docker
+app_port: 7860
+---
+```
+
+Add `GROQ_API_KEY`, `OPENROUTER_API_KEY` and `AIN_DATA_KEY` (a Fernet key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) as Space **secrets**. The container reads `SPACE_HOST` and allows that origin itself. Share the direct `https://<user>-<space>.hf.space` link, not the huggingface.co page: that page shows the app in a cross-site iframe, where the session cookie is not sent (and the app refuses to be framed). Without persistent storage, accounts and saved analyses are lost when the Space restarts. The image ships the warmed LLM cache, so the hero documents answer instantly and without spending free-tier quota.
+
+### Local development
+
+Prerequisites: Python 3.13 and Node 22. Use the same commands on Windows, macOS and Linux; only creating and activating the venv differs.
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate          # Windows (PowerShell / cmd)
+source .venv/bin/activate       # macOS / Linux
+
 # backend (CPU-only torch keeps the install small)
-.venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-.venv\Scripts\python -m pip install -r requirements.txt
-copy .env.example .env          # then add GROQ_API_KEY and OPENROUTER_API_KEY
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r requirements.txt
+cp .env.example .env            # Windows cmd: copy .env.example .env; then add GROQ_API_KEY and OPENROUTER_API_KEY
 cd backend
-..\.venv\Scripts\python -m uvicorn ain.api:app --port 8000
+python -m uvicorn ain.api:app --port 8000
 
 # frontend (second terminal)
 cd web
@@ -156,12 +194,14 @@ npm install
 npm run dev                     # http://localhost:3000  ·  http://localhost:3000/counsel
 ```
 
+On a machine with little memory, start the backend with `AIN_DENSE=0` (BM25-only retrieval) and serve the UI with `npm run build && npm start` instead of `npm run dev`.
+
 ### LLM modes (`AIN_LLM_MODE` in `.env`)
 - `live` is the default when a key is present. It calls Groq (main pipeline) and OpenRouter (Bench), and caches every answer on disk. If a provider has no key or runs out of free quota, its roles use their backup on the other provider.
 - `replay` uses only the cache, with no network. Run `python -m scripts.smoke_live` once with keys and the demo then works offline. Council chat questions are new each time, so chat goes live whenever the bench roles have a key, and falls back to canned answers otherwise.
 - `fake` gives deterministic offline answers. It is used by the tests and runs when no key is configured. Law retrieval and all four gates are real; only the language-model answers are canned. The UI labels this mode "offline demo".
 
-Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each one (primary, fallbacks, backup) against the providers' live `/models` lists and prints the OpenRouter free quota left. `--docs 1` warms one hero document at a time to stay inside the free quota.
+Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each one (primary, fallbacks, backup) against the providers' live `/models` lists and prints the OpenRouter free quota left. `--docs 1` warms one hero document at a time to stay inside the free quota, and `--doc long_migrant_msa.txt` runs one named document (it prints clauses, off-playbook risks, the hypotheses dropped as playbook restatements, calls, fallbacks and time).
 
 ### API
 
@@ -201,12 +241,12 @@ Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets 
 ## Tests and evaluation
 
 ```bash
-cd backend
-..\.venv\Scripts\python -m pytest -q            # 129 offline tests
-..\.venv\Scripts\python -m eval.run_eval        # recall / precision / citation validity / drop rate / ablation
-..\.venv\Scripts\python -m eval.bench_quality   # bench trap set: do the quota savers change any answer?
-..\.venv\Scripts\python -m scripts.smoke_live   # live keys: model check + hero docs + cache warm-up
-cd ..\web && npm run lint && npm run build
+cd backend                       # venv active
+python -m pytest -q              # 169 offline tests
+python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
+python -m eval.bench_quality     # bench trap set: do the quota savers change any answer?
+python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
+cd ../web && npm run lint && npm run build
 ```
 
 The tests cover:
@@ -226,6 +266,10 @@ The tests cover:
 - wage arithmetic;
 - the drafter stripping unverified citations;
 - end-to-end runs on both hero documents: ≥3 risks, 100% of memo citations verified, ≥1 claim dropped, ≥1 off-playbook risk;
+- off-playbook depth: every hero document (Malaysia, Saudi Arabia, Dhaka EPZ) yields ≥3 Adversary risks that the duplicate filter accepts, and restated playbook findings are dropped;
+- long documents: the ~25-page sample segments into clauses no longer than 2,500 characters; every Adversary part call stays within its budget; the reduce step hears from every part, splits into a tree when the parts do not fit one call, and finds the cross-part passport + absconding trap, verified; a part or reduce call that fails on every route is skipped and shown in the trace instead of failing the analysis; PDF page furniture is stripped; the token bucket paces and re-syncs;
+- scope: a document without employment terms gets the "outside Ain's focus" note, and niche documents do not;
+- ILO supervisory comments: verbatim, free of the source PDF's page furniture, labelled interpretive, and passing G4 as "not binding";
 - the full HTTP flow including SSE, the human salary check and the council endpoints.
 
 ## 3-minute demo script
@@ -242,6 +286,9 @@ The tests cover:
 3. **Proof, 30 s.** Open **Verification → Compare with a plain chatbot**: the plain prompt's citations mostly fail (invented sections, repealed Acts, the wrong regime), while the memo's citations are 100% verified. Download the DOCX.
 
 ## Honest limitations
+- **Narrow by design.** The playbook covers employment, migration and factory supply contracts. A commercial NDA, MSA or lease gets only the general Contract Act, FX and data checks, and is labelled as outside Ain's focus. The Adversary still runs on it, but over a corpus built for labour law.
+- **No case law yet.** The corpus has statutes, regulations, voluntary standards and three ILO supervisory (CEACR) observations. It has no court judgments: no Bangladesh High Court or Appellate Division rulings, and no CourtListener or Caselaw Access Project data. Adding judgments needs verbatim official text and a citation format, and is the next corpus step.
+- **Long documents on the free tier are slow, not broken.** The ~25-page sample needs about 10 Adversary part calls plus a reduce step, and Groq's free tier allows ~8,000 tokens a minute per model. The run therefore queues for several minutes; it does not fail. The sample contract is fictional and generated by `scripts/make_long_sample.py`.
 - The 2026 Labour Act amendments are read from bdlaws' consolidated text. The Bangla text is authoritative, and English propositions are checked against it by the judge models.
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.

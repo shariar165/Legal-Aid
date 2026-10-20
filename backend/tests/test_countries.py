@@ -77,7 +77,7 @@ def test_router_adds_each_country_pack_and_nothing_for_unknown_destinations():
             assert c.pack in route.pack_ids, name
             assert "bd_labour" not in route.pack_ids
     route = decide(DocFacts(doc_type="employment", destination_country="Italy"), "recruiting agency")
-    assert route.pack_ids == {"bd_contract", "bd_migration", "ilo", "std_recruitment"}
+    assert route.pack_ids == {"bd_contract", "bd_migration", "ilo", "std_recruitment", "ilo_supervisory"}
 
 
 def test_money_in_any_destination_currency():

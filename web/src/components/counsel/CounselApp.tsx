@@ -404,6 +404,15 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
               </span>
             </p>
           )}
+          {result.route.scope_note && (
+            <p className={styles.destLine}>
+              <span className={styles.chip} data-tone="warn">
+                <Icon name="globe" size={13} />
+                Outside Ain&apos;s focus
+              </span>
+              <span>{result.route.scope_note.en}</span>
+            </p>
+          )}
           <p className={styles.summary}>{result.memo.executive_summary}</p>
           <div className={styles.summaryBn}>
             <span className={styles.insetLabel}>বাংলা সারাংশ · Summary in Bangla</span>

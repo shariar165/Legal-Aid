@@ -41,8 +41,9 @@ export interface Section {
   status: "in_force" | "amended" | "repealed";
   superseded_by: string | null;
   amendment_notes: string[];
-  /** standard: a voluntary code such as the ILO fair-recruitment principles, not law */
-  kind?: "law" | "standard" | "company_policy";
+  /** standard: a voluntary code such as the ILO fair-recruitment principles, not law;
+   *  supervisory: an ILO Committee of Experts (CEACR) observation, interpretive and not binding */
+  kind?: "law" | "standard" | "company_policy" | "supervisory";
 }
 
 export interface Claim {
@@ -290,7 +291,8 @@ export interface AnalysisResult {
   facts: Record<string, unknown>;
   /** absent on results saved before destination countries existed */
   destination?: Destination | null;
-  route: { packs: PackDecision[]; excluded: PackDecision[] };
+  /** scope_note: set when the document is outside Ain's niche (no employment or migration terms) */
+  route: { packs: PackDecision[]; excluded: PackDecision[]; scope_note?: L10n | null };
   risks: Risk[];
   ledger: Verification[];
   wage: WageCalc | null;

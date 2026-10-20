@@ -30,7 +30,9 @@ roles:
              backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
 
 providers:
-  groq:       {base_url: https://api.groq.com/openai/v1, key_env: GROQ_API_KEY, rpm: 30, max_tokens_floor: 2000}
+  # Free tier: ~8k tokens/minute per model. Calls are paced under `tpm` (re-synced from Groq's own headers); a single
+  # request over the whole budget gets 413 and goes to the backup provider.
+  groq:       {base_url: https://api.groq.com/openai/v1, key_env: GROQ_API_KEY, rpm: 30, tpm: 8000, max_tokens_floor: 2000}
   # Free tier: 50 free-model requests/day (1000/day once $10 of credit has ever been bought), ~20/min.
   # Free endpoints are rate-limited per model upstream, so at most `max_parallel` calls per model run at once.
   openrouter: {base_url: https://openrouter.ai/api/v1, key_env: OPENROUTER_API_KEY, rpm: 18, max_parallel: 2, free_only: true, max_tokens_floor: 6000,

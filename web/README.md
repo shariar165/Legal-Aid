@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ain Copilot web app
 
-## Getting Started
+The Next.js 16 front end of Ain Copilot (App Router, Cache Components on). It has two modes over one backend:
 
-First, run the development server:
+| Route | Who | What |
+|---|---|---|
+| `/` | a migrant worker on a phone | Citizen mode: Bangla-first, read aloud, a salary check for blurry photos, take-home pay, help contacts in the country of work, a letter to the recruiting agency. A private guest session is created automatically. |
+| `/counsel`, `/counsel/[jobId]` | lawyers, NGO caseworkers, compliance teams | Counsel workspace: Report (IRAC memo, DOCX), Contract, Council (chat with the three LLM judges, deliberation, Chief Justice ruling) and Verification (ledger, agent trace, plain-chatbot comparison, privacy receipt). Needs an account. |
+| `/login`, `/signup` | | account pages; a guest's analyses move into the account on sign-in |
+
+Code map: `src/components/citizen/*` and `src/components/counsel/*` hold the two UIs. `src/lib/api.ts` is the typed client for the FastAPI backend (`backend/ain/api.py`). `src/lib/useAnalysis.ts` follows a job over server-sent events, and `src/lib/useSession.ts` handles the session.
+
+## Run
+
+The backend must be running first (see the repository README). Then:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
+npm run lint
+npm run build && npm start   # production build; lighter on memory than dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | When | Meaning |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | build time | Where the browser calls the backend. Default `http://localhost:8000`. Set it to `""` for same-origin calls through the proxy below. |
+| `AIN_INTERNAL_API` | build time | When set (the Docker image uses `http://127.0.0.1:8000`), `next.config.ts` rewrites `/api/*` to the backend and turns gzip off, so server-sent events stream. The browser then sees one origin, so the HttpOnly session cookie stays first-party. |
+| `NEXT_PUBLIC_HELPDESK_PHONE` | build time | Optional number for the citizen "call for help" button. |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The backend's `AIN_CORS` must list the origin the browser uses: `http://localhost:3000` in development, or the public URL of a deployment. Its CSRF check rejects other origins.
 
-## Learn More
+## Notes for contributors
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- This is Next.js 16: read `node_modules/next/dist/docs/` before relying on older conventions (see `AGENTS.md`).
+- Route gating must redirect from the fresh `useSession(onSession)` callback, never from stored session state. Cache Components keep visited routes alive, and stale state caused a login loop.

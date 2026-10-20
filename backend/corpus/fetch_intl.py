@@ -45,6 +45,11 @@ SOURCES = {
         None,
     ),
     "std_rba_8.pdf": ("https://www.responsiblebusiness.org/media/docs/RBACodeofConduct8.0_English.pdf", None),
+    # --- ILO supervisory comments (CEACR) on Bangladesh; NORMLEX blocks bots, the ILO's own compilation does not ---
+    "ilo_ceacr_bd_2024.pdf": (
+        "https://tradefordecentwork.ilo.org/wp-content/uploads/2024/09/Compilation-of-selected-observations-and-direct-requests-of-the-Committee-of-Experts-on-the-Application-of-Conventions-and-Recommendations-Bangladesh.pdf",
+        None,
+    ),
 }
 
 

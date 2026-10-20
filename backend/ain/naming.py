@@ -16,6 +16,9 @@ BN_ACT_NAMES = {
     "ILO-C029": "আইএলও কনভেনশন ২৯ (জবরদস্তিমূলক শ্রম)",
     "ILO-C095": "আইএলও কনভেনশন ৯৫ (মজুরি সুরক্ষা)",
     "ILO-C181": "আইএলও কনভেনশন ১৮১ (বেসরকারি নিয়োগ সংস্থা)",
+    "ILO-CEACR-C087-2023": "আইএলও বিশেষজ্ঞ কমিটির পর্যবেক্ষণ, কনভেনশন ৮৭ (বাংলাদেশ, ২০২৩)",
+    "ILO-CEACR-C098-2023": "আইএলও বিশেষজ্ঞ কমিটির পর্যবেক্ষণ, কনভেনশন ৯৮ (বাংলাদেশ, ২০২৩)",
+    "ILO-CEACR-C029-2021": "আইএলও বিশেষজ্ঞ কমিটির পর্যবেক্ষণ, কনভেনশন ২৯ (বাংলাদেশ, ২০২১)",
     "MY-EA-1955": "কর্মসংস্থান আইন ১৯৫৫ (মালয়েশিয়া)",
     "MY-MWO-2024": "ন্যূনতম মজুরি আদেশ ২০২৪ (মালয়েশিয়া)",
     "SA-LABOR-2005": "সৌদি শ্রম আইন (রাজকীয় ডিক্রি এম/৫১)",
@@ -68,12 +71,17 @@ SHORT_EN = {
     "ILO-C029": "ILO Convention 29",
     "ILO-C095": "ILO Convention 95",
     "ILO-C181": "ILO Convention 181",
+    "ILO-CEACR-C087-2023": "ILO CEACR observation on C87 (Bangladesh, 2023)",
+    "ILO-CEACR-C098-2023": "ILO CEACR observation on C98 (Bangladesh, 2023)",
+    "ILO-CEACR-C029-2021": "ILO CEACR observation on C29 (Bangladesh, 2021)",
 }
 
 
 def _unit(sec: Section) -> tuple[str, str]:
     if sec.kind == "company_policy":
         return "clause", "অনুচ্ছেদ"
+    if sec.kind == "supervisory":  # an observation is cited by its topic, not by a number
+        return "", ""
     if sec.act_key == "STD-EPP":  # a single statement, no numbered parts
         return "", ""
     if sec.act_key.startswith("STD-ILO-FAIR"):
@@ -97,6 +105,8 @@ def label(sec: Section) -> L10n:
         bn_act = "কোম্পানির নীতি: " + sec.act_en.split(": ", 1)[-1]
     if sec.kind == "standard":  # never let a voluntary code read like a statute
         en_act, bn_act = f"{en_act} (voluntary standard)", f"{bn_act} (স্বেচ্ছামূলক মান, আইন নয়)"
+    if sec.kind == "supervisory":  # nor an ILO supervisory comment like a court ruling or a statute
+        en_act, bn_act = f"{en_act} · {sec.heading} (ILO supervisory, interpretive)", f"{bn_act} · {sec.heading} (আইএলও পর্যবেক্ষণ, ব্যাখ্যামূলক, আইন নয়)"
     u_en, u_bn = _unit(sec)
     if not u_en:
         return L10n(en=en_act, bn=bn_act)

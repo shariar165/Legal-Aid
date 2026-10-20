@@ -1,6 +1,8 @@
 # Expected findings per demo document. A risk counts as found when its playbook rule id
-# matches, or (for off-playbook risks) when its title contains one of the keywords.
+# matches, or (for off-playbook risks) when its title or finding contains one of the keywords.
+# min_adversary: the least number of confirmed off-playbook (Adversarial Counsel) risks the document must yield.
 migrant_my_contract.txt:
+  min_adversary: 3
   expect:
     - {rule: PB-PASSPORT}
     - {rule: PB-RECRUIT-FEE}
@@ -9,7 +11,10 @@ migrant_my_contract.txt:
     - {rule: PB-CLAIM-WAIVER}
     - {keywords: [return, repatriat, ফেরা]}
     - {keywords: [debt, bondage, penalty, exit]}
+    - {keywords: [forum]}
+    - {keywords: [english only, read and understood]}
 migrant_sa_contract.txt:
+  min_adversary: 3
   expect:
     - {rule: PB-PASSPORT}
     - {rule: PB-RECRUIT-FEE}
@@ -17,9 +22,13 @@ migrant_sa_contract.txt:
     - {rule: PB-RETURN-TICKET}
     - {rule: PB-END-OF-SERVICE}
     - {rule: PB-CLAIM-WAIVER}
+    - {keywords: [iqama, residence permit]}
+    - {keywords: [forum]}
+    - {keywords: [english only, read and understood]}
   must_cite: [SA-LABOR-2005-a40, SA-LABOR-2005-a84, SA-LABOR-2005-a93]
   must_not_cite_prefix: [MY-]
 rmg_dhaka_epz.txt:
+  min_adversary: 3
   expect:
     - {rule: PB-EXPORT-PROCEEDS}
     - {rule: PB-NONCOMPETE}
@@ -31,7 +40,25 @@ rmg_dhaka_epz.txt:
     - {rule: PB-NOTICE}
     - {rule: PB-MATERNITY}
     - {keywords: [union, association, epz]}
+    - {keywords: [grievance, committee]}
+    - {keywords: [pregnan]}
   must_cite: [BD-EPZLABOUR-2019-s22, BD-EPZLABOUR-2019-s30]
   must_not_cite_prefix: [BD-LABOUR-2006]
+long_migrant_msa.txt:
+  min_adversary: 3
+  expect:
+    - {rule: PB-PASSPORT}
+    - {rule: PB-RECRUIT-FEE}
+    - {rule: PB-DEDUCTION-CAP}
+    - {rule: PB-RETURN-TICKET}
+    - {rule: PB-END-OF-SERVICE}
+    - {rule: PB-CLAIM-WAIVER}
+    - {keywords: [abscond]}
+    - {keywords: [iqama, residence permit]}
+    - {keywords: [debt, bondage]}
+    - {keywords: [forum]}
+    - {keywords: [english only, read and understood]}
+  must_cite: [SA-LABOR-2005-a40]
+  must_not_cite_prefix: [MY-]
 control_clean.txt:
   expect: []

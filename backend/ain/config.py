@@ -46,6 +46,7 @@ class ProviderConfig:
     free_only: bool = False
     reasoning: dict | None = None
     max_tokens_floor: int = 0  # reasoning models spend part of max_tokens thinking
+    tpm: int = 0  # tokens per minute per model; 0 = no token pacing
 
     @property
     def api_key(self) -> str | None:
@@ -123,6 +124,7 @@ def provider(name: str) -> ProviderConfig:
         free_only=bool(p.get("free_only")),
         reasoning=p.get("reasoning"),
         max_tokens_floor=int(p.get("max_tokens_floor", 0)),
+        tpm=int(p.get("tpm", 0)),
     )
 
 

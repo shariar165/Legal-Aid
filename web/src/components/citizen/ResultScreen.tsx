@@ -92,6 +92,12 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
           </section>
         )}
 
+        {result.route.scope_note && (
+          <section className={styles.countryCard} data-supported={false}>
+            <p className={styles.countryLine}>{result.route.scope_note[lang]}</p>
+          </section>
+        )}
+
         {citizen.cards.map((card) => {
           const playing = speech.playingId === card.kind;
           const isOpen = !!open[card.kind];

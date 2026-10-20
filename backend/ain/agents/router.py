@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from ain import countries
 from ain.llm import LLM
-from ain.models import DocFacts, PackDecision, RouteDecision
+from ain.models import DocFacts, L10n, PackDecision, RouteDecision
 
 PACK_LABELS = {
     "bd_contract": "Contract Act 1872 · Stamp Act 1899 · CPC 1908",
@@ -22,6 +22,7 @@ PACK_LABELS = {
     "bd_data": "Personal Data Protection Act 2026",
     "eu_data": "EU GDPR (Regulation 2016/679)",
     "std_recruitment": "Fair-recruitment standards: ILO General Principles · Employer Pays Principle · RBA Code (voluntary, not law)",
+    "ilo_supervisory": "ILO Committee of Experts (CEACR) observations on Bangladesh (interpretive, not binding)",
     **{c.pack: c.label for c in countries.load_countries()},  # one labour-law pack per destination country
 }
 
@@ -76,7 +77,20 @@ def decide(facts: DocFacts, text_lower: str) -> RouteDecision:
         add("bd_data", "Workers' personal data is processed or transferred.")
         if facts.mentions_eu_buyer:
             add("eu_data", "Personal data flows to a party in the European Union.")
-    return RouteDecision(packs=packs, excluded=excluded)
+    if {"bd_migration", "bd_labour", "bd_epz"} & {p.pack for p in packs}:
+        add("ilo_supervisory", "How the ILO's supervisory body reads the conventions Bangladesh ratified, applied to Bangladesh.")
+    labour = {"bd_migration", "bd_labour", "bd_epz"} | {c.pack for c in countries.load_countries()}
+    note = None if labour & {p.pack for p in packs} else SCOPE_NOTE
+    return RouteDecision(packs=packs, excluded=excluded, scope_note=note)
+
+
+# Ain is built for one niche: employment and migrant-worker contracts (and the supply contracts that bind factories).
+SCOPE_NOTE = L10n(
+    en="Ain Copilot is built for employment and migrant-worker contracts. This document has no employment terms, so only "
+    "general checks ran (Contract Act, foreign exchange, data transfer). A commercial NDA, MSA or lease still needs a lawyer's full review.",
+    bn="আইন কপাইলট চাকরি ও প্রবাসী কর্মীর চুক্তির জন্য তৈরি। এই দলিলে চাকরির শর্ত নেই, তাই শুধু সাধারণ যাচাই হয়েছে "
+    "(চুক্তি আইন, বৈদেশিক মুদ্রা, তথ্য স্থানান্তর)। বাণিজ্যিক চুক্তি বা ভাড়ার চুক্তি একজন আইনজীবীকে দিয়ে পুরোটা দেখিয়ে নিন।",
+)
 
 
 def _fake_facts(facts: DocFacts) -> dict:

@@ -1,0 +1,17 @@
+# secrets never go into the image: pass them at run time (--env-file .env, or Space secrets)
+.env
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+web/node_modules
+web/.next
+web/tsconfig.tsbuildinfo
+backend/.data
+backend/runs
+backend/corpus/raw
+# the bench-quality eval caches are large and only for the eval; the LLM answer cache (.cache/llm) is kept so the
+# hero documents replay instantly without spending free-tier quota
+backend/.cache/bench_quality*
+backend/eval/bench_quality*.json
+backend/eval/last_eval.json

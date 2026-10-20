@@ -37,8 +37,9 @@ class Section(BaseModel):
     amendment_notes: list[str] = Field(default_factory=list)
     packs: list[str] = Field(default_factory=list)
     # law: a statute or regulation; standard: a voluntary code (ILO principles, Employer Pays, RBA);
-    # company_policy: an employer's own published or uploaded policy
-    kind: Literal["law", "standard", "company_policy"] = "law"
+    # company_policy: an employer's own published or uploaded policy;
+    # supervisory: an ILO supervisory body's observation (CEACR) - how a convention is read and applied, not binding law
+    kind: Literal["law", "standard", "company_policy", "supervisory"] = "law"
 
 
 # ---------------------------------------------------------------- ingestion
@@ -136,6 +137,8 @@ class PackDecision(BaseModel):
 class RouteDecision(BaseModel):
     packs: list[PackDecision]
     excluded: list[PackDecision] = Field(default_factory=list)
+    # set when the document is outside Ain's niche (no employment or migration terms): only general checks ran
+    scope_note: L10n | None = None
 
     @property
     def pack_ids(self) -> set[str]:

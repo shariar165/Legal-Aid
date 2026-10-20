@@ -220,6 +220,10 @@ async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact, absence: bo
     return bool(data.get("applies")), ids, str(data.get("finding") or "").strip() or fake()["finding"]
 
 
+# a long document can match a rule in dozens of clauses; the first few are enough to confirm it, and keep the call small
+MAX_HITS = 6
+
+
 # ------------------------------------------------------------------ public API
 
 
@@ -231,7 +235,7 @@ async def run_text_rules(llm: LLM, clauses: list[Clause], route: RouteDecision, 
         if not rule.active(packs) or not {"regex", "absent"} & rule.trigger.keys() or not rule.anchors_for(packs):
             continue
         if hits := _matching_clauses(rule, clauses):
-            jobs.append((rule, hits, False))
+            jobs.append((rule, hits[:MAX_HITS], False))
         elif missing := _missing_term(rule, clauses):
             jobs.append((rule, missing, True))
     results = await asyncio.gather(*(_confirm(llm, rule, hits, redact, absence) for rule, hits, absence in jobs))
