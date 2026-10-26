@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ain-copilot": {
+      "command": ".venv/Scripts/python",
+      "args": ["-m", "ain.mcp_server"],
+      "env": { "PYTHONPATH": "backend", "AIN_DENSE": "0" }
+    }
+  }
+}

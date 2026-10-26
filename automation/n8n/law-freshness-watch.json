@@ -1,0 +1,198 @@
+{
+  "name": "Ain · Law freshness watch",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "82fc75d9-837a-55ee-b970-dded47e06800",
+      "name": "Every day 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f18d3337-62fc-5ecd-8fd3-10d317f259c8",
+              "name": "ainBaseUrl",
+              "value": "http://host.docker.internal:8000",
+              "type": "string"
+            },
+            {
+              "id": "e9dff62f-c205-5a25-b608-fbbf14c3863f",
+              "name": "notifyWebhookUrl",
+              "value": "https://hooks.slack.com/services/REPLACE/ME",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b86dd117-34f0-5af0-b0de-e54810bacbb3",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.ainBaseUrl }}/api/corpus/freshness",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 900000
+        }
+      },
+      "id": "7baf47ce-2612-5dc8-8481-e7b3f13b5e00",
+      "name": "Check bdlaws vs corpus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE",
+          "name": "Ain automation token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "ff68aad6-9cc7-53b5-8c95-ab284f921964",
+              "leftValue": "={{ $json.changed || !$json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "03b78673-a93e-5cc8-acae-80b2bad593f3",
+      "name": "Changed or failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Settings').item.json.notifyWebhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: ($json.ok ? '' : '⚠ Freshness check incomplete: ' + $json.errors.map(e => e.error).join('; ') + '\\n') + ($json.changed ? '⚖ bdlaws changed ' + $json.changes + ' corpus section(s): ' + $json.acts.map(a => a.title + ' [' + a.changed.concat(a.missing, a.new_sections).join(', ') + ']').join('; ') + '\\nNext: ' + $json.next_step : '') }) }}",
+        "options": {}
+      },
+      "id": "ac735ae5-5e20-5e43-ac4f-d0b3542afd8a",
+      "name": "Notify team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9fe5d59c-67ec-5326-8475-783b73106610",
+      "name": "No change",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 06:00": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Check bdlaws vs corpus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check bdlaws vs corpus": {
+      "main": [
+        [
+          {
+            "node": "Changed or failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Changed or failed?": {
+      "main": [
+        [
+          {
+            "node": "Notify team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

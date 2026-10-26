@@ -1,0 +1,17 @@
+# Self-hosted n8n for Ain's two workflows. Start: docker compose up -d  ->  http://localhost:5678
+# Then import law-freshness-watch.json and analysis-digest.json (Workflows -> Import from file); see README.md.
+services:
+  n8n:
+    image: n8nio/n8n:2.41.7
+    ports:
+      - "127.0.0.1:5678:5678"     # local only; put it behind auth before exposing it
+    environment:
+      - GENERIC_TIMEZONE=Asia/Dhaka
+      - TZ=Asia/Dhaka
+      - N8N_DIAGNOSTICS_ENABLED=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # reach the Ain backend on the host (Linux; built in on Docker Desktop)
+    volumes:
+      - n8n_data:/home/node/.n8n
+volumes:
+  n8n_data:

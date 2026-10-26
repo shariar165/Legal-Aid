@@ -16,11 +16,12 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ain import auth, config, countries
+from ain import auth, automation, config, countries, mcp_server
 from ain.agents import ablation, council
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
 from ain.llm import LLM, PIILeakError
+from ain.llm import _get_cache as _llm_cache  # entry count for /api/metrics
 from ain.models import (
     AblationResult,
     AnalysisResult,
@@ -128,6 +129,20 @@ async def warm() -> None:
 
     _background(_warm())
     _background(_purge())
+    if mcp_server.http_token():
+        _mcp_stop.clear()
+        _background(mcp_server.serve_http_sessions(_mcp_stop))
+
+
+@app.on_event("shutdown")
+async def _stop_mcp() -> None:
+    _mcp_stop.set()
+
+
+# MCP over streamable HTTP (POST /api/mcp), only when AIN_MCP_TOKEN is set; stdio needs no server: python -m ain.mcp_server
+_mcp_stop = asyncio.Event()
+if mcp_server.http_token():
+    app.router.routes.extend(mcp_server.http_routes())
 
 
 # ---------------------------------------------------------------- accounts
@@ -221,6 +236,56 @@ def health() -> dict:
     }
 
 
+EVAL_FILES = (config.BACKEND / "eval" / "last_eval.json", config.BACKEND / "eval" / "results_snapshot.json")
+EVAL_FIELDS = ("document", "risks_confirmed", "adversary_risks", "recall", "precision", "citation_validity", "claims", "dropped", "ablation_plain_supported", "mode")
+
+
+@app.get("/api/metrics")
+async def metrics() -> dict:
+    """What the /docs page shows live: corpus make-up, model routing, LLM cache size, MCP surface, last eval run."""
+    corpus = get_corpus()
+    packs: dict[str, int] = {}
+    kinds: dict[str, int] = {}
+    for s in corpus.sections:
+        kinds[s.kind] = kinds.get(s.kind, 0) + 1
+        for p in s.packs:
+            packs[p] = packs.get(p, 0) + 1
+
+    def _route(r: config.RoleConfig | None) -> dict | None:
+        return {"provider": r.provider, "model": r.model, "fallbacks": list(r.fallbacks)} if r else None
+
+    roles = [{"role": n, **_route(r), "backup": _route(r.backup)} for n in config.role_names() if (r := config.role(n))]
+    eval_file = next((f for f in EVAL_FILES if f.exists()), None)
+    rows = json.loads(eval_file.read_text(encoding="utf-8"))["results"] if eval_file else []
+    try:
+        cache_entries = await asyncio.to_thread(lambda: len(_llm_cache()))
+    except Exception:  # an unreadable cache never breaks the docs page
+        cache_entries = None
+    return {
+        "corpus": {
+            "sections": len(corpus.sections),
+            "acts": len({s.act_key for s in corpus.sections}),
+            "by_pack": sorted(({"pack": p, "sections": n} for p, n in packs.items()), key=lambda x: -x["sections"]),
+            "by_kind": kinds,
+            "countries": len(countries.load_countries()),
+        },
+        "llm": {"mode": config.llm_mode(), "cache_entries": cache_entries, "roles": roles},
+        "mcp": {"tools": [t.name for t in await mcp_server.server.list_tools()], "http_enabled": bool(mcp_server.http_token())},
+        "eval": {"source": eval_file.name if eval_file else None, "results": [{k: r.get(k) for k in EVAL_FIELDS} for r in rows]},
+    }
+
+
+
+@app.get("/api/corpus/freshness")
+async def corpus_freshness(request: Request, force: bool = False) -> dict:
+    """For the n8n law-freshness workflow: which corpus sections changed on bdlaws since we built the corpus.
+    Off (404) unless AIN_AUTOMATION_TOKEN is set; needs `Authorization: Bearer <token>`."""
+    if not automation.token():
+        raise HTTPException(404, "Not Found")
+    if not automation.authorized(request.headers.get("authorization")):
+        raise HTTPException(401, "Missing or wrong bearer token", headers={"WWW-Authenticate": "Bearer"})
+    return await automation.law_freshness(force=force)
+
 @app.get("/api/samples")
 def samples() -> list[dict]:
     return [
@@ -281,7 +346,10 @@ async def analyze(
 
     job = new_job(name)
     auth.record_job(owner.user_id, job.id, name)
-    task = asyncio.create_task(run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc))
+    async def run_and_notify():
+        await automation.notify_job(await run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc))
+
+    task = asyncio.create_task(run_and_notify())
     _tasks.add(task)
     task.add_done_callback(lambda t: (_tasks.discard(t), t.exception() if not t.cancelled() else None))
     return {"job_id": job.id, "name": name}

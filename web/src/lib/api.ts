@@ -26,6 +26,34 @@ export interface Health {
   dense_retrieval: boolean;
 }
 
+export interface RouteInfo {
+  provider: string;
+  model: string;
+  fallbacks: string[];
+}
+
+export interface EvalRow {
+  document: string;
+  risks_confirmed: number;
+  adversary_risks: number;
+  recall: number | null;
+  precision: number | null;
+  citation_validity: number | null;
+  claims: number;
+  dropped: number;
+  /** e.g. "1/5": citations of the plain chatbot that the verifier supported */
+  ablation_plain_supported: string | null;
+  mode: "live" | "replay" | "fake";
+}
+
+/** GET /api/metrics: what the /docs page shows live. */
+export interface Metrics {
+  corpus: { sections: number; acts: number; by_pack: { pack: string; sections: number }[]; by_kind: Record<string, number>; countries: number };
+  llm: { mode: Health["llm_mode"]; cache_entries: number | null; roles: (RouteInfo & { role: string; backup: RouteInfo | null })[] };
+  mcp: { tools: string[]; http_enabled: boolean };
+  eval: { source: string | null; results: EvalRow[] };
+}
+
 export interface Section {
   citation_id: string;
   act: string;
@@ -400,6 +428,7 @@ const post = (path: string, body?: unknown) =>
 
 export const api = {
   health: () => call("/api/health").then((r) => json<Health>(r)),
+  metrics: () => call("/api/metrics").then((r) => json<Metrics>(r)),
   samples: () => call("/api/samples").then((r) => json<Sample[]>(r)),
   countries: () => call("/api/countries").then((r) => json<Destination[]>(r)),
   analyzeSample(sampleId: string) {

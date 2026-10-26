@@ -1,0 +1,178 @@
+{
+  "name": "Ain · Analysis digest",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ain-job-digest",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f1b36798-5d53-53bc-a2e8-532c3834cd99",
+      "name": "Analysis finished",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "4c087d14-3e73-5197-bdb0-7fe6f592c063"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One log row per finished analysis. The payload has counts only: no file name, no text, no finding.\nreturn $input.all().map(({ json }) => {\n  const d = json.body ?? json;\n  const s = d.risks_by_severity ?? {};\n  return { json: {\n    ...d,\n    received_at: new Date().toISOString(),\n    urgent: (s.critical ?? 0) > 0 || (d.human_review ?? 0) > 0,\n    line: `Ain job ${d.job_id}: ${d.risks} risks (${s.critical ?? 0} critical, ${s.high ?? 0} high), ` +\n          `${d.off_playbook_risks} off-playbook, ${d.claims_verified} claims verified / ${d.claims_dropped} dropped, ` +\n          `${d.human_review} for human review, ${d.destination ?? 'BD'}, ${d.llm_mode}, ${Math.round(d.seconds)} s`,\n  } };\n});"
+      },
+      "id": "16de402a-f740-5b88-8438-97fe4cc7de6b",
+      "name": "Summarise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a9b652e1-23c2-5ebe-9e53-889e912f2668",
+              "name": "notifyWebhookUrl",
+              "value": "https://hooks.slack.com/services/REPLACE/ME",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1d42600-5ea3-5568-9035-9b66be5c2380",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "e556f478-7031-567a-b373-a22d4629df4e",
+              "leftValue": "={{ $('Summarise').item.json.urgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4e218851-501c-592e-a139-00305aa10d51",
+      "name": "Critical or human review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Settings').item.json.notifyWebhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '🚩 ' + $('Summarise').item.json.line }) }}",
+        "options": {}
+      },
+      "id": "8a65a1fe-702f-5b7f-b858-b646c45b0d40",
+      "name": "Notify team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bdebffc5-0c9a-5d69-bd74-a69bae445cc1",
+      "name": "Routine",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        880,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Analysis finished": {
+      "main": [
+        [
+          {
+            "node": "Summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarise": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Critical or human review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical or human review?": {
+      "main": [
+        [
+          {
+            "node": "Notify team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Routine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

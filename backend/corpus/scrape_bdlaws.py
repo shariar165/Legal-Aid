@@ -38,21 +38,26 @@ def fetch(path: str) -> str:
     cache = RAW / (path.strip("/").replace("/", "__"))
     if cache.exists() and cache.stat().st_size > 1000:
         return cache.read_text(encoding="utf-8")
-    req = urllib.request.Request(BASE + path, headers={"User-Agent": "AinCopilot-research/0.1 (hackathon corpus build)"})
-    for attempt in range(4):
-        try:
-            with urllib.request.urlopen(req, timeout=90) as r:
-                data = r.read()
-            break
-        except Exception as e:  # noqa: BLE001 - network flakiness on a government site
-            if attempt == 3:
-                raise
-            print(f"  retry {path}: {e}", file=sys.stderr)
-            time.sleep(3 * (attempt + 1))
-    text = data.decode("utf-16") if data[:2] in (b"\xff\xfe", b"\xfe\xff") else data.decode("utf-8", errors="replace")
+    text = download(path)
     cache.write_text(text, encoding="utf-8")
     time.sleep(1.0)  # be polite
     return text
+
+
+def download(path: str, timeout: float = 90, attempts: int = 4) -> str:
+    """One bdlaws page, decoded, always from the network (no cache). Used by fetch() and corpus.freshness."""
+    req = urllib.request.Request(BASE + path, headers={"User-Agent": "AinCopilot-research/0.1 (hackathon corpus build)"})
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                data = r.read()
+            break
+        except Exception as e:  # noqa: BLE001 - network flakiness on a government site
+            if attempt == attempts - 1:
+                raise
+            print(f"  retry {path}: {e}", file=sys.stderr)
+            time.sleep(3 * (attempt + 1))
+    return data.decode("utf-16") if data[:2] in (b"\xff\xfe", b"\xfe\xff") else data.decode("utf-8", errors="replace")
 
 
 def norm_section_no(raw: str) -> str:

@@ -1,0 +1,116 @@
+{
+ "results": [
+  {
+   "document": "migrant_my_contract.txt",
+   "risks_confirmed": 9,
+   "adversary_risks": 4,
+   "restated": 0,
+   "recall": 1.0,
+   "precision": 1.0,
+   "memo_citations": 21,
+   "citation_validity": 1.0,
+   "claims": 24,
+   "dropped": 1,
+   "drop_rate": 0.042,
+   "bench_dissents": 0,
+   "seconds": 0.3,
+   "llm_calls": 75,
+   "checks": {
+    ">= 3 off-playbook risks": true
+   },
+   "ablation_plain_supported": "1/5",
+   "mode": "fake"
+  },
+  {
+   "document": "migrant_sa_contract.txt",
+   "risks_confirmed": 9,
+   "adversary_risks": 3,
+   "restated": 0,
+   "recall": 1.0,
+   "precision": 1.0,
+   "memo_citations": 21,
+   "citation_validity": 1.0,
+   "claims": 23,
+   "dropped": 0,
+   "drop_rate": 0.0,
+   "bench_dissents": 0,
+   "seconds": 0.21,
+   "llm_calls": 81,
+   "checks": {
+    "cites SA-LABOR-2005-a40": true,
+    "cites SA-LABOR-2005-a84": true,
+    "cites SA-LABOR-2005-a93": true,
+    "never relies on MY-": true,
+    ">= 3 off-playbook risks": true
+   },
+   "ablation_plain_supported": "1/5",
+   "mode": "fake"
+  },
+  {
+   "document": "rmg_dhaka_epz.txt",
+   "risks_confirmed": 12,
+   "adversary_risks": 3,
+   "restated": 0,
+   "recall": 1.0,
+   "precision": 1.0,
+   "memo_citations": 17,
+   "citation_validity": 1.0,
+   "claims": 18,
+   "dropped": 1,
+   "drop_rate": 0.056,
+   "bench_dissents": 2,
+   "seconds": 0.19,
+   "llm_calls": 65,
+   "checks": {
+    "cites BD-EPZLABOUR-2019-s22": true,
+    "cites BD-EPZLABOUR-2019-s30": true,
+    "never relies on BD-LABOUR-2006": true,
+    ">= 3 off-playbook risks": true
+   },
+   "ablation_plain_supported": "1/6",
+   "mode": "fake"
+  },
+  {
+   "document": "long_migrant_msa.txt",
+   "risks_confirmed": 11,
+   "adversary_risks": 5,
+   "restated": 0,
+   "recall": 1.0,
+   "precision": 1.0,
+   "memo_citations": 24,
+   "citation_validity": 1.0,
+   "claims": 27,
+   "dropped": 1,
+   "drop_rate": 0.037,
+   "bench_dissents": 0,
+   "seconds": 0.65,
+   "llm_calls": 102,
+   "checks": {
+    "cites SA-LABOR-2005-a40": true,
+    "never relies on MY-": true,
+    ">= 3 off-playbook risks": true
+   },
+   "ablation_plain_supported": "1/5",
+   "mode": "fake"
+  },
+  {
+   "document": "control_clean.txt",
+   "risks_confirmed": 0,
+   "adversary_risks": 0,
+   "restated": 0,
+   "recall": null,
+   "precision": 1.0,
+   "memo_citations": 0,
+   "citation_validity": null,
+   "claims": 0,
+   "dropped": 0,
+   "drop_rate": 0.0,
+   "bench_dissents": 0,
+   "seconds": 0.01,
+   "llm_calls": 3,
+   "checks": {},
+   "ablation_plain_supported": null,
+   "mode": "fake"
+  }
+ ]
+}

@@ -135,7 +135,7 @@ Add an entry to `backend/corpus/companies.yaml` and run `curate_companies` and `
 
 ```
 backend/
-  ain/            FastAPI app (api.py), orchestrator, LLM layer, models, DOCX export
+  ain/            FastAPI app (api.py), MCP server (mcp_server.py), orchestrator, LLM layer, models, DOCX export
     agents/       ingestion · pii · router · risk_analyst · adversary · calculator · policy_check
                   verifier · bench · council · critic · drafter · ablation
     countries.yaml  destination countries (aliases, currency, wage figures, help contacts)
@@ -146,7 +146,10 @@ backend/
   scripts/        smoke_live.py (live model check + cache warm-up), make_photo_sample.py, make_long_sample.py
 Dockerfile        one-container build (FastAPI + Next.js on port 7860) for Docker / Hugging Face Spaces; docker/start.sh
   tests/          offline pytest suite
-web/              Next.js app: citizen UI (/) and Counsel workspace (/counsel)
+web/              Next.js app: citizen UI (/), Counsel workspace (/counsel), live docs + system status (/docs)
+automation/n8n/   self-hosted n8n workflows: law freshness watch, analysis digest
+docs/             AI_USAGE.md (how AI is used in the build) and specs/ (the approved plan behind each feature)
+AGENTS.md         rules and workflow for coding agents (CLAUDE.md points to it); .claude/skills/ holds project skills
 ```
 
 ## Run it
@@ -228,6 +231,33 @@ Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each
 
 Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets `404`, the same as for a job that doesn't exist.
 
+### MCP server (`backend/ain/mcp_server.py`)
+
+Ain is also a [Model Context Protocol](https://modelcontextprotocol.io) server, so any MCP client (Claude Desktop, Claude Code, Cursor…) can use the verified-law engine as tools. It is built on the official `mcp` Python SDK (v2, `MCPServer`) and reuses the engine as it is: the same retrieval, gates and PII refusal.
+
+| Kind | Name | What it does |
+|---|---|---|
+| tool | `search_law(query, packs?, k)` | hybrid BM25 + dense search over the corpus, in English or Bangla, optionally narrowed to law packs |
+| tool | `get_section(citation_id)` | the verbatim section text, its status (in force / amended / repealed) and the official link |
+| tool | `verify_citation(citation_id, proposition, quote?)` | the 4 verifier gates on one claim, giving verified / partial / dropped |
+| tool | `wage_truth(salary, country, deductions?)` | the Wage Truth Calculator (arithmetic only) against the country's cited minimum wage and deduction cap |
+| tool | `analyze_contract(text, country?)` | the whole pipeline; returns the risks with only their verified citations |
+| tool | `list_countries()` | the 8 destination countries and their law packs |
+| resource | `ain://corpus/{citation_id}` · `ain://playbook/rules` | statute text · the YAML risk playbook |
+| prompt | `review_contract` | a review recipe: search in both languages, verify every claim, and cite only verified ones |
+
+Transports:
+- **stdio**: `python -m ain.mcp_server` (run from `backend/`). The repo's `.mcp.json` registers it for Claude Code (Windows venv path; on macOS/Linux use `.venv/bin/python`).
+- **Streamable HTTP**: `POST /api/mcp` on the API, stateless with JSON responses, so it also works through the Next.js proxy on the hosted container. It is on only when `AIN_MCP_TOKEN` is set, and every request needs `Authorization: Bearer $AIN_MCP_TOKEN`. Host headers are checked against localhost, `SPACE_HOST` and `AIN_MCP_HOSTS` (DNS-rebinding protection).
+
+A proposition or quote that contains an identifier is refused, exactly as in council chat. `tests/test_mcp.py` covers the tools, the PII refusal and the bearer check over HTTP.
+
+### Workflow automation (`automation/n8n/`)
+
+Two self-hosted n8n workflows, both off until configured (see `automation/n8n/README.md`):
+- **Law freshness watch** (daily): `GET /api/corpus/freshness` (bearer `AIN_AUTOMATION_TOKEN`) re-reads each Bangladesh act on bdlaws and reports any corpus section that changed, disappeared or was added, so the corpus is rebuilt before the currency gate goes stale. It only reports; a person reviews and rebuilds. The same check runs from the command line: `python -m corpus.freshness`.
+- **Analysis digest**: when an analysis finishes, the backend POSTs a count-only summary to `AIN_WEBHOOK_URL` (no file name, no text, no finding). n8n alerts the team on a critical risk or a human-review flag.
+
 ### Security and user data
 
 - **Who owns what.** Citizen mode needs no signup. The first analysis on a device creates a private **guest** session, which owns that device's analyses; guests and their data are deleted after 7 days. Counsel mode (`/counsel`) needs an **account** (email + password). Signing up or signing in from a guest session moves the guest's analyses into the account.
@@ -242,7 +272,7 @@ Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets 
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 169 offline tests
+python -m pytest -q              # 185 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer?
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
