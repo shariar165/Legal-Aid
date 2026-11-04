@@ -20,3 +20,4 @@ the current state.
 | 11 | 2026-10-20 | [Judge-weakness round: Adversary depth, long context, scope, ILO CEACR](2026-10-20-11-judge-weakness-round.md) |
 | 12 | 2026-10-21 | [Council deliberation loading scene](2026-10-21-12-council-deliberation-scene.md) |
 | 13 | 2026-10-24 | [AI Depth audit: MCP server, /docs page, n8n, AI-DLC](2026-10-24-13-ai-depth-extras.md) |
+| 14 | 2026-11-04 | [Evidence-gated deliberation, pressure trap, Case Room events](2026-11-04-14-evidence-gate.md) |

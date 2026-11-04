@@ -54,7 +54,7 @@ const WHITE = "#FFFFFF";
 const OUTLINE = 2; // die-cut margin in cells (the design's default)
 const ROUND = 3; // closing radius that rounds the die-cut
 
-/* ------------------------------------------------------------------ helpers (as in the design) */
+/* ------------------------------------------------------------------ helpers (as in the design; CouncilFight shares them) */
 
 function hex(h: string) {
   h = h.replace("#", "");
@@ -62,17 +62,18 @@ function hex(h: string) {
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
 }
 
-function mix(a: string, b: string, t: number) {
+export function mix(a: string, b: string, t: number) {
   const pa = hex(a);
   const pb = hex(b);
   return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, "0")).join("");
 }
 
-function palette(b: string): Record<string, string> {
+export function palette(b: string): Record<string, string> {
   return {
     K: INK, B: b, S: mix(b, INK, 0.25), H: mix(b, WHITE, 0.4),
     L: "#86B85C", l: "#4F7D36", P: "#FF9EA6", R: "#EE4F6A", M: "#9E2B33",
     G: "#F5C443", Y: "#C98A1A", W: WHITE, T: "#4FB0EA", t: "#A9DDF7", C: "#CDD3DD", c: "#9AA3B3",
+    D: "#F6F1EA", d: "#D8CDBF",
   };
 }
 
@@ -94,13 +95,13 @@ function dots(g: string[][], list: Dot[], ox: number, oy: number) {
 
 const off = (list: Dot[], ox: number, oy: number): Dot[] => list.map(([y, x, ch]) => [y + oy, x + ox, ch]);
 
-function kernel(rad: number) {
+export function kernel(rad: number) {
   const k: [number, number][] = [];
   for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) if (dx * dx + dy * dy <= rad * rad + 1) k.push([dx, dy]);
   return k;
 }
 
-function morph(m: Uint8Array, GW: number, GH: number, rad: number, dilate: boolean) {
+export function morph(m: Uint8Array, GW: number, GH: number, rad: number, dilate: boolean) {
   const ker = kernel(rad);
   const o = new Uint8Array(GW * GH);
   for (let y = 0; y < GH; y++)

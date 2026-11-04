@@ -26,6 +26,11 @@ small enough to read at a glance.
    `Ain automation token` credential on the **Check bdlaws vs corpus** node.
 5. Run each workflow once with **Execute workflow**, then switch them to *Active*.
 
+Command-line import instead of step 4 (n8n running, owner account created):
+`n8n import:workflow --input=law-freshness-watch.json --projectId=<your personal project id>`, and the same for
+`analysis-digest.json`. Then do the Settings and credential edits from step 4 in the editor. If you run n8n with
+`npx n8n` rather than Docker, set `ainBaseUrl` to `http://localhost:8000`.
+
 The settings sit in a node, not in `$env`, because n8n 2.x blocks environment access inside nodes by default. The
 token stays in n8n's encrypted credential store and never appears in the exported JSON.
 

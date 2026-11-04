@@ -228,7 +228,7 @@ Authorization: Bearer $AIN_MCP_TOKEN`}</pre>
             </div>
             <div className={s.card}>
               <h3>Offline test suite</h3>
-              <p>185 pytest tests with a deterministic fake LLM: corpus integrity, every gate failing on its own bad case, no PII in any outbound payload, the EPZ regime switch, the bench rules, the MCP tools and the automation hooks.</p>
+              <p>229 pytest tests with a deterministic fake LLM: corpus integrity, every gate failing on its own bad case, no PII in any outbound payload, the EPZ regime switch, the bench rules, the MCP tools and the automation hooks.</p>
             </div>
           </div>
         </section>

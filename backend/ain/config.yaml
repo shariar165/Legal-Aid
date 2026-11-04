@@ -54,5 +54,9 @@ bench:
   human_review_on_wide_spread: false  # true: flag human review only on a verdict split or a severity spread of 2+ notches
   severity_rubric: false              # true: one written severity rubric for all judges; the lens shapes only reasoning/advice
 
+council:
+  # Not read by any prompt yet: per-seat notes from eval/pressure_trap.json, to be judged once the trap has live runs.
+  peer_stability_notes: false
+
 verifier:
   quote_fidelity_threshold: 90

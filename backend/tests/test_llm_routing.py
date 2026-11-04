@@ -189,3 +189,95 @@ async def test_one_models_daily_limit_fails_that_route_at_once(live, monkeypatch
     assert sum(h == "api.groq.com" for h, _ in seen) == 1
     assert llm.calls[-1].provider == "openrouter" and llm.calls[-1].fallback
     assert not llm_mod.is_tripped("groq")
+
+
+# ------------------------------------------------------------------ rate_wait: announced once, before the wait
+
+
+def waits(monkeypatch):
+    """(LLM, its rate_wait events, every sleep it took)."""
+    events, sleeps = [], []
+
+    async def sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr(llm_mod.asyncio, "sleep", sleep)
+    return LLM(mode="live", on_event=lambda type_, agent, message, **data: events.append((type_, data))), events, sleeps
+
+
+async def test_a_retry_after_is_announced_once_with_provider_and_model(live, monkeypatch):
+    replies = iter([httpx.Response(429, headers={"retry-after": "7"}, json={"error": {"message": "slow down"}})])
+    serve(monkeypatch, lambda req, body: next(replies, None) or answer(body["model"]))
+    llm, events, sleeps = waits(monkeypatch)
+    await call(llm, role="fast")
+    model = config.role("fast").model
+    assert events == [("rate_wait", {"seconds": 7.0, "provider": "groq", "model": model})]
+    assert 7.0 in sleeps
+
+
+async def test_a_long_token_wait_is_one_event_and_one_sleep_never_one_per_second(live, monkeypatch):
+    serve(monkeypatch, lambda req, body: answer(body["model"]))
+    prov = config.provider("groq")
+    model = config.role("fast").model
+    llm_mod._bucket(prov, model).level = -4000.0
+    llm, events, sleeps = waits(monkeypatch)
+    await call(llm, role="fast")
+    assert len(events) == 1 and events[0][1]["provider"] == "groq" and events[0][1]["seconds"] >= 30
+    assert len(sleeps) == 1 and sleeps[0] >= 30
+
+
+async def test_the_requests_per_minute_pacer_announces_its_wait(live, monkeypatch):
+    serve(monkeypatch, lambda req, body: answer(body["model"]))
+    prov = config.provider("groq")
+    now = llm_mod.time.monotonic()
+    llm_mod._pacer("groq").slots = [now] * prov.rpm
+    llm, events, _ = waits(monkeypatch)
+    await call(llm, role="fast")
+    assert [t for t, _ in events] == ["rate_wait"] and events[0][1]["seconds"] > 50
+
+
+async def test_pacer_and_token_bucket_together_wait_the_longer_of_the_two(live, monkeypatch):
+    """They run at once: adding them would slow every queued call down for nothing, and report a wait that never happens."""
+    serve(monkeypatch, lambda req, body: answer(body["model"]))
+    prov = config.provider("groq")
+    model = config.role("fast").model
+    llm_mod._pacer("groq").slots = [llm_mod.time.monotonic()] * prov.rpm
+    llm_mod._bucket(prov, model).level = -2000.0
+    llm, events, sleeps = waits(monkeypatch)
+    await call(llm, role="fast")
+    assert len(events) == 1 and len(sleeps) == 1 and 50 < sleeps[0] < 62
+
+
+def test_gaps_under_a_second_are_normal_pacing_and_stay_quiet():
+    events = []
+    llm = LLM(mode="fake", on_event=lambda type_, agent, message, **data: events.append(data))
+    prov = config.provider("groq")
+    llm._rate_wait(0.4, prov, "m")
+    assert events == []
+    llm._rate_wait(1.0, prov, "m")
+    assert events == [{"seconds": 1.0, "provider": "groq", "model": "m"}]
+
+
+async def test_network_and_server_error_backoffs_are_not_rate_waits(live, monkeypatch):
+    state = {"n": 0}
+
+    def handler(request, body):
+        state["n"] += 1
+        if state["n"] == 1:
+            raise httpx.ConnectError("no route")
+        if state["n"] == 2:
+            return httpx.Response(503, json={"error": {"message": "overloaded"}})
+        return answer(body["model"])
+
+    serve(monkeypatch, handler)
+    llm, events, sleeps = waits(monkeypatch)
+    await call(llm, role="fast")
+    assert events == [] and len(sleeps) >= 2
+
+
+async def test_a_server_error_with_retry_after_is_a_rate_wait(live, monkeypatch):
+    replies = iter([httpx.Response(503, headers={"retry-after": "5"}, json={"error": {"message": "overloaded"}})])
+    serve(monkeypatch, lambda req, body: next(replies, None) or answer(body["model"]))
+    llm, events, _ = waits(monkeypatch)
+    await call(llm, role="fast")
+    assert [d["seconds"] for _, d in events] == [5.0]

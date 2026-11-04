@@ -384,6 +384,13 @@ class CouncilChatRequest(BaseModel):
     language: CouncilLanguage = "en"
 
 
+class ChangedBecause(BaseModel):
+    """What moved a member in round 2: a section new to that member, and a phrase checked against its text."""
+
+    citation_id: str
+    quote: str
+
+
 class CouncilReply(BaseModel):
     member: str
     name: str
@@ -395,6 +402,10 @@ class CouncilReply(BaseModel):
     round: int = 1  # 1 = first answer, 2 = response to colleagues during deliberation
     revised: bool = False  # round 2 only: the member changed their position
     responds_to: str | None = None  # round 2 only: the colleague (member id) mainly addressed
+    severity: Severity | None = None  # set when a risk is in focus; None if the model gave no valid rating
+    flip_basis: Literal["evidence", "pressure"] | None = None  # round 2 only, decided in code: None = no change of view
+    changed_because: ChangedBecause | None = None  # kept only when flip_basis is "evidence": never an unchecked citation
+    flip_note: str = ""  # why a "pressure" revision does not count (fixed strings, never model text)
 
 
 class CouncilChatResponse(BaseModel):
@@ -416,6 +427,15 @@ class CouncilDisagreement(BaseModel):
     members: list[str] = Field(default_factory=list)  # member ids on the minority / differing side
 
 
+class CouncilVote(BaseModel):
+    """What a member's vote counts as: a revision that failed the evidence gate leaves round 1 standing."""
+
+    member: str
+    severity: Severity | None = None
+    position: str = ""
+    flip_basis: Literal["evidence", "pressure"] | None = None
+
+
 class CouncilRuling(BaseModel):
     agreement: Literal["unanimous", "majority", "split"]
     consensus: str
@@ -423,6 +443,7 @@ class CouncilRuling(BaseModel):
     next_step: str
     citations: list[str] = Field(default_factory=list)
     model: str = ""
+    votes: list[CouncilVote] = Field(default_factory=list)  # computed in code from the counted positions, not by the model
 
 
 class CouncilDeliberateResponse(BaseModel):

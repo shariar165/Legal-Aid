@@ -451,6 +451,9 @@ def _flat(t: str) -> str:
     return " ".join(t.casefold().split())
 
 
+MIN_QUOTE_CHARS = 12  # below this a "quote" is a common word that matches any statute
+
+
 def quote_in(quote: object, text: str) -> bool:
     """True when the quoted phrase (pieces around an ellipsis may be quoted separately) occurs in `text`."""
     if not isinstance(quote, str):
@@ -458,7 +461,7 @@ def quote_in(quote: object, text: str) -> bool:
     pieces = [x.strip(" \"'.,;:()[]-–—") for x in re.split(r"\[\.\.\.\]|\.\.\.|…", _flat(quote))]
     pieces = [x for x in pieces if x]
     hay = _flat(text)
-    return bool(pieces) and max(len(x) for x in pieces) >= 12 and all(x in hay for x in pieces)
+    return bool(pieces) and max(len(x) for x in pieces) >= MIN_QUOTE_CHARS and all(x in hay for x in pieces)
 
 
 def _fake_quote(section: Section) -> str:
@@ -576,11 +579,23 @@ async def _round(llm: LLM, cases: list[Case], opts: Options, stats: Counter, bef
                 seats.append(a)
             else:
                 op, info = a  # type: ignore[misc]
-                seats.append(_clean(p, _answered_by(llm, p.role, info), op, info))
+                seat = _clean(p, _answered_by(llm, p.role, info), op, info)
+                seats.append(seat)
+                _announce(llm, cases[k], seat, before[k][j] if before else None)
         return seats
 
     per_judge = await asyncio.gather(*(judge(j, p) for j, p in enumerate(PERSONAS)))
     return [[per_judge[j][k] for j in range(len(PERSONAS))] for k in range(len(cases))]
+
+
+def _announce(llm: LLM, case: Case, o: BenchOpinion, was: Seat | None) -> None:
+    """One live event per judge per claim: the first opinion, and again only if peer review really changed it."""
+    if isinstance(was, BenchOpinion) and (was.verdict, was.severity) == (o.verdict, o.severity):
+        return
+    llm.event(
+        "bench_opinion", "Virtual Bench", f"{o.name}: {o.verdict}, severity {o.severity}", persona=o.persona, verdict=o.verdict,
+        severity=o.severity, model=o.model, claim_id=case.claim.id, round=2 if was is not None else 1,
+    )
 
 
 def _review_user(case: Case, before: list[Seat], j: int) -> str:

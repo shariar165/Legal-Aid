@@ -228,6 +228,19 @@ export interface TraceEvent {
   data: Record<string, unknown>;
 }
 
+/* The trace events that carry structured data for the live views (orchestrator.py, bench.py, llm.py). */
+export type LiveEventData = {
+  risk_found: { risk_id: string; severity: Severity; origin: Risk["origin"]; clause_ids: string[] };
+  /** one per judge as its opinion arrives; round 2 only when peer review really changed it */
+  bench_opinion: { persona: PersonaId; verdict: BenchOpinion["verdict"]; severity: Severity; model: string; claim_id: string; round: 1 | 2 };
+  /** sent once, before a wait of a second or more for pacing or a retry-after */
+  rate_wait: { seconds: number; provider: string; model: string };
+};
+
+export type LiveEvent<K extends keyof LiveEventData> = Omit<TraceEvent, "type" | "data"> & { type: K; data: LiveEventData[K] };
+
+export const isLiveEvent = <K extends keyof LiveEventData>(e: TraceEvent, type: K): e is LiveEvent<K> => e.type === type;
+
 export interface PackDecision {
   pack: string;
   label: string;
@@ -349,6 +362,11 @@ export interface ChatTurn {
 
 export type CouncilLanguage = "en" | "bn";
 
+export interface ChangedBecause {
+  citation_id: string;
+  quote: string;
+}
+
 export interface CouncilReply {
   member: PersonaId;
   name: string;
@@ -362,6 +380,22 @@ export interface CouncilReply {
   round: number;
   revised: boolean;
   responds_to: PersonaId | null;
+  /** set when a risk is in focus */
+  severity?: Severity | null;
+  /** round 2, decided in code: evidence = new verified law; pressure = shown, but round 1 stands; null = no change of view */
+  flip_basis?: "evidence" | "pressure" | null;
+  /** only on an evidence revision */
+  changed_because?: ChangedBecause | null;
+  /** why a pressure revision does not count */
+  flip_note?: string;
+}
+
+/** What a member's vote counts as, computed by the backend. */
+export interface CouncilVote {
+  member: PersonaId;
+  severity: Severity | null;
+  position: string;
+  flip_basis: CouncilReply["flip_basis"];
 }
 
 export interface CouncilChatBody {
@@ -387,6 +421,7 @@ export interface CouncilRuling {
   next_step: string;
   citations: string[];
   model: string;
+  votes?: CouncilVote[];
 }
 
 export interface Me {

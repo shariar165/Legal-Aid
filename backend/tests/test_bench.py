@@ -102,3 +102,36 @@ async def test_judges_see_only_statute_claim_and_redacted_finding(corpus):
     assert len(reviews) == 3 and all("anonymised" in p["user"] for p in reviews)
     models = {m for role in ("bench_a", "bench_b", "bench_c") for r in all_routes(role) for m in (r.model, *r.fallbacks)}
     assert not any(m in p["user"] or m.split("/")[0] in p["user"] for p in reviews for m in models)
+
+
+# ------------------------------------------------------------------ bench_opinion: live, one per judge
+
+
+def _listen(llm):
+    events = []
+    llm._on_event = lambda type_, agent, message, **data: events.append((type_, agent, message, data))
+    return events
+
+
+async def test_each_judge_announces_one_opinion_as_it_arrives(corpus):
+    llm = RecordingLLM()
+    events = _listen(llm)
+    await bench.convene(llm, CLAIM, corpus.get("BD-EPZLABOUR-2019-s22"), _risk(), "supports")
+    assert [e[0] for e in events] == ["bench_opinion"] * 3
+    assert {e[3]["persona"] for e in events} == {"happy", "proud", "gloomy"}
+    for _, agent, message, d in events:
+        assert agent == "Virtual Bench" and d["claim_id"] == CLAIM.id and d["round"] == 1 and d["model"]
+        assert d["verdict"] in ("supports", "neutral", "contradicts") and d["severity"] in message
+
+
+async def test_a_judge_who_really_changes_in_peer_review_announces_it_again(corpus):
+    def review(role, user):
+        sev = "critical" if role == "bench_c" else "high"
+        return {"verdict": "supports", "severity": sev, "reasoning": "r", "revised": role == "bench_c"}
+
+    llm = RecordingLLM(overrides={"bench_opinion": {"verdict": "supports", "severity": "high", "reasoning": "r"}, "bench_review": review})
+    events = _listen(llm)
+    await bench.convene(llm, CLAIM, corpus.get("BD-EPZLABOUR-2019-s22"), _risk(), "supports")
+    assert len(events) == 4
+    last = events[-1][3]
+    assert last["persona"] == "gloomy" and last["severity"] == "critical" and last["round"] == 2

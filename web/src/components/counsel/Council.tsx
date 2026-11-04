@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   api,
@@ -11,13 +12,18 @@ import {
   type CouncilMember,
   type CouncilReply,
   type CouncilRuling,
+  type CouncilVote,
   type PersonaId,
   type Section,
+  type Severity,
 } from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
 import { Icon } from "./Icons";
 import { PixelSticker } from "./PixelSticker";
 import styles from "./counsel.module.css";
+
+/* the deliberation's pixel brawl: client-only and split out, so its sprites load only when a deliberation starts */
+const CouncilFight = dynamic(() => import("./CouncilFight"), { ssr: false, loading: () => <div className={styles.fight} /> });
 
 /* The three council members. Lenses, names and titles mirror backend/ain/agents/bench.py PERSONAS;
    the API adds each member's live model. The lens is the label; the name is flavour. */
@@ -187,7 +193,11 @@ function historyOf(exchanges: Exchange[]): ChatTurn[] {
   for (const x of exchanges) {
     if (x.status === "asking") continue;
     turns.push({ speaker: "user", text: x.question });
-    for (const r of [...x.round1, ...x.round2]) turns.push({ speaker: r.member, text: (r.position ? `${r.position}. ` : "") + r.text });
+    for (const r of [...x.round1, ...x.round2]) {
+      // a revision that did not count must not become the member's position in the next question's history
+      const position = r.flip_basis === "pressure" ? x.round1.find((f) => f.member === r.member)?.position : r.position;
+      turns.push({ speaker: r.member, text: (position ? `${position}. ` : "") + r.text });
+    }
   }
   return turns.slice(-8);
 }
@@ -647,12 +657,13 @@ function ExchangeView({ x, sections, busy, onDeliberate }: { x: Exchange; sectio
       )}
 
       {(x.status === "deliberating" || x.status === "ruled") && <RoundLabel n={2} text="Deliberation · the members answer each other" />}
-      {x.status === "deliberating" && <Thinking members={x.members} />}
+      {x.status === "deliberating" && <DeliberationScene />}
       {x.status === "ruled" && (
         <>
           {x.round2.map((r) => (
             <ReplyCard key={`2-${r.member}`} r={r} sections={sections} lang={x.language} />
           ))}
+          {x.ruling?.votes && <SeverityScale votes={x.ruling.votes} round2={x.round2} />}
           {x.ruling && <RulingCard ruling={x.ruling} sections={sections} lang={x.language} />}
         </>
       )}
@@ -686,6 +697,16 @@ function Thinking({ members }: { members: PersonaId[] }) {
   );
 }
 
+/* While the members rebut each other and the Chief Justice writes the ruling: the slow wait, so it gets a show. */
+function DeliberationScene() {
+  return (
+    <div className={styles.deliberation}>
+      <CouncilFight />
+      <p className={styles.deliberationNote}>The members are answering each other. The Chief Justice will then write the ruling.</p>
+    </div>
+  );
+}
+
 function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section> }) {
   if (!ids.length) return null;
   return (
@@ -708,7 +729,27 @@ function Cites({ ids, sections }: { ids: string[]; sections: Map<string, Section
   );
 }
 
+/* The round-2 tag: said by the evidence gate in the backend, not by the member. */
+function Stance({ r }: { r: CouncilReply }) {
+  if (r.flip_basis === "evidence") {
+    return (
+      <span className={styles.stanceTag} data-basis="evidence">
+        Moved on evidence ✓
+      </span>
+    );
+  }
+  if (r.flip_basis === "pressure") {
+    return (
+      <span className={styles.stanceTag} data-basis="pressure">
+        Moved under pressure: not counted
+      </span>
+    );
+  }
+  return <span className={styles.stanceTag}>Kept position</span>;
+}
+
 function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<string, Section>; lang: CouncilLanguage }) {
+  const because = r.changed_because;
   return (
     <article className={styles.msg} data-persona={r.member}>
       <span className={styles.msgAvatar}>
@@ -728,11 +769,7 @@ function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<strin
               to {LENS[r.responds_to]}
             </span>
           )}
-          {r.round === 2 && (
-            <span className={styles.stanceTag} data-revised={r.revised}>
-              {r.revised ? "Changed position" : "Kept position"}
-            </span>
-          )}
+          {r.round === 2 && <Stance r={r} />}
           <span className={styles.confidence} data-level={r.confidence} title={CONFIDENCE_LABEL[r.confidence]}>
             <i />
             <i />
@@ -742,25 +779,106 @@ function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<strin
         </div>
         {r.position && (
           <p className={styles.msgPosition} lang={lang}>
-            {r.position}
+            {r.flip_basis === "pressure" ? (
+              <>
+                <span className={styles.claimed}>Claimed:</span> <s>{r.position}</s>
+              </>
+            ) : (
+              r.position
+            )}
           </p>
         )}
+        {r.flip_basis === "pressure" && r.flip_note && <p className={styles.flipNote}>{r.flip_note}. The first answer stands.</p>}
         <p className={styles.msgText} lang={lang}>
           {r.text}
         </p>
-        <Cites ids={r.citations} sections={sections} />
+        {because && (
+          <div className={styles.evidence}>
+            <span className={styles.insetLabel}>What moved this member</span>
+            <blockquote>{because.quote}</blockquote>
+            <Cites ids={[because.citation_id]} sections={sections} />
+          </div>
+        )}
+        <Cites ids={r.citations.filter((c) => c !== because?.citation_id)} sections={sections} />
       </div>
     </article>
   );
 }
 
+/* Where each vote counts, once round 2 is over: an avatar sits at the member's counted severity. A revision that failed
+   the evidence gate leaves the avatar at round 1, with a faint ghost at the severity it claimed. */
+const SCALE: Severity[] = ["low", "medium", "high", "critical"];
+
+function SeverityScale({ votes, round2 }: { votes: CouncilVote[]; round2: CouncilReply[] }) {
+  const rated = votes.filter((v) => v.severity);
+  if (rated.length < 2) return null; // no risk in focus: nothing was rated
+  const ghosts = rated.flatMap((v) => {
+    const claimed = round2.find((r) => r.member === v.member)?.severity;
+    return v.flip_basis === "pressure" && claimed && claimed !== v.severity ? [{ member: v.member, from: v.severity as Severity, claimed }] : [];
+  });
+  const centre = (s: Severity) => (SCALE.indexOf(s) + 0.5) * 25;
+  return (
+    <section className={styles.sevScale} aria-label="Counted severity">
+      <span className={styles.insetLabel}>Counted severity</span>
+      <div className={styles.sevBands}>
+        {ghosts.map((g) => (
+          <span
+            key={g.member}
+            className={styles.sevLink}
+            aria-hidden="true"
+            style={{ left: `${Math.min(centre(g.from), centre(g.claimed))}%`, width: `${Math.abs(centre(g.from) - centre(g.claimed))}%` }}
+          />
+        ))}
+        {SCALE.map((s) => (
+          <div key={s} className={styles.sevBand} data-sev={s}>
+            <span className={styles.sevBandLabel}>{SEVERITY_LABEL[s]}</span>
+            <span className={styles.sevMarks}>
+              {rated
+                .filter((v) => v.severity === s)
+                .map((v) => (
+                  <span key={v.member} className={styles.sevMark} title={`${memberLabel(v.member)}: ${SEVERITY_LABEL[s]}`}>
+                    <CouncilAvatar persona={v.member} size={32} />
+                  </span>
+                ))}
+              {ghosts
+                .filter((g) => g.claimed === s)
+                .map((g) => (
+                  <span key={g.member} className={styles.sevGhost} aria-hidden="true" title={`${memberLabel(g.member)} claimed ${SEVERITY_LABEL[s]}: not counted`}>
+                    <CouncilAvatar persona={g.member} size={32} />
+                  </span>
+                ))}
+            </span>
+          </div>
+        ))}
+      </div>
+      {ghosts.map((g) => (
+        <p key={g.member} className={styles.sevNote}>
+          {memberLabel(g.member)} claimed {SEVERITY_LABEL[g.claimed].toLowerCase()} with no new law, so the vote stays at {SEVERITY_LABEL[g.from].toLowerCase()}.
+        </p>
+      ))}
+    </section>
+  );
+}
+
+/* "2 High · 1 Medium": counted by the backend from the votes that stand, most severe first */
+function tallyOf(votes: CouncilVote[]) {
+  return [...SCALE]
+    .reverse()
+    .map((s) => ({ s, n: votes.filter((v) => v.severity === s).length }))
+    .filter((x) => x.n)
+    .map((x) => `${x.n} ${SEVERITY_LABEL[x.s]}`)
+    .join(" · ");
+}
+
 function RulingCard({ ruling, sections, lang }: { ruling: CouncilRuling; sections: Map<string, Section>; lang: CouncilLanguage }) {
   const [copied, setCopied] = useState(false);
   const a = AGREEMENT[ruling.agreement];
+  const tally = tallyOf(ruling.votes ?? []);
   const copy = async () => {
     const lines = [
       `Council ruling (${a.label})`,
       ruling.consensus,
+      ...(tally ? [`Counted severity: ${tally}`] : []),
       ...ruling.disagreements.map((d) => `In dispute: ${d.point}`),
       `Next step: ${ruling.next_step}`,
     ];
@@ -795,6 +913,12 @@ function RulingCard({ ruling, sections, lang }: { ruling: CouncilRuling; section
       <p className={styles.rulingConsensus} lang={lang}>
         {ruling.consensus}
       </p>
+
+      {tally && (
+        <p className={styles.rulingTally}>
+          <b>Counted severity</b> {tally}
+        </p>
+      )}
 
       {ruling.disagreements.length > 0 && (
         <div className={styles.rulingBlock}>

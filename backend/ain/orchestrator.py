@@ -18,7 +18,7 @@ from ain import companies, config, countries, vault
 from ain.agents import adversary, calculator, critic, drafter, ingestion, policy_check, risk_analyst, router, verifier
 from ain.agents.pii import redact
 from ain.llm import LLM
-from ain.models import AnalysisResult, Claim, OcrCheck, OutboundCall, PackDecision, Stats, TraceEvent, Verification
+from ain.models import AnalysisResult, Claim, OcrCheck, OutboundCall, PackDecision, Risk, Stats, TraceEvent, Verification
 from ain.retrieval import CorpusOverlay, get_corpus
 
 CONFIRM_TIMEOUT_S = 600.0
@@ -88,6 +88,10 @@ class Job:
 JOBS: dict[str, Job] = {}
 
 
+def _risk_found(job: Job, agent: str, r: Risk) -> None:
+    job.say("risk_found", agent, r.title.en, risk_id=r.id, severity=r.severity, origin=r.origin, clause_ids=r.clause_ids)
+
+
 def new_job(name: str) -> Job:
     job = Job(id=uuid.uuid4().hex[:12], name=name)
     JOBS[job.id] = job
@@ -120,9 +124,9 @@ async def _run(
         job.say("llm_call", call.agent, f"{call.provider}/{call.model}" + (" (cached)" if call.cached else ""), role=call.role, chars=call.chars, cached=call.cached)
 
     if llm is None:
-        llm = LLM(mode=llm_mode, on_call=on_call)
+        llm = LLM(mode=llm_mode, on_call=on_call, on_event=job.say)
     else:
-        llm._on_call = on_call
+        llm._on_call, llm._on_event = on_call, job.say
     corpus = get_corpus()
     job.say("start", None, f"Analysing {filename}", llm_mode=llm.mode)
 
@@ -201,14 +205,14 @@ async def _run(
     wage_t = asyncio.create_task(wage_task())
     text_risks, text_claims = await text_task
     for r in text_risks:
-        job.say("risk_found", "Risk Analyst", r.title.en, risk_id=r.id, severity=r.severity, origin=r.origin)
+        _risk_found(job, "Risk Analyst", r)
     adv_t = asyncio.create_task(
         adversary.run(llm, corpus, doc.clauses, facts, route, text_risks, red_text, doc.text, start=100, emit=job.emit)
     )
     wage = await wage_t
     fact_risks, fact_claims = risk_analyst.run_fact_rules(facts, wage, doc.clauses, route, start=len(text_risks) + 1)
     for r in fact_risks:
-        job.say("risk_found", "Risk Analyst", r.title.en, risk_id=r.id, severity=r.severity, origin=r.origin)
+        _risk_found(job, "Risk Analyst", r)
     job.say("agent_done", "Risk Analyst", f"{len(text_risks) + len(fact_risks)} playbook risks")
     adv_risks, adv_claims, rejected = await adv_t
     # renumber adversary risks to follow the playbook ones
@@ -222,7 +226,7 @@ async def _run(
             if c.risk_id == old:
                 c.risk_id = r.id
                 c.id = c.id.replace(f"{old}.", f"{r.id}.", 1)
-        job.say("risk_found", "Adversarial Counsel", r.title.en, risk_id=r.id, severity=r.severity, origin="adversary")
+        _risk_found(job, "Adversarial Counsel", r)
     for rj in rejected:
         job.say("citation_rejected", "Adversarial Counsel", f"{rj['citation_id']}: {rj['reason']}", **rj)
     job.say("agent_done", "Adversarial Counsel", f"{len(adv_risks)} additional risks")
@@ -232,13 +236,13 @@ async def _run(
         job.say("agent_start", "Policy Check", "Comparing the contract with the employer's own policy")
         pol_risks, pol_claims = await policy_check.run(llm, doc.clauses, policy_secs, red_text, start=n + 1, source_label="own policy (uploaded)")
         for r in pol_risks:
-            job.say("risk_found", "Policy Check", r.title.en, risk_id=r.id, severity=r.severity, origin="policy")
+            _risk_found(job, "Policy Check", r)
         job.say("agent_done", "Policy Check", f"{len(pol_risks)} contradiction(s) with the employer's policy")
     if company_secs:
         job.say("agent_start", "Policy Check", f"Comparing the contract with {company.name}'s published policy")
         co_risks, co_claims = await policy_check.run(llm, doc.clauses, company_secs, red_text, start=n + 1 + len(pol_risks), source_label=company.source_label)
         for r in co_risks:
-            job.say("risk_found", "Policy Check", r.title.en, risk_id=r.id, severity=r.severity, origin="policy")
+            _risk_found(job, "Policy Check", r)
         job.say("agent_done", "Policy Check", f"{len(co_risks)} contradiction(s) with {company.name}'s published policy")
         pol_risks, pol_claims = pol_risks + co_risks, pol_claims + co_claims
     job.say("step", None, "match", step="match")

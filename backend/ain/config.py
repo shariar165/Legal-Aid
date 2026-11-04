@@ -136,6 +136,10 @@ def bench_settings() -> dict:
     return dict(_raw()["bench"])
 
 
+def council_settings() -> dict:
+    return dict(_raw()["council"])
+
+
 def quote_threshold() -> int:
     return int(_raw()["verifier"]["quote_fidelity_threshold"])
 

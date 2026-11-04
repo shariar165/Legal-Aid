@@ -37,6 +37,8 @@ from ain.models import OutboundCall
 
 log = logging.getLogger(__name__)
 
+RATE_WAIT_MIN_S = 1.0  # shorter pacing gaps are normal between calls: reporting them would flood the trace
+
 
 class LLMError(RuntimeError):
     pass
@@ -74,7 +76,8 @@ class _Pacer:
     def __init__(self) -> None:
         self.slots: list[float] = []
 
-    async def wait(self, rpm: int) -> None:
+    def slot(self, rpm: int) -> float:
+        """Take the next slot and return how long to wait for it. Synchronous, so concurrent calls queue without a lock."""
         now = time.monotonic()
         self.slots = [s for s in self.slots if s > now - 60]
         slot = now
@@ -83,8 +86,7 @@ class _Pacer:
         if self.slots:
             slot = max(slot, self.slots[-1])
         self.slots.append(slot)
-        if slot > now:
-            await asyncio.sleep(slot - now)
+        return max(0.0, slot - now)
 
 
 def estimate_tokens(text: str) -> int:
@@ -197,12 +199,16 @@ def all_routes(role: str) -> list[Route]:
 class LLM:
     """Per-job client. Records every call for the privacy receipt and the trace."""
 
-    def __init__(self, mode: str | None = None, on_call: Callable[[OutboundCall], None] | None = None):
+    def __init__(
+        self, mode: str | None = None, on_call: Callable[[OutboundCall], None] | None = None,
+        on_event: Callable[..., None] | None = None,
+    ):
         self.mode = mode or config.llm_mode()
         self.calls: list[OutboundCall] = []
         self.blocked = 0
         self.json_retries = 0  # answers that were not valid JSON and had to be asked again
         self._on_call = on_call
+        self._on_event = on_event  # (type, agent, message, **data): live trace events raised below an agent's own code
         self._sem = asyncio.Semaphore(6)
         self._per_model: dict[tuple[str, str], asyncio.Semaphore] = {}
 
@@ -285,6 +291,16 @@ class LLM:
             return contextlib.nullcontext()
         return self._per_model.setdefault((r.prov.name, r.model), asyncio.Semaphore(r.prov.max_parallel))
 
+    def event(self, type_: str, agent: str | None = None, message: str = "", **data: Any) -> None:
+        if self._on_event:
+            self._on_event(type_, agent, message, **data)
+
+    def _rate_wait(self, seconds: float, prov: config.ProviderConfig, model: str) -> None:
+        """Announce one wait before it starts, so the UI can count it down; called once per wait, never per second."""
+        if seconds >= RATE_WAIT_MIN_S:
+            shown = round(seconds, 1)
+            self.event("rate_wait", None, f"Waiting {shown:g} s for the {prov.name} rate limit ({model})", seconds=shown, provider=prov.name, model=model)
+
     def _record(self, info: dict | None, call: OutboundCall) -> None:
         if info is not None:
             info.update(provider=call.provider, model=call.model, fallback=call.fallback, cached=call.cached)
@@ -323,9 +339,12 @@ class LLM:
         attempts = 6 if last else 3
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=15.0)) as client:
             for attempt in range(attempts):
-                await _pacer(prov.name).wait(prov.rpm)
+                delay = _pacer(prov.name).slot(prov.rpm)
                 if bucket:
-                    await asyncio.sleep(bucket.reserve(need))
+                    delay = max(delay, bucket.reserve(need))  # the two clocks run together: the longer one decides
+                if delay > 0:
+                    self._rate_wait(delay, prov, model)
+                    await asyncio.sleep(delay)
                 try:
                     r = await client.post(f"{prov.base_url}/chat/completions", json=body, headers=headers)
                 except httpx.TransportError as e:
@@ -348,6 +367,8 @@ class LLM:
                     last_err = LLMError(f"{r.status_code}: {r.text[:200]}")
                     if wait > 60 and not last:
                         raise _RouteFailed(f"{where}: rate limited for {wait:.0f}s")
+                    if r.status_code == 429 or r.headers.get("retry-after"):
+                        self._rate_wait(wait, prov, model)
                     await asyncio.sleep(wait)
                     continue
                 if r.status_code == 400 and "response_format" in body and "json" in r.text.lower():

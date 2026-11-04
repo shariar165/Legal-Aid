@@ -120,3 +120,11 @@ async def test_without_the_rubric_flag_the_prompts_are_unchanged(corpus):
         assert "rubric" not in p["system"]
     opinion = next(p["system"] for p in llm.payloads if p["task"] == "bench_opinion")
     assert bench.SEVERITY_QUESTION in opinion
+
+
+async def test_a_seat_with_no_opinion_announces_nothing(corpus):
+    llm = Failing({"bench_b"})
+    events = []
+    llm._on_event = lambda type_, agent, message, **data: events.append(data)
+    await bench.convene(llm, CLAIM, corpus.get("BD-EPZLABOUR-2019-s22"), _risk(), "supports")
+    assert {e["persona"] for e in events} == {"happy", "gloomy"}

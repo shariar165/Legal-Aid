@@ -6,8 +6,9 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from ain import api
+from ain import api, config
 from ain.agents import ingestion
+from ain.llm import LLM
 
 
 @pytest.fixture
@@ -139,3 +140,42 @@ def test_council_members_and_chat(client):
     assert client.post(deliberate, json={"message": "x", "replies": first[:1]}).status_code == 422
     leak = [dict(first[0], text="Call 01712345678"), *first[1:]]
     assert client.post(deliberate, json={"message": "x", "replies": leak}).status_code == 422
+
+
+def test_every_new_event_reaches_the_stream_for_the_epz_sample(client, monkeypatch):
+    # fake mode never reaches _post, so nothing rate-limits it: fire the real emitter once (its waits are covered in test_llm_routing)
+    real = LLM.json
+    fired = []
+
+    async def once(self, **kw):
+        if not fired:
+            fired.append(True)
+            self._rate_wait(3.0, config.provider("groq"), "openai/gpt-oss-120b")
+        return await real(self, **kw)
+
+    monkeypatch.setattr(LLM, "json", once)
+    job = client.post("/api/analyze", data={"sample_id": "rmg_epz"}).json()
+    events = []
+    with client.stream("GET", f"/api/jobs/{job['job_id']}/events") as resp:
+        for line in resp.iter_lines():
+            if line.startswith("data:"):
+                events.append(json.loads(line[5:]))
+            if line.startswith("event: end"):
+                break
+    of = lambda t: [e for e in events if e.get("type") == t]  # noqa: E731
+
+    risks = client.get(f"/api/jobs/{job['job_id']}/result").json()["risks"]
+    found = of("risk_found")
+    assert found and {e["data"]["risk_id"] for e in found} == {r["id"] for r in risks}
+    by_id = {r["id"]: r for r in risks}
+    assert all(e["data"]["clause_ids"] == by_id[e["data"]["risk_id"]]["clause_ids"] for e in found)
+
+    opinions = of("bench_opinion")
+    ruled = {e["data"]["claim_id"] for e in of("bench_ruling")}
+    assert ruled and {e["data"]["claim_id"] for e in opinions} == ruled
+    for claim in ruled:
+        assert sorted(e["data"]["persona"] for e in opinions if e["data"]["claim_id"] == claim) == ["gloomy", "happy", "proud"]
+    assert all({"persona", "verdict", "severity", "model", "claim_id"} <= set(e["data"]) for e in opinions)
+
+    [wait] = of("rate_wait")
+    assert wait["data"] == {"seconds": 3.0, "provider": "groq", "model": "openai/gpt-oss-120b"}

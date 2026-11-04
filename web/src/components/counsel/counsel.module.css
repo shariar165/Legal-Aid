@@ -2873,9 +2873,137 @@ button.clause:hover {
   color: var(--c-muted);
 }
 
-.stanceTag[data-revised="true"] {
+.stanceTag[data-basis="evidence"] {
+  background: var(--sev-low-tint);
+  color: var(--sev-low-ink);
+}
+
+.stanceTag[data-basis="pressure"] {
   background: var(--warn-tint);
   color: var(--warn-ink);
+}
+
+/* a revision that failed the evidence gate: shown, but plainly not the member's counted position */
+.msgPosition s {
+  font-weight: 500;
+  color: var(--c-muted);
+  text-decoration-thickness: 1px;
+}
+
+.claimed {
+  font-size: 13px;
+  color: var(--warn-ink);
+}
+
+.flipNote {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--warn-ink);
+}
+
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--sev-low-tint);
+}
+
+.evidence blockquote {
+  margin: 0;
+  font-family: var(--c-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.evidence .msgCites {
+  margin: 0;
+}
+
+/* where each vote counts after round 2 */
+.sevScale {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 44px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+}
+
+.sevBands {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+.sevBand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 92px;
+  padding: 6px 4px 8px;
+  background: var(--sv-tint);
+  border-top: 4px solid var(--sv);
+}
+
+.sevBandLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--sv-ink);
+}
+
+.sevMarks {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sevMark {
+  display: inline-flex;
+  border-radius: 10px;
+  background: var(--c-card);
+  outline: 2px solid var(--sv);
+  outline-offset: 1px;
+}
+
+.sevGhost {
+  display: inline-flex;
+  border-radius: 10px;
+  opacity: 0.32;
+  outline: 2px dashed var(--c-muted);
+  outline-offset: 1px;
+}
+
+.sevLink {
+  position: absolute;
+  bottom: 24px;
+  border-top: 2px dashed var(--c-muted);
+}
+
+.sevNote {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--c-muted);
+}
+
+.rulingTally {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--c-muted);
+}
+
+.rulingTally b {
+  margin-right: 6px;
+  color: var(--c-ink);
 }
 
 .confidence {
@@ -2955,6 +3083,32 @@ button.clause:hover {
   border: 1px solid var(--c-line);
   border-top: 3px solid var(--c-accent);
   box-shadow: var(--shadow-2);
+}
+
+/* the deliberation loading scene: the council's pixel brawl (CouncilFight), a 16:9 stage */
+.deliberation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 640px;
+  margin-left: 44px;
+}
+
+.fight {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: #f8eee2;
+  border: 1px solid var(--c-line);
+  box-shadow: var(--shadow-2);
+}
+
+.deliberationNote {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-muted);
 }
 
 .rulingHead {
@@ -4498,6 +4652,8 @@ button.clause:hover {
   }
 
   .deliberateBar,
+  .deliberation,
+  .sevScale,
   .ruling {
     margin-left: 0;
   }
