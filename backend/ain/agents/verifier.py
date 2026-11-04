@@ -51,10 +51,14 @@ def gate_existence(claim: Claim, corpus: Corpus, route: RouteDecision) -> tuple[
     return GateResult(gate="existence", status="pass", detail=f"Found {sec.act_en} s.{sec.section} - {sec.heading}"), sec
 
 
+def quote_score(quote: str, text: str) -> float:
+    return fuzz.partial_ratio(_ws(quote), _ws(text))
+
+
 def gate_fidelity(claim: Claim, sec: Section) -> GateResult:
     if not claim.quote:
         return GateResult(gate="fidelity", status="skip", detail="No direct quotation; the proposition is a paraphrase checked by entailment.")
-    score = fuzz.partial_ratio(_ws(claim.quote), _ws(sec.text))
+    score = quote_score(claim.quote, sec.text)
     if score >= config.quote_threshold():
         return GateResult(gate="fidelity", status="pass", detail=f"Quotation matches the official text ({score:.0f}%).")
     return GateResult(gate="fidelity", status="warn", detail=f"Quotation does not match the official text ({score:.0f}%); shown as a paraphrase.")

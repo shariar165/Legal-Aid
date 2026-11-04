@@ -8,15 +8,18 @@ how many of its citations survive versus Ain Copilot's.
 
 from __future__ import annotations
 
+import logging
 import re
 
 from rapidfuzz import fuzz
 
 from ain.agents.verifier import gate_currency, gate_entailment
-from ain.llm import LLM
+from ain.llm import LLM, MalformedAnswer, dict_items
 from ain.models import AblationResult, AnalysisResult, Claim
 from ain.naming import SHORT_EN
 from ain.retrieval import Corpus
+
+log = logging.getLogger(__name__)
 
 PLAIN_SYSTEM = """You are a lawyer. Read the contract and list its main legal risks for the weaker party.
 For every risk cite the specific statute and section number that applies.
@@ -86,18 +89,23 @@ def resolve(corpus: Corpus, act: str, section: str) -> str | None:
 
 async def run(llm: LLM, corpus: Corpus, result: AnalysisResult) -> AblationResult:
     migrant = "bd_migration" in result.route.pack_ids
-    data = await llm.json(
-        role="plain",
-        system=PLAIN_SYSTEM,
-        user=result.document.text[:14000],  # already redacted
-        task="ablation_plain",
-        agent="Ablation · plain LLM",
-        fake=lambda: {"risks": FAKE_PLAIN["migrant" if migrant else "commercial"]},
-        temperature=0.2,
-    )
+    try:
+        data = await llm.json(
+            role="plain",
+            system=PLAIN_SYSTEM,
+            user=result.document.text[:14000],  # already redacted
+            task="ablation_plain",
+            agent="Ablation · plain LLM",
+            fake=lambda: {"risks": FAKE_PLAIN["migrant" if migrant else "commercial"]},
+            temperature=0.2,
+        )
+    except MalformedAnswer as e:
+        log.warning("Ablation: no usable plain answer: %s", e)
+        data = {}
+    items = dict_items(data.get("risks"), "ablation risks")
     rows: list[dict] = []
-    for item in data.get("risks", []):
-        for c in item.get("citations", []):
+    for item in items:
+        for c in dict_items(item.get("citations"), "ablation citations"):
             act, section, claim_text = str(c.get("act", "")), str(c.get("section", "")), str(c.get("claim", ""))
             cid = resolve(corpus, act, section)
             row = {"risk": item.get("risk", ""), "cited": f"{act} s.{section}", "claim": claim_text, "citation_id": cid}
@@ -117,7 +125,7 @@ async def run(llm: LLM, corpus: Corpus, result: AnalysisResult) -> AblationResul
     ain_rows = [v for v in result.ledger if v.claim.risk_id != "P"]
     return AblationResult(
         plain_model=llm.resolve("plain")[1] if llm.mode != "fake" else "fake (offline demo)",
-        plain_answer="\n".join(f"- {i.get('risk')}" for i in data.get("risks", [])),
+        plain_answer="\n".join(f"- {i.get('risk')}" for i in items),
         citations_found=len(rows),
         resolvable=sum(r["citation_id"] is not None for r in rows),
         supported=sum(r["outcome"] == "supported" for r in rows),

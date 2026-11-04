@@ -48,8 +48,17 @@ class PIILeakError(LLMError):
     pass
 
 
+class MalformedAnswer(LLMError):
+    """The providers answered, but never with a usable JSON object. Each agent decides what that means for it: a job must
+    survive it, while an outage (plain LLMError) still fails loudly rather than pass as a clean report."""
+
+
 class _RouteFailed(LLMError):
     """This route cannot answer; try the next one."""
+
+
+class _Malformed(_RouteFailed):
+    """This route answered with something other than a JSON object, even after retries."""
 
 
 @dataclass(frozen=True)
@@ -175,6 +184,30 @@ def _quota_reset(r: httpx.Response) -> float | None:
         return None
 
 
+def dict_items(value: object, where: str) -> list[dict]:
+    """The objects in a list from a model's answer. Models sometimes return strings where the schema says objects: each
+    bad item is skipped with a warning, so one malformed answer can never kill a job."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        log.warning("%s: expected a list, got %s; skipped", where, type(value).__name__)
+        return []
+    good = [x for x in value if isinstance(x, dict)]
+    if len(good) != len(value):
+        log.warning("%s: skipped %d of %d malformed item(s)", where, len(value) - len(good), len(value))
+    return good
+
+
+def str_items(value: object) -> list[str]:
+    """The non-empty strings in a list from a model's answer; anything else (often unhashable) is dropped."""
+    return [x for x in value if isinstance(x, str) and x.strip()] if isinstance(value, list) else []
+
+
+def text_of(value: object, default: str = "") -> str:
+    """A string field from a model's answer, or `default` when the model gave anything else."""
+    return value if isinstance(value, str) and value.strip() else default
+
+
 def parse_json(content: str) -> dict:
     content = re.sub(r"<think>.*?</think>", "", content, flags=re.S).strip()
     content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
@@ -263,6 +296,8 @@ class LLM:
             hit = cache.get(key(r))
             if hit is not None:
                 data, used = _unwrap(hit, r.model)
+                if not isinstance(data, dict):  # saved before answers were checked: ask again rather than crash on it
+                    continue
                 self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, cached=True, fallback=_is_fallback(r, used)))
                 return data
         if self.mode == "replay":
@@ -273,6 +308,7 @@ class LLM:
 
         routes = self.routes(role)
         errors: list[str] = []
+        malformed = False
         for i, r in enumerate(routes):
             try:
                 async with self._sem, self._model_slot(r):
@@ -280,11 +316,12 @@ class LLM:
             except _RouteFailed as e:
                 log.warning("%s: %s", agent, e)
                 errors.append(str(e))
+                malformed = malformed or isinstance(e, _Malformed)
                 continue
             cache[key(r)] = {"__ain__": 1, "data": data, "model": used}
             self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, fallback=_is_fallback(r, used)))
             return data
-        raise LLMError(f"{agent}: every route for role '{role}' failed: " + " | ".join(errors))
+        raise (MalformedAnswer if malformed else LLMError)(f"{agent}: every route for role '{role}' failed: " + " | ".join(errors))
 
     def _model_slot(self, r: Route) -> asyncio.Semaphore | contextlib.nullcontext:
         if not r.prov.max_parallel:
@@ -381,14 +418,17 @@ class LLM:
                 content = (payload.get("choices") or [{}])[0].get("message", {}).get("content") or ""
                 used = payload.get("model") or model
                 if not content.strip():
-                    raise _RouteFailed(f"{where}: empty answer (reasoning used up the token budget)")
+                    raise _Malformed(f"{where}: empty answer (reasoning used up the token budget)")
                 try:
-                    return parse_json(content), used
-                except json.JSONDecodeError as e:
+                    data = parse_json(content)
+                    if not isinstance(data, dict):
+                        raise ValueError(f"expected a JSON object, got {type(data).__name__}")
+                    return data, used
+                except ValueError as e:  # includes json.JSONDecodeError
                     self.json_retries += 1
                     last_err = e
                     await asyncio.sleep(min(20, 2 ** attempt))
-        raise _RouteFailed(f"{where} failed after retries: {last_err}")
+        raise (_Malformed if isinstance(last_err, ValueError) else _RouteFailed)(f"{where} failed after retries: {last_err}")
 
 
 def _unwrap(hit: Any, model: str) -> tuple[dict, str]:

@@ -8,6 +8,7 @@ rule's anchors (citation_ids into the corpus); the verifier still checks every o
 
 from __future__ import annotations
 
+import logging
 import asyncio
 import re
 from dataclasses import dataclass, field
@@ -16,9 +17,11 @@ from functools import lru_cache
 import yaml
 
 from ain import config, countries
-from ain.llm import LLM
+from ain.llm import LLM, MalformedAnswer, str_items
 from ain.models import Claim, Clause, DocFacts, L10n, Risk, RouteDecision, WageCalc
 from ain.naming import EN_TO_BN_DIGITS
+
+log = logging.getLogger(__name__)
 
 CHECK_SYSTEM = """You are a careful contract lawyer. You get ONE question and the text of one or more contract clauses
 (personal data is replaced by placeholders). Answer ONLY from the clause text.
@@ -208,15 +211,19 @@ async def _confirm(llm: LLM, rule: Rule, hits: list[Clause], redact, absence: bo
         finding = rule.trigger.get("absent_finding") if absence else None
         return {"applies": True, "clause_ids": [c.id for c in hits], "finding": finding or f"Clause {hits[0].id}: “{excerpt}”"}
 
-    data = await llm.json(
-        role="reasoner",
-        system=CHECK_SYSTEM,
-        user=f"QUESTION: {rule.question}\n\nCLAUSES:\n{body}",
-        task=f"risk_check:{rule.id}",
-        agent="Risk Analyst",
-        fake=fake,
-    )
-    ids = [i for i in data.get("clause_ids") or [] if any(c.id == i for c in hits)] or [hits[0].id]
+    try:
+        data = await llm.json(
+            role="reasoner",
+            system=CHECK_SYSTEM,
+            user=f"QUESTION: {rule.question}\n\nCLAUSES:\n{body}",
+            task=f"risk_check:{rule.id}",
+            agent="Risk Analyst",
+            fake=fake,
+        )
+    except MalformedAnswer as e:  # the rule's trigger did match: keep the risk, since the 4 gates still check it, not hide it
+        log.warning("Risk Analyst: %s kept unconfirmed: %s", rule.id, e)
+        data = fake()
+    ids = [i for i in str_items(data.get("clause_ids")) if any(c.id == i for c in hits)] or [hits[0].id]
     return bool(data.get("applies")), ids, str(data.get("finding") or "").strip() or fake()["finding"]
 
 

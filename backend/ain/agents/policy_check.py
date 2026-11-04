@@ -11,12 +11,15 @@ made about the company.
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import date
 
 from ain.agents.risk_analyst import load_rules
-from ain.llm import LLM
+from ain.llm import LLM, MalformedAnswer, dict_items, str_items
 from ain.models import Claim, Clause, L10n, Risk, Section
+
+log = logging.getLogger(__name__)
 
 POLICY_PACK = "employer_policy"
 POLICY_LABEL = "Employer's own policy (uploaded)"
@@ -145,25 +148,29 @@ async def run(
     short = _policy_ids(sections)
     policy_block = "\n\n".join(f"[{pid}] {s.text}" for pid, s in short.items())
     contract_block = "\n\n".join(f"[{c.id}] {redact(c.text)}" for c in contract)
-    data = await llm.json(
-        role="reasoner",
-        system=SYSTEM,
-        user=f"EMPLOYER POLICY ({source_label}):\n{policy_block}\n\nCONTRACT:\n{contract_block}",
-        task="policy_check",
-        agent="Policy Check",
-        fake=lambda: _fake(contract, short),
-    )
+    try:
+        data = await llm.json(
+            role="reasoner",
+            system=SYSTEM,
+            user=f"EMPLOYER POLICY ({source_label}):\n{policy_block}\n\nCONTRACT:\n{contract_block}",
+            task="policy_check",
+            agent="Policy Check",
+            fake=lambda: _fake(contract, short),
+        )
+    except MalformedAnswer as e:  # a policy contradiction is shown only with a verified quote, so there is nothing to show
+        log.warning("Policy Check: no usable answer: %s", e)
+        return [], []
     contract_ids = {c.id for c in contract}
     risks: list[Risk] = []
     claims: list[Claim] = []
     n = start
-    for item in data.get("contradictions", [])[:6]:
+    for item in dict_items(data.get("contradictions"), "policy contradictions")[:6]:
         sec = short.get(str(item.get("policy_clause_id")))
         quote = str(item.get("policy_quote") or "").strip()
         if sec is None or not quote:
             continue  # nothing to verify against: never show an unsupported "the policy says"
         rid = f"R{n}"
-        ids = [i for i in item.get("contract_clause_ids") or [] if i in contract_ids]
+        ids = [i for i in str_items(item.get("contract_clause_ids")) if i in contract_ids]
         where = f"clause {ids[0]}" if ids else "the contract"
         topic = L10n(en=str(item.get("topic_en") or "a policy promise"), bn=str(item.get("topic_bn") or item.get("topic_en") or "নীতির প্রতিশ্রুতি"))
         claim = Claim(

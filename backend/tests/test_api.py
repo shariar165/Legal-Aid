@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from ain import api, config
 from ain.agents import ingestion
-from ain.llm import LLM
+from ain.llm import LLM, LLMError
 
 
 @pytest.fixture
@@ -179,3 +179,15 @@ def test_every_new_event_reaches_the_stream_for_the_epz_sample(client, monkeypat
 
     [wait] = of("rate_wait")
     assert wait["data"] == {"seconds": 3.0, "provider": "groq", "model": "openai/gpt-oss-120b"}
+
+
+def test_the_council_answers_502_when_no_model_can_reply(client, monkeypatch):
+    job = client.post("/api/analyze", data={"sample_id": "rmg_epz"}).json()["job_id"]
+    assert _wait(client, job)["status"] == "done"
+
+    async def down(self, **kw):
+        raise LLMError("every route failed")
+
+    monkeypatch.setattr(LLM, "json", down)
+    r = client.post(f"/api/jobs/{job}/council/chat", json={"message": "Should I sign?", "members": ["happy"]})
+    assert r.status_code == 502 and "try again" in r.json()["detail"]

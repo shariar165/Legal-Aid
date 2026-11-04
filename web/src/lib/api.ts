@@ -362,9 +362,15 @@ export interface ChatTurn {
 
 export type CouncilLanguage = "en" | "bn";
 
+/** What moved a member: a section or a contract clause new to them, with a quote checked against its text. */
 export interface ChangedBecause {
-  citation_id: string;
+  citation_id: string | null;
+  clause_id: string | null;
   quote: string;
+  label: string;
+  url: string;
+  /** false: a section retrieved for round 2, not put through the four gates for this risk */
+  verified: boolean;
 }
 
 export interface CouncilReply {
@@ -382,6 +388,11 @@ export interface CouncilReply {
   responds_to: PersonaId | null;
   /** set when a risk is in focus */
   severity?: Severity | null;
+  /** risk in focus: does this member uphold the risk's finding? */
+  verdict?: "supports" | "rejects" | null;
+  /** whole contract: this member's overall advice */
+  stance?: "sign" | "renegotiate" | "do_not_sign" | null;
+  clause_ids?: string[];
   /** round 2, decided in code: evidence = new verified law; pressure = shown, but round 1 stands; null = no change of view */
   flip_basis?: "evidence" | "pressure" | null;
   /** only on an evidence revision */
@@ -394,6 +405,8 @@ export interface CouncilReply {
 export interface CouncilVote {
   member: PersonaId;
   severity: Severity | null;
+  verdict: CouncilReply["verdict"];
+  stance: CouncilReply["stance"];
   position: string;
   flip_basis: CouncilReply["flip_basis"];
 }

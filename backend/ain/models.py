@@ -385,10 +385,15 @@ class CouncilChatRequest(BaseModel):
 
 
 class ChangedBecause(BaseModel):
-    """What moved a member in round 2: a section new to that member, and a phrase checked against its text."""
+    """What moved a member in round 2: a section or a contract clause new to that member, and a phrase checked against
+    its text. Exactly one of citation_id and clause_id is set."""
 
-    citation_id: str
+    citation_id: str | None = None
+    clause_id: str | None = None
     quote: str
+    label: str = ""  # how the UI names the source, e.g. "Contract Act 1872, s.27"
+    url: str = ""
+    verified: bool = True  # False: a section retrieved for round 2, which has not been through the 4 gates for this risk
 
 
 class CouncilReply(BaseModel):
@@ -403,6 +408,9 @@ class CouncilReply(BaseModel):
     revised: bool = False  # round 2 only: the member changed their position
     responds_to: str | None = None  # round 2 only: the colleague (member id) mainly addressed
     severity: Severity | None = None  # set when a risk is in focus; None if the model gave no valid rating
+    verdict: Literal["supports", "rejects"] | None = None  # risk in focus: does this member uphold the risk's finding?
+    stance: Literal["sign", "renegotiate", "do_not_sign"] | None = None  # whole contract: this member's overall advice
+    clause_ids: list[str] = Field(default_factory=list)  # contract clauses the answer relies on
     flip_basis: Literal["evidence", "pressure"] | None = None  # round 2 only, decided in code: None = no change of view
     changed_because: ChangedBecause | None = None  # kept only when flip_basis is "evidence": never an unchecked citation
     flip_note: str = ""  # why a "pressure" revision does not count (fixed strings, never model text)
@@ -432,6 +440,8 @@ class CouncilVote(BaseModel):
 
     member: str
     severity: Severity | None = None
+    verdict: Literal["supports", "rejects"] | None = None
+    stance: Literal["sign", "renegotiate", "do_not_sign"] | None = None
     position: str = ""
     flip_basis: Literal["evidence", "pressure"] | None = None
 

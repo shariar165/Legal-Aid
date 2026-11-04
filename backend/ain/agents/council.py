@@ -11,28 +11,33 @@ challenging or revising - then the Chief Justice (the bench's chairman model) wr
 consensus, the points still in dispute, and one concrete next step. The same grounding and
 citation stripping apply to both rounds. Answers can be in English or simple Bangla.
 
-Evidence gate: LLM judges drift under peer pressure, so a change of view counts only if it rests on new, verified law.
-Every round-2 revision is checked in code (`_check_revision`), never taken on the model's word: it must name a section in
-that member's `allowed` list, new to that member since round 1, with a quote that passes the verifier's fidelity gate.
-Otherwise it is a "pressure" revision (as is a change the member did not declare): it is still shown, but the member's
-round-1 severity and position stand for the Chief Justice and the vote tally (`_counted`).
+Evidence gate: LLM judges drift under peer pressure, so a change of view counts only if something new supports it. Every
+round-2 revision is checked in code (`_check_revision`), never taken on the model's word: it must name a section in that
+member's `allowed` list or a clause of the contract, new to that member since round 1, with a quote that passes the
+verifier's fidelity gate. Otherwise it is a "pressure" revision: it is still shown, but the member's round-1 view stands for
+the Chief Justice and the vote tally (`_counted`). A change the member did not declare is pressure too; it is read from
+the structured fields (severity, and verdict or stance), never from the free-text position, which members reword freely.
+
+Round 2 can see more than round 1, or there would be nothing new to cite: a few in-force sections retrieved for the risk
+(`extra_sections`), and the contract clauses at issue. Those sections have not been through the 4 gates for this risk, so
+they stay out of the Chief Justice's citable list and the UI marks a revision resting on one. This is the one way the
+council reaches beyond the verified ledger, and the sections still come only from retrieval.
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from rapidfuzz import fuzz
-
-from ain.agents.bench import BY_ID, MIN_QUOTE_CHARS, PERSONAS, SEV, Persona, _fake_quote, _flat, cited_text, model_name, window
-from ain.agents.verifier import gate_fidelity
-from ain.llm import LLM, LLMError
+from ain import config
+from ain.agents.bench import BY_ID, MIN_QUOTE_CHARS, PERSONAS, SEV, Persona, _fake_quote, cited_text, model_name, window
+from ain.agents.verifier import gate_currency, quote_score
+from ain.llm import LLM, LLMError, str_items
 from ain.models import (
     AnalysisResult,
     BenchOpinion,
     ChangedBecause,
     ChatTurn,
-    Claim,
+    Clause,
     CouncilDisagreement,
     CouncilMember,
     CouncilReply,
@@ -42,10 +47,17 @@ from ain.models import (
     Section,
     Verification,
 )
+from ain.retrieval import get_corpus, tokenize
 
 HISTORY_TURNS = 8
 EXCERPT_CHARS = 300  # per citation, whole-contract round 2 only: enough to quote, small enough for Groq's 8k tokens a minute
-POSITION_SAME = 90  # fuzz.ratio: rewording stays above it, while a dropped "not" (85 on a short line) falls below
+EXTRA_SECTIONS = 5  # at most, for one risk in round 2 (3-5 when the corpus has that many in force and in scope)
+EXTRA_CHARS = 800  # of each of those sections
+EXTRA_CLAUSES = 3  # further contract clauses shown in round 2, beyond the ones at issue
+CLAUSE_CHARS = 500
+CLAUSE_BUDGET = 3000  # all contract text in one round-2 prompt
+VERDICTS = ("supports", "rejects")
+STANCES = ("sign", "renegotiate", "do_not_sign")
 
 LANGUAGE = {
     "en": "Write in plain English.",
@@ -62,8 +74,9 @@ in the CONTEXT, never any other section or act. Put citation_ids in the "citatio
 If the question needs law that is not in the CONTEXT, say so in your voice.
 You may refer to what the other council members said in the conversation. This is information, not formal legal advice.
 "position" is your answer in one short line (at most 12 words), e.g. "Do not sign until clause 4 is removed".
-"confidence" is how sure the CONTEXT lets you be: "high", "medium" or "low".{severity_rule}
-Return JSON: {{"position": "...", "reply": "...", "confidence": "high|medium|low",{severity_key} "citations": ["citation_id", ...]}}"""
+"confidence" is how sure the CONTEXT lets you be: "high", "medium" or "low".{rating_rule}
+"clause_ids" lists the contract clauses your answer relies on, e.g. ["C4"].
+Return JSON: {{"position": "...", "reply": "...", "confidence": "high|medium|low",{rating_key} "clause_ids": ["C4", ...], "citations": ["citation_id", ...]}}"""
 
 REBUTTAL_SYSTEM = """You are a member of a three-member legal council that has reviewed a contract for the weaker party.
 {personality}
@@ -73,11 +86,11 @@ anything you think the CONTEXT does not support or that overstates or understate
 you change your own position. {language}
 Rely ONLY on the CONTEXT; you may cite only citation_ids that appear in it (in "citations", not in the text).
 "responds_to" names the colleague whose answer you mainly react to - "happy" (Sunny), "proud" (Regal) or "gloomy" (Grey).
-If you keep your view, repeat your first position word for word in "position". If you change it, set "revised" to true and
-give "changed_because": the citation_id of a section in the CONTEXT that you did not cite in your first answer, and a
-short phrase copied exactly from that section's text.{severity_rule}
+If you change your view, set "revised" to true and give "changed_because": either {{"citation_id": "...", "quote": "..."}} for a
+section you did not cite in your first answer, or {{"clause_id": "...", "quote": "..."}} for a contract clause you did not rely
+on in your first answer. The quote is a short phrase copied exactly from that section's or clause's text.{rating_rule}
 Return JSON: {{"position": "your position now, at most 12 words", "reply": "...", "revised": true|false,
-"changed_because": {{"citation_id": "...", "quote": "..."}} or null,{severity_key}
+"changed_because": {{...}} or null,{rating_key}
 "responds_to": "happy|proud|gloomy", "confidence": "high|medium|low", "citations": ["citation_id", ...]}}"""
 
 RULING_SYSTEM = """You are the Chief Justice of a three-member legal council (Sunny the optimist, Regal the textualist,
@@ -93,13 +106,18 @@ Write the council's ruling for the user. {language}
 Rely ONLY on the CONTEXT and what the members said; cite only citation_ids that appear in the CONTEXT.
 Return JSON: {{"agreement": "...", "consensus": "...", "disagreements": [...], "next_step": "...", "citations": [...]}}"""
 
-# Only when a risk is in focus: the whole-contract prompts have no severity to give.
-SEVERITY_RULE = '\n"severity" is how serious this risk is for the weaker party: "low", "medium", "high" or "critical".'
-SEVERITY_KEY = ' "severity": "low|medium|high|critical",'
+# What a member's view is, in fields code can compare: a risk has a severity and a verdict, the whole contract a stance.
+RISK_RULE = """
+"severity" is how serious this risk is for the weaker party: "low", "medium", "high" or "critical".
+"verdict" is "supports" if the CONTEXT bears out this risk's finding, "rejects" if it does not."""
+RISK_KEY = ' "severity": "low|medium|high|critical", "verdict": "supports|rejects",'
+WHOLE_RULE = """
+"stance" is your overall advice on this contract: "sign", "renegotiate" or "do_not_sign"."""
+WHOLE_KEY = ' "stance": "sign|renegotiate|do_not_sign",'
 
 
-def _severity_slots(risk: Risk | None) -> dict[str, str]:
-    return {"severity_rule": SEVERITY_RULE if risk else "", "severity_key": SEVERITY_KEY if risk else ""}
+def _rating_slots(risk: Risk | None) -> dict[str, str]:
+    return {"rating_rule": RISK_RULE if risk else WHOLE_RULE, "rating_key": RISK_KEY if risk else WHOLE_KEY}
 
 
 def chat_mode(result_mode: str) -> str:
@@ -142,6 +160,8 @@ def build_context(result: AnalysisResult, risk: Risk | None, p: Persona | None, 
             f"RISK {risk.id}: {risk.title.en} (severity {risk.severity}, status {risk.status})",
             f"FINDING: {risk.finding}",
         ]
+        if risk.clause_ids:
+            lines.append(f"CLAUSES AT ISSUE: {', '.join(risk.clause_ids)}")
         if risk.clash:
             lines.append(f"CLASH: {risk.clash}")
         if risk.action.en:
@@ -211,7 +231,7 @@ def _fake_reply(p: Persona, result: AnalysisResult, risk: Risk | None, allowed: 
             },
         }[language][p.id]
         position = {"en": "No verified risk; safe to sign with care", "bn": "যাচাই করা ঝুঁকি নেই; সাবধানে সই করা যায়"}[language]
-        return {"position": position, "reply": text, "confidence": "medium", "citations": [], "severity": None}
+        return {"position": position, "reply": text, "confidence": "medium", "citations": [], "stance": "sign"}
     mine = _own(r, p)
     sev = mine.severity if mine else r.severity
     if language == "bn":
@@ -235,7 +255,8 @@ def _fake_reply(p: Persona, result: AnalysisResult, risk: Risk | None, allowed: 
             "gloomy": "Do not sign it as it stands",
         }[p.id]
     confidence = {"happy": "medium", "proud": "high", "gloomy": "high"}[p.id]
-    return {"position": position, "reply": text, "confidence": confidence, "citations": cite, "severity": sev if risk else None}
+    rating = {"severity": sev, "verdict": "supports"} if risk else {"stance": "do_not_sign" if p.id == "gloomy" else "renegotiate"}
+    return {"position": position, "reply": text, "confidence": confidence, "citations": cite, **rating}
 
 
 def _history(turns: list[ChatTurn]) -> str:
@@ -263,10 +284,10 @@ def _sections(result: AnalysisResult, allowed: list[str]) -> dict[str, Section]:
     return {v.section.citation_id: v.section for v in result.ledger if v.section and v.section.citation_id in allowed}
 
 
-def _severity(out: dict) -> str | None:
-    s = out.get("severity")
+def _choice(out: dict, key: str, options: tuple | list) -> str | None:
+    s = out.get(key)
     s = s.strip().lower() if isinstance(s, str) else None
-    return s if s in SEV else None
+    return s if s in options else None
 
 
 def _declared(out: dict) -> bool:
@@ -274,52 +295,101 @@ def _declared(out: dict) -> bool:
     return r.strip().lower() == "true" if isinstance(r, str) else r is True
 
 
-def _same_position(a: str, b: str) -> bool:
-    return not a or not b or fuzz.ratio(_flat(a), _flat(b)) >= POSITION_SAME
-
-
-def _quote_matches(quote: str, sec: Section) -> bool:
-    """The verifier's fidelity gate (G2). Only a clear pass counts: an empty quote is its "skip", a poor one its "warn"."""
+def _quote_matches(quote: str, text: str) -> bool:
+    """The verifier's fidelity check (G2) and threshold. A trivial phrase is refused first: "the" scores 100 on any text."""
     quote = " ".join(quote.split())
-    if len(quote) < MIN_QUOTE_CHARS:
-        return False
-    return gate_fidelity(Claim(id="round2", risk_id="round2", proposition=quote, citation_id=sec.citation_id, quote=quote), sec).status == "pass"
+    return len(quote) >= MIN_QUOTE_CHARS and quote_score(quote, text) >= config.quote_threshold()
+
+
+async def extra_sections(result: AnalysisResult, risk: Risk, allowed: list[str]) -> list[Section]:
+    """Up to EXTRA_SECTIONS in-force sections from the hybrid retriever that apply to this document and that the member
+    does not have yet: without them most risks have one citation, and nothing new to rest a change of view on."""
+    query = f"{risk.title.en} {risk.title.bn} {risk.finding}"
+    hits = await asyncio.to_thread(get_corpus().search, query, result.route.pack_ids, EXTRA_SECTIONS * 3, False)
+    fresh = [s for s, _ in hits if s.citation_id not in allowed and gate_currency(s).status != "fail"]
+    return fresh[:EXTRA_SECTIONS]
+
+
+def _clauses_shown(result: AnalysisResult, risk: Risk | None) -> list[Clause]:
+    """The clauses at issue, and for a risk the few others closest to it, in document order of importance."""
+    clauses = result.document.clauses
+    by_id = {c.id: c for c in clauses}
+    ids = risk.clause_ids if risk else [i for r in result.risks if r.status != "dropped" for i in r.clause_ids]
+    shown = [by_id[i] for i in dict.fromkeys(ids) if i in by_id]
+    if risk:
+        want = set(tokenize(f"{risk.title.en} {risk.finding}"))
+        others = sorted((c for c in clauses if c not in shown), key=lambda c: -len(want & set(tokenize(c.text))))
+        shown += others[:EXTRA_CLAUSES]
+    return shown
+
+
+def _further_material(result: AnalysisResult, risk: Risk | None, extras: list[Section]) -> str:
+    """What round 2 can see that round 1 could not."""
+    lines: list[str] = []
+    if extras:
+        lines.append("FURTHER LAW (in force, retrieved for this question, not yet checked against this risk):")
+        for s in extras:
+            lines.append(f"[{s.citation_id}] {s.act_en}, s.{s.section} - {s.heading}\nTEXT: {_short(window(s.text, risk.finding if risk else s.heading, EXTRA_CHARS), EXTRA_CHARS)}")
+    left = CLAUSE_BUDGET
+    shown: list[str] = []
+    for c in _clauses_shown(result, risk):
+        text = _short(c.text, min(CLAUSE_CHARS, left))
+        if left < 40:
+            break
+        shown.append(f"[{c.id}] {text}")
+        left -= len(text)
+    if shown:
+        lines += ["CONTRACT CLAUSES:", *shown]
+    return "\n".join(lines)
 
 
 def _check_revision(
-    first: CouncilReply, out: dict, severity: str | None, position: str, allowed: list[str], sections: dict[str, Section]
+    first: CouncilReply, out: dict, now: dict[str, str | None], sections: dict[str, Section], clauses: dict[str, Clause], ledger_ids: set[str]
 ) -> tuple[str | None, ChangedBecause | None, str]:
     """(flip_basis, changed_because, why it does not count). Decided here, whatever the model said about itself."""
-    moved = (severity and first.severity and severity != first.severity) or not _same_position(position, first.position)
+    moved = any(v and getattr(first, k) and v != getattr(first, k) for k, v in now.items())
     if not _declared(out):
-        return ("pressure", None, "Changed severity or position without declaring a revision") if moved else (None, None, "")
+        return ("pressure", None, "Changed its view without declaring a revision") if moved else (None, None, "")
     cb = out.get("changed_because")
-    cid = cb.get("citation_id") if isinstance(cb, dict) else None
-    quote = cb.get("quote") if isinstance(cb, dict) else None
-    if not isinstance(cid, str) or not isinstance(quote, str):
-        return "pressure", None, "Gave no new section and quote for the change"
-    if cid not in allowed or cid not in sections:
-        return "pressure", None, "Cited a section outside what this member may cite"
-    if cid in first.citations:
-        return "pressure", None, "Cited a section this member had already cited in round 1, so nothing new"
-    if not _quote_matches(quote, sections[cid]):
-        return "pressure", None, "The quote was not found in the section's text"
-    return "evidence", ChangedBecause(citation_id=cid, quote=" ".join(quote.split())[:300]), ""
+    cb = cb if isinstance(cb, dict) else {}
+    cid, clause, quote = cb.get("citation_id"), cb.get("clause_id"), cb.get("quote")
+    if not isinstance(quote, str) or not (isinstance(cid, str) and cid or isinstance(clause, str) and clause):
+        return "pressure", None, "Gave no new section or clause, with a quote, for the change"
+    clean = " ".join(quote.split())[:300]
+    if isinstance(cid, str) and cid:
+        if cid not in sections:  # holds exactly the sections this member may cite
+            return "pressure", None, "Cited a section outside what this member may cite"
+        if cid in first.citations:
+            return "pressure", None, "Cited a section this member had already cited in round 1, so nothing new"
+        sec = sections[cid]
+        if not _quote_matches(quote, sec.text):
+            return "pressure", None, "The quote was not found in the section's text"
+        return "evidence", ChangedBecause(citation_id=cid, quote=clean, label=f"{sec.act_en}, s.{sec.section}", url=sec.url, verified=cid in ledger_ids), ""
+    if clause not in clauses:
+        return "pressure", None, "Named a clause that is not in this contract"
+    if clause in first.clause_ids:
+        return "pressure", None, "Relied on a clause this member had already relied on in round 1, so nothing new"
+    if not _quote_matches(quote, clauses[clause].text):
+        return "pressure", None, "The quote was not found in the clause's text"
+    return "evidence", ChangedBecause(clause_id=clause, quote=clean, label=f"Clause {clause}"), ""
 
 
 def _reply(
-    p: Persona, llm: LLM, out: dict, fallback: dict, allowed: list[str], round_: int = 1, rated: bool = False,
-    first: CouncilReply | None = None, sections: dict[str, Section] | None = None,
+    p: Persona, llm: LLM, out: dict, fallback: dict, allowed: list[str], round_: int = 1, risk: Risk | None = None,
+    first: CouncilReply | None = None, sections: dict[str, Section] | None = None, clauses: dict[str, Clause] | None = None,
+    ledger_ids: set[str] | None = None,
 ) -> CouncilReply:
     citations = _cites(out, allowed)
     text = _strip_ids(str(out.get("reply") or "").strip(), allowed) or fallback["reply"]
     # round 2 never borrows from the offline stand-in: a value it made up would look like a change of view
     position = " ".join(str(out.get("position") or "").split())[:120] or (first.position if first else fallback.get("position", ""))
-    severity = (_severity(out) or (None if round_ == 2 else fallback.get("severity"))) if rated else None
+    # a risk has a severity and a verdict, the whole contract a stance; an unusable value in round 2 means "no comparison"
+    options = {"severity": SEV, "verdict": VERDICTS} if risk else {"stance": STANCES}
+    now = {k: _choice(out, k, o) or (None if round_ == 2 else fallback.get(k)) for k, o in options.items()}
     conf = out.get("confidence") if out.get("confidence") in CONFIDENCE else fallback.get("confidence", "medium")
     to = out.get("responds_to")
-    basis, because, note = _check_revision(first, out, severity, position, allowed, sections or {}) if first else (None, None, "")
-    if because:
+    basis, because, note = _check_revision(first, out, now, sections or {}, clauses or {}, ledger_ids or set()) if first else (None, None, "")
+    if because and because.citation_id:
         citations = list(dict.fromkeys([*citations, because.citation_id]))
     return CouncilReply(
         member=p.id,
@@ -331,8 +401,9 @@ def _reply(
         confidence=conf,
         round=round_,
         revised=_declared(out) if round_ == 2 else False,
-        responds_to=to if round_ == 2 and to in BY_ID and to != p.id else None,
-        severity=severity,
+        responds_to=to if round_ == 2 and isinstance(to, str) and to in BY_ID and to != p.id else None,
+        **now,
+        clause_ids=[c for c in str_items(out.get("clause_ids")) if c in (clauses or {})],
         flip_basis=basis,
         changed_because=because,
         flip_note=note,
@@ -348,7 +419,7 @@ async def ask(
     fallback = _fake_reply(p, result, risk, allowed, language)
     out = await llm.json(
         role=p.role,
-        system=CHAT_SYSTEM.format(personality=p.personality(), language=LANGUAGE[language], **_severity_slots(risk)),
+        system=CHAT_SYSTEM.format(personality=p.personality(), language=LANGUAGE[language], **_rating_slots(risk)),
         user=user,
         task="council_chat",
         agent=f"LLM Council · {p.name}",
@@ -356,7 +427,7 @@ async def ask(
         temperature=0.7,
         max_tokens=700,
     )
-    return _reply(p, llm, out, fallback, allowed, rated=risk is not None)
+    return _reply(p, llm, out, fallback, allowed, risk=risk, clauses={c.id: c for c in result.document.clauses})
 
 
 async def chat(
@@ -391,9 +462,12 @@ def _notch(severity: str | None) -> str | None:
     return SEV[i + 1 if i < len(SEV) - 1 else i - 1]
 
 
-def _fake_rebuttal(p: Persona, result: AnalysisResult, risk: Risk | None, allowed: list[str], language: str, mine: CouncilReply | None) -> dict:
-    """Offline stand-in, and it walks both paths through the gate on a risk: Sunny moves on a section it had not cited
-    (when the risk has one), and Grey claims a move with nothing new behind it."""
+def _fake_rebuttal(
+    p: Persona, result: AnalysisResult, risk: Risk | None, allowed: list[str], language: str, mine: CouncilReply | None, extras: list[Section]
+) -> dict:
+    """Offline stand-in, and it walks every path through the gate on a risk: Sunny moves on a section it had not cited,
+    Regal on the contract's own words (on an Adversary risk, so most risks still show a member keeping its view), and
+    Grey claims a move with nothing new behind it."""
     r = _focus(result, risk)
     action_en = r.action.en if r else "Keep a copy of the contract."
     action_bn = r.action.bn if r else "চুক্তির একটি কপি নিজের কাছে রাখুন।"
@@ -410,6 +484,7 @@ def _fake_rebuttal(p: Persona, result: AnalysisResult, risk: Risk | None, allowe
         },
     }[language][p.id]
     first = _fake_reply(p, result, risk, allowed, language)
+    view = {k: (getattr(mine, k) if mine else None) or first.get(k) for k in ("severity", "verdict", "stance")}
     out = {
         "position": mine.position if mine else first["position"],
         "reply": text,
@@ -417,11 +492,19 @@ def _fake_rebuttal(p: Persona, result: AnalysisResult, risk: Risk | None, allowe
         "responds_to": REBUT_TARGET[p.id],
         "confidence": first["confidence"],
         "citations": allowed[:1],
-        "severity": (mine.severity if mine else None) or first["severity"],
+        **view,
     }
     unused = [c for c in allowed if not mine or c not in mine.citations]
-    sections = _sections(result, allowed)
-    if risk and p.id == "happy" and unused and unused[0] in sections:
+    sections = {**_sections(result, allowed), **{s.citation_id: s for s in extras}}
+    clause = next((c for c in _clauses_shown(result, risk) if not mine or c.id not in mine.clause_ids), None) if risk else None
+    if risk and p.id == "proud" and risk.origin == "adversary" and clause:
+        moved = {"en": "The clause itself goes further than I first allowed for.", "bn": "শর্তটি নিজেই আমার প্রথম ধারণার চেয়ে বেশি দূর যায়।"}[language]
+        position = {"en": "Revised: the clause's own words change my rating", "bn": "মত বদলেছি: শর্তের ভাষাই আমার মূল্যায়ন বদলায়"}[language]
+        out |= {
+            "reply": moved, "position": position, "revised": True, "severity": _notch(out["severity"]),
+            "changed_because": {"clause_id": clause.id, "quote": " ".join(clause.text.split()[:8])},
+        }
+    elif risk and p.id == "happy" and unused and unused[0] in sections:
         moved = {"en": "I had not read this section first time: it changes my rating.", "bn": "এই ধারাটি আগে পড়িনি: এটি আমার মূল্যায়ন বদলে দেয়।"}[language]
         position = {"en": "Revised: this section changes my rating", "bn": "মত বদলেছি: এই ধারায় আমার মূল্যায়ন বদলায়"}[language]
         out |= {
@@ -436,22 +519,29 @@ def _fake_rebuttal(p: Persona, result: AnalysisResult, risk: Risk | None, allowe
 
 
 async def rebut(
-    llm: LLM, result: AnalysisResult, p: Persona, message: str, risk: Risk | None, replies: list[CouncilReply], language: str
+    llm: LLM, result: AnalysisResult, p: Persona, message: str, risk: Risk | None, replies: list[CouncilReply], language: str,
+    extras: list[Section] | None = None,
 ) -> CouncilReply:
-    context, allowed = build_context(result, risk, p, excerpts=True)
+    context, ledger_allowed = build_context(result, risk, p, excerpts=True)
+    if extras is None:
+        extras = await extra_sections(result, risk, ledger_allowed) if risk else []
+    allowed = [*ledger_allowed, *(s.citation_id for s in extras if s.citation_id not in ledger_allowed)]
+    further = _further_material(result, risk, extras)
+    context = f"{context}\n\n{further}" if further else context
     mine = next((r for r in replies if r.member == p.id), None)
     own = f"YOUR FIRST ANSWER:{(' Position: ' + mine.position + '.') if mine and mine.position else ''} {mine.text if mine else '(none)'}\n"
     if mine and mine.severity:
         own += f"YOUR FIRST SEVERITY: {mine.severity}\n"
-    own += f"YOU CITED: {', '.join(mine.citations) if mine and mine.citations else 'nothing'}\n\n"
+    own += f"YOU CITED: {', '.join(mine.citations) if mine and mine.citations else 'nothing'}\n"
+    own += f"YOU RELIED ON CLAUSES: {', '.join(mine.clause_ids) if mine and mine.clause_ids else 'none'}\n\n"
     user = (
         f"CONTEXT:\n{context}\n\nUSER'S QUESTION: {message}\n\n{own}"
         f"COLLEAGUES' ANSWERS:\n{_answers(replies, exclude=p.id)}"
     )
-    fallback = _fake_rebuttal(p, result, risk, allowed, language, mine)
+    fallback = _fake_rebuttal(p, result, risk, allowed, language, mine, extras)
     out = await llm.json(
         role=p.role,
-        system=REBUTTAL_SYSTEM.format(personality=p.personality(), language=LANGUAGE[language], **_severity_slots(risk)),
+        system=REBUTTAL_SYSTEM.format(personality=p.personality(), language=LANGUAGE[language], **_rating_slots(risk)),
         user=user,
         task="council_rebuttal",
         agent=f"LLM Council · {p.name}",
@@ -459,18 +549,16 @@ async def rebut(
         temperature=0.6,
         max_tokens=600,
     )
-    return _reply(p, llm, out, fallback, allowed, round_=2, rated=risk is not None, first=mine, sections=_sections(result, allowed))
+    sections = {**_sections(result, allowed), **{s.citation_id: s for s in extras}}
+    clauses = {c.id: c for c in result.document.clauses}
+    return _reply(p, llm, out, fallback, allowed, round_=2, risk=risk, first=mine, sections=sections, clauses=clauses, ledger_ids=set(ledger_allowed))
 
 
 def _counted(first: CouncilReply, second: CouncilReply) -> CouncilVote:
     """What a member's vote counts as: round 1 stands unless the change of view passed the gate."""
     stands = second.flip_basis == "pressure"
-    return CouncilVote(
-        member=second.member,
-        severity=first.severity if stands or second.severity is None else second.severity,
-        position=first.position if stands else second.position,
-        flip_basis=second.flip_basis,
-    )
+    view = {k: getattr(first, k) if stands or getattr(second, k) is None else getattr(second, k) for k in ("severity", "verdict", "stance")}
+    return CouncilVote(member=second.member, position=first.position if stands else second.position, flip_basis=second.flip_basis, **view)
 
 
 def _votes_block(votes: list[CouncilVote], rebuttals: list[CouncilReply]) -> str:
@@ -478,10 +566,13 @@ def _votes_block(votes: list[CouncilVote], rebuttals: list[CouncilReply]) -> str
     counted, revisions = [], []
     for v, r in zip(votes, rebuttals):
         who = f"{BY_ID[v.member].name} ({v.member})"
-        sev = f"; severity {v.severity}" if v.severity else ""
-        counted.append(f"{who}: {v.position}{sev}")
+        view = "".join(f"; {k} {getattr(v, k)}" for k in ("severity", "verdict", "stance") if getattr(v, k))
+        counted.append(f"{who}: {v.position}{view}")
         if v.flip_basis == "evidence" and r.changed_because:
-            revisions.append(f"{who} revised, and it COUNTS: it rests on {r.changed_because.citation_id}, new to this member, and the quote matches the text.")
+            cb = r.changed_because
+            source = cb.citation_id or f"contract clause {cb.clause_id}"
+            caveat = "" if cb.verified else " That section was retrieved for this question and has not been checked against this risk: weigh it yourself."
+            revisions.append(f'{who} revised, and it COUNTS: it rests on {source}, new to this member, and this quote matches the text: "{cb.quote}".{caveat}')
         elif v.flip_basis == "pressure":
             revisions.append(f"{who} claimed a change of view that does NOT count, so round 1 stands. Why: {r.flip_note}.")
     return "COUNTED POSITIONS:\n" + "\n".join(counted) + "\n\nREVISIONS:\n" + ("\n".join(revisions) or "No member changed their view.")
@@ -529,7 +620,8 @@ async def deliberate(
     """Round 2: members answer each other; then the Chief Justice writes the ruling."""
     first = [r for r in replies if r.member in BY_ID]
     chosen = [p for p in PERSONAS if any(r.member == p.id for r in first)]
-    rebuttals = list(await asyncio.gather(*(rebut(llm, result, p, message, risk, first, language) for p in chosen)))
+    extras = await extra_sections(result, risk, build_context(result, risk, None)[1]) if risk else []
+    rebuttals = list(await asyncio.gather(*(rebut(llm, result, p, message, risk, first, language, extras) for p in chosen)))
     votes = [_counted(next(f for f in first if f.member == r.member), r) for r in rebuttals]
 
     context, allowed = build_context(result, risk, None)
@@ -556,7 +648,7 @@ async def deliberate(
     disagreements = []
     for d in out.get("disagreements") or [] if isinstance(out.get("disagreements"), list) else []:
         if isinstance(d, dict) and str(d.get("point") or "").strip():
-            ms = [m for m in d.get("members") or [] if m in BY_ID] if isinstance(d.get("members"), list) else []
+            ms = [m for m in str_items(d.get("members")) if m in BY_ID]
             disagreements.append(CouncilDisagreement(point=_strip_ids(str(d["point"]), allowed)[:300], members=ms))
     if agreement == "unanimous":
         disagreements = []

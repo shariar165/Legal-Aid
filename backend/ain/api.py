@@ -20,7 +20,7 @@ from ain import auth, automation, config, countries, mcp_server
 from ain.agents import ablation, council
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
-from ain.llm import LLM, PIILeakError
+from ain.llm import LLM, LLMError, PIILeakError
 from ain.llm import _get_cache as _llm_cache  # entry count for /api/metrics
 from ain.models import (
     AblationResult,
@@ -472,6 +472,8 @@ async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResp
         replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history, body.language)
     except PIILeakError:
         raise HTTPException(422, PII_MESSAGE) from None
+    except LLMError as e:
+        raise HTTPException(502, "The council could not answer just now. Please try again.") from e
     _save_council_calls(r, llm)
     return CouncilChatResponse(replies=replies)
 
@@ -488,6 +490,8 @@ async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> Cou
         rebuttals, ruling = await council.deliberate(llm, r, body.message.strip(), body.replies, risk, body.history, body.language)
     except PIILeakError:
         raise HTTPException(422, PII_MESSAGE) from None
+    except LLMError as e:
+        raise HTTPException(502, "The council could not answer just now. Please try again.") from e
     _save_council_calls(r, llm)
     return CouncilDeliberateResponse(rebuttals=rebuttals, ruling=ruling)
 

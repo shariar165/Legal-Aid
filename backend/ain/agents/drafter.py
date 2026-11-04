@@ -8,7 +8,8 @@ without a verified citation behind it.
 
 from __future__ import annotations
 
-from ain.llm import LLM
+import logging
+from ain.llm import LLM, MalformedAnswer, dict_items, str_items
 from ain.models import (
     SEVERITY_ORDER,
     CitizenCard,
@@ -25,6 +26,8 @@ from ain.models import (
     WageCalc,
 )
 from ain.naming import EN_TO_BN_DIGITS, label
+
+log = logging.getLogger(__name__)
 
 DRAFT_SYSTEM = """You are a senior Bangladeshi lawyer writing a legal risk memorandum in IRAC form.
 For each risk you get the finding and the VERIFIED legal propositions with their citation_ids.
@@ -98,16 +101,21 @@ async def draft(
             "letter_en": letter_en,
         }
 
-    data = await llm.json(role="reasoner", system=DRAFT_SYSTEM, user="\n\n".join(blocks) or "No risks.", task="draft_memo", agent="Memo Drafter", fake=fake, max_tokens=4000)
+    try:
+        data = await llm.json(role="reasoner", system=DRAFT_SYSTEM, user="\n\n".join(blocks) or "No risks.", task="draft_memo", agent="Memo Drafter", fake=fake, max_tokens=4000)
+    except MalformedAnswer as e:  # the deterministic memo is built only from verified rows
+        log.warning("Memo Drafter: no usable answer, using the template memo: %s", e)
+        data = fake()
 
     issues: list[MemoIssue] = []
     seen: set[str] = set()
-    for item in data.get("issues", []):
+    for item in dict_items(data.get("issues"), "memo issues"):
         rid = item.get("risk_id")
-        if rid not in allowed or rid in seen:
+        if not isinstance(rid, str) or rid not in allowed or rid in seen:
             continue
-        cited = [c for c in item.get("citation_ids", []) if c in allowed[rid]]
-        stray = [c for c in item.get("citation_ids", []) if c not in allowed[rid]]
+        ids = str_items(item.get("citation_ids"))
+        cited = [c for c in ids if c in allowed[rid]]
+        stray = [c for c in ids if c not in allowed[rid]]
         if stray:
             emit(TraceEvent(t=0, type="critic", agent="Critic", message=f"Stripped unverified citation(s) {', '.join(stray)} from the memo for {rid}", data={"risk_id": rid, "stripped": stray}))
         r = next(x for x in live if x.id == rid)

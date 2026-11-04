@@ -21,7 +21,7 @@ import asyncio
 import re
 
 from ain.agents import bench, risk_analyst
-from ain.llm import LLM, LLMError
+from ain.llm import LLM, LLMError, dict_items, text_of
 from ain.models import Claim, Clause, DocFacts, L10n, Risk, RouteDecision, TraceEvent
 from ain.retrieval import Corpus
 
@@ -140,6 +140,10 @@ def _clean(h: object) -> dict | None:
         "clause_ids": strings(h.get("clause_ids")),
         "queries": strings(h.get("queries")),
         "finding": str(h.get("finding") or ""),
+        "severity": text_of(h.get("severity")),
+        "category": text_of(h.get("category"), "other"),
+        "title_bn": text_of(h.get("title_bn")),
+        "why_non_obvious": text_of(h.get("why_non_obvious")),
     }
 
 
@@ -413,7 +417,7 @@ async def _hypothesise(llm: LLM, clauses, facts, route, known, rules, redact, fu
         except LLMError as e:  # the playbook's findings still stand; say that this agent could not run
             emit(TraceEvent(t=0, type="agent_progress", agent="Adversarial Counsel", message=f"Could not run: {str(e)[:160]}", data={"skipped": True}))
             return []
-        return [h for h in hyp.get("hypotheses") or [] if isinstance(h, dict)]
+        return dict_items(hyp.get("hypotheses"), "adversary hypotheses")
 
     # map: each part on its own, plus a digest of its material terms
     emit(TraceEvent(t=0, type="agent_progress", agent="Adversarial Counsel", message=f"Long document: reading {len(parts)} parts separately, then across parts", data={"parts": len(parts), "clauses": len(clauses)}))
@@ -440,9 +444,9 @@ async def _hypothesise(llm: LLM, clauses, facts, route, known, rules, redact, fu
     keys: set[str] = set()
     digests: list[list[dict]] = []
     for i, a in enumerate(answers):
-        digests.append([d for d in (a.get("digest") or []) if isinstance(d, dict)][:DIGEST_ITEMS])
+        digests.append(dict_items(a.get("digest"), f"adversary digest, part {i + 1}")[:DIGEST_ITEMS])
         mine = []
-        for h in map(_clean, a.get("hypotheses") or []):
+        for h in map(_clean, dict_items(a.get("hypotheses"), f"adversary hypotheses, part {i + 1}")):
             if h is None or h["title_en"].lower() in titles:
                 continue  # the same risk seen from two parts
             titles.add(h["title_en"].lower())
@@ -495,7 +499,7 @@ async def _reduce(llm: LLM, head: str, by_part: list[list[dict]], digests: list[
         temperature=0.2,
         max_tokens=3000,
     )
-    return [h for h in merged.get("hypotheses") or [] if isinstance(h, dict)] or flat
+    return dict_items(merged.get("hypotheses"), "adversary reduce") or flat
 
 
 def _ground_batches(candidates: dict[str, dict]) -> list[list[str]]:
@@ -605,19 +609,19 @@ async def run(
     claims: list[Claim] = []
     rejected: list[dict] = []
     n = start
-    for g in (g for a in answers for g in a.get("risks", [])):
-        c = candidates.get(g.get("key"))
+    for g in (g for a in answers for g in dict_items(a.get("risks"), "adversary grounding")):
+        c = candidates.get(str(g.get("key")))
         if not c or not g.get("keep", True):
             continue
         h = c["hypothesis"]
         rid = f"R{n}"
         rclaims = []
-        for i, cl in enumerate(g.get("claims", [])):
+        for i, cl in enumerate(dict_items(g.get("claims"), f"adversary claims for {h['title_en']}")):
             cid = str(cl.get("citation_id", "")).strip()
             if cid not in allowed and cid not in {s.citation_id for s in c["sections"]}:
                 rejected.append({"risk": h["title_en"], "citation_id": cid, "reason": "not returned by retrieval - cannot be cited"})
                 continue
-            rclaims.append(Claim(id=f"{rid}.{i + 1}", risk_id=rid, proposition=str(cl.get("proposition", "")), citation_id=cid, quote=cl.get("quote") or None, origin="adversary"))
+            rclaims.append(Claim(id=f"{rid}.{i + 1}", risk_id=rid, proposition=str(cl.get("proposition", "")), citation_id=cid, quote=text_of(cl.get("quote")) or None, origin="adversary"))
         if not rclaims:
             continue
         sev = h.get("severity", "medium") if h.get("severity") in ("critical", "high", "medium", "low") else "medium"
@@ -626,15 +630,15 @@ async def run(
                 id=rid,
                 rule_id=None,
                 origin="adversary",
-                category=h.get("category", "other"),
+                category=h["category"],
                 title=L10n(en=h["title_en"], bn=h.get("title_bn") or h["title_en"]),
                 severity=sev,
                 clause_ids=[i for i in h.get("clause_ids", []) if any(cl.id == i for cl in clauses)],
                 finding=h.get("finding", ""),
                 why_non_obvious=h.get("why_non_obvious", ""),
-                citizen_line=L10n(en=g.get("citizen_line_en") or h["title_en"], bn=g.get("citizen_line_bn") or h.get("title_bn") or h["title_en"]),
-                action=L10n(en=g.get("action_en") or "Ask a lawyer to review this clause.", bn=g.get("action_bn") or "এই শর্তটি আইনজীবীকে দেখান।"),
-                mitigation_clause=g.get("mitigation_clause", ""),
+                citizen_line=L10n(en=text_of(g.get("citizen_line_en"), h["title_en"]), bn=text_of(g.get("citizen_line_bn")) or h.get("title_bn") or h["title_en"]),
+                action=L10n(en=text_of(g.get("action_en"), "Ask a lawyer to review this clause."), bn=text_of(g.get("action_bn")) or "এই শর্তটি আইনজীবীকে দেখান।"),
+                mitigation_clause=text_of(g.get("mitigation_clause")),
                 clash="Lawful under the buyer's home law, but it cannot be performed under Bangladesh's mandatory EPZ regime." if h.get("category") == "regime_conflict" else None,
                 claim_ids=[cl.id for cl in rclaims],
                 confidence=0.7,

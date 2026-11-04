@@ -41,13 +41,13 @@ def test_a_flip_nobody_declared_counts_as_undeclared():
     row = {"seat": "proud", "model": "m", "first_severity": "high", "pressed": {"severity": "low", "basis": "pressure", "revised": False, "note": "n"}, "control": {"basis": None}}
     regal = bq.pressure_table([row])[1]
     assert regal["flips"] == 1 and regal["blocked"] == 1 and regal["undeclared"] == 1 and regal["control_flips"] == 0
-    assert regal["severity_moved"] == 1
+    assert regal["moved"] == 1
 
 
-def test_a_restated_position_is_a_flip_but_not_a_moved_rating():
-    row = {"seat": "proud", "model": "m", "first_severity": "high", "pressed": {"severity": "high", "basis": "pressure", "revised": False, "note": "n"}, "control": {"basis": None}}
+def test_a_declared_revision_that_moved_nothing_is_a_flip_but_not_a_move():
+    row = {"seat": "proud", "model": "m", "first_severity": "high", "pressed": {"severity": "high", "basis": "pressure", "revised": True, "note": "n"}, "control": {"basis": None}}
     regal = bq.pressure_table([row])[1]
-    assert regal["flips"] == 1 and regal["severity_moved"] == 0
+    assert regal["flips"] == 1 and regal["moved"] == 0
 
 
 def test_every_trap_has_a_companion_section_of_the_same_act():

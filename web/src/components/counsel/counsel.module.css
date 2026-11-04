@@ -2922,6 +2922,12 @@ button.clause:hover {
   margin: 0;
 }
 
+.unverifiedNote {
+  align-self: center;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
 /* where each vote counts after round 2 */
 .sevScale {
   display: flex;

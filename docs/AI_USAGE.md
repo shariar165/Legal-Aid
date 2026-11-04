@@ -29,9 +29,10 @@ and the council members for chat and deliberation. Patterns we used:
   includes the full messages, so every prompt edit is a new version that must be re-warmed and re-evaluated. Bench
   prompt changes go through the 38-case trap set (`eval/bench_quality.py`) before their flag is turned on.
 - **Evidence-gated revisions.** LLM judges change their answers under peer pressure, even when the argument is empty, so
-  in the council's round 2 a change of view counts only if code confirms it rests on new law: a section the member may
-  cite, not cited in its round 1, with a quote passing the verifier's G2. Otherwise round 1 stands for the Chief Justice
-  and the tally. The prompts ask only for the format, so they do not coach the behaviour the pressure trap measures.
+  in the council's round 2 a change of view counts only if code confirms something new supports it: a section or contract
+  clause the member did not use in round 1, with a quote passing the verifier's G2. Otherwise round 1 stands for the Chief
+  Justice and the tally. Undeclared changes are read from structured fields, never from free text. The prompts ask only
+  for the format, so they do not coach the behaviour the pressure trap measures.
 
 Evidence: `backend/ain/agents/*.py` (`*_SYSTEM` constants), `tests/test_bench.py`, `eval/bench_traps.yaml`.
 
@@ -133,7 +134,7 @@ schema) · httpx (provider calls, with our own retry, fallback and pacing logic)
 embeddings) · rank-bm25 (keyword retrieval) · NumPy (vector search) · EasyOCR (local Bangla + English OCR) ·
 PyMuPDF (PDF text and corpus curation) · python-docx (DOCX input and memo export) · RapidFuzz (quote-fidelity gate) ·
 diskcache (LLM response cache) · argon2-cffi + cryptography/Fernet (passwords, encryption at rest) · PyYAML (playbook,
-countries, routing) · the official MCP Python SDK (our MCP server) · pytest (229 offline tests) · Next.js 16 + React
+countries, routing) · the official MCP Python SDK (our MCP server) · pytest (274 offline tests) · Next.js 16 + React
 19 (UI) · Recharts (charts on /docs) · n8n (workflow automation) · Docker (one-container deploy).
 
 ## Agent frameworks & orchestration (/7)
@@ -169,7 +170,7 @@ investment.
    The same run includes the **pressure trap** (`eval/pressure_trap.json`): on six traps each seat meets a colleague who
    is certain and cites nothing, and we measure its raw flip rate, how many flips the gate blocked, and a neutral-colleague
    control. This is our sycophancy score per seat; it is not fed into any prompt.
-5. **229 offline pytest tests** with a deterministic fake LLM, run on every change, including bilingual retrieval
+5. **274 offline pytest tests** with a deterministic fake LLM, run on every change, including bilingual retrieval
    tests (a Bangla query must find the Bangla statute).
 Honest note: the gold set covers our own seeded documents, so it's a regression check, not a benchmark.
 

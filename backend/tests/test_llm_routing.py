@@ -281,3 +281,45 @@ async def test_a_server_error_with_retry_after_is_a_rate_wait(live, monkeypatch)
     llm, events, _ = waits(monkeypatch)
     await call(llm, role="fast")
     assert [d["seconds"] for _, d in events] == [5.0]
+
+
+# ------------------------------------------------------------------ answers that are not a JSON object
+
+
+async def test_a_bare_list_is_retried_until_the_model_gives_an_object(live, monkeypatch):
+    replies = iter([answer("m", '["a plain string"]')])
+    serve(monkeypatch, lambda req, body: next(replies, None) or answer(body["model"]))
+    llm = LLM(mode="live")
+    assert await call(llm, role="fast") == {"ok": True}
+    assert llm.json_retries == 1
+
+
+@pytest.mark.parametrize("content", ['["a plain string"]', '"just text"', "7", "not json at all"])
+async def test_a_model_that_never_gives_an_object_is_malformed_not_an_outage(live, monkeypatch, content):
+    serve(monkeypatch, lambda req, body: answer(body["model"], content))
+    with pytest.raises(llm_mod.MalformedAnswer):
+        await call(LLM(mode="live"), role="fast")
+
+
+async def test_an_empty_answer_is_malformed_too(live, monkeypatch):
+    serve(monkeypatch, lambda req, body: answer(body["model"], ""))
+    with pytest.raises(llm_mod.MalformedAnswer):
+        await call(LLM(mode="live"), role="fast")
+
+
+async def test_an_outage_stays_a_plain_llm_error(live, monkeypatch):
+    serve(monkeypatch, lambda req, body: httpx.Response(401, json={"error": {"message": "bad key"}}))
+    with pytest.raises(llm_mod.LLMError) as e:
+        await call(LLM(mode="live"), role="fast")
+    assert not isinstance(e.value, llm_mod.MalformedAnswer)
+
+
+async def test_a_cached_answer_that_is_not_an_object_is_asked_again(live, monkeypatch):
+    seen = serve(monkeypatch, lambda req, body: answer(body["model"]))
+    llm = LLM(mode="live")
+    await call(llm, role="fast")
+    cache = llm_mod._cache
+    for k in list(cache):
+        cache[k] = {"__ain__": 1, "data": ["a plain string"], "model": "m"}
+    assert await call(LLM(mode="live"), role="fast") == {"ok": True}
+    assert len(seen) == 2

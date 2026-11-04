@@ -221,26 +221,6 @@ async def test_undeclared_severity_change_is_pressure(result):
     assert sunny.severity == "low" and ruling.votes[0].severity == first[0].severity  # shown as claimed; round 1 is what counts
 
 
-async def test_undeclared_position_change_is_pressure(result):
-    risk = _multi(result)
-    first, sunny, _, _ = await _revise(result, risk, {"position": "Sign it today without any changes", "revised": False})
-    assert first[0].position != sunny.position and sunny.flip_basis == "pressure"
-
-
-async def test_light_rewording_is_not_a_change_of_view(result):
-    risk = _multi(result)
-    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
-    first[0].position = "Do not sign it as it stands"
-    _, sunny, _, _ = await _revise(result, risk, {"position": "Do not sign this as it stands", "revised": False, "severity": first[0].severity}, first)
-    assert sunny.flip_basis is None and sunny.flip_note == ""
-
-
-async def test_a_lost_not_in_the_position_is_a_change_of_view(result):
-    risk = _multi(result)
-    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
-    first[0].position = "Do not sign it as it stands"
-    _, sunny, _, _ = await _revise(result, risk, {"position": "Sign it as it stands", "revised": False, "severity": first[0].severity}, first)
-    assert sunny.flip_basis == "pressure"
 
 
 async def test_a_missing_round_two_severity_is_not_a_flip_and_round_one_stands(result):
@@ -307,13 +287,6 @@ async def test_the_offline_stand_in_walks_both_paths_through_the_gate(result):
     assert rebuttals[2].severity != first[2].severity and ruling.votes[2].severity == first[2].severity
 
 
-async def test_on_a_one_citation_risk_no_new_law_exists_so_a_revision_cannot_count(result):
-    """Rule 3 as written: `allowed` is per risk, so once round 1 has cited the only section there is nothing new."""
-    risk = next(k for k in result.risks if k.bench and k.status != "dropped" and len(council.build_context(result, k, council.BY_ID["happy"])[1]) == 1)
-    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
-    rebuttals, _ = await council.deliberate(RecordingLLM(), result, "Sign?", first, risk, [])
-    assert rebuttals[0].flip_basis is None and rebuttals[2].flip_basis == "pressure"
-
 
 async def test_whole_contract_round_two_shows_text_to_quote_within_a_budget(result):
     plain, allowed = council.build_context(result, None, council.BY_ID["proud"])
@@ -379,3 +352,197 @@ async def test_the_deliberate_endpoint_shape_round_trips_the_new_fields(result):
     rebuttals, ruling = await council.deliberate(RecordingLLM(), result, "Sign?", first, risk, [])
     data = CouncilDeliberateResponse(rebuttals=rebuttals, ruling=ruling).model_dump()
     assert data["rebuttals"][0]["changed_because"]["citation_id"] and data["ruling"]["votes"][2]["flip_basis"] == "pressure"
+
+
+# ------------------------------------------------------------------ an undeclared flip is read from structured fields
+
+
+async def test_a_quiet_change_of_verdict_is_pressure(result):
+    risk = _multi(result)
+    first, sunny, ruling, _ = await _revise(result, risk, {"position": None, "revised": False, "verdict": "rejects"})
+    assert first[0].verdict == "supports" and sunny.flip_basis == "pressure" and "without declaring" in sunny.flip_note
+    assert sunny.verdict == "rejects" and ruling.votes[0].verdict == "supports"
+
+
+async def test_a_quiet_change_of_stance_on_the_whole_contract_is_pressure(result):
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], None, [])
+    assert first[0].stance == "renegotiate"
+    _, sunny, ruling, _ = await _revise_whole(result, first, {"position": None, "revised": False, "stance": "sign"})
+    assert sunny.flip_basis == "pressure" and ruling.votes[0].stance == "renegotiate"
+
+
+@pytest.mark.parametrize(
+    "said, now",
+    [
+        ("Do not sign clause 16", "Do not sign clause 16. The restraint-of-trade clause may be void unless a court finds the limit reasonable."),
+        ("Severity remains high; no action required.", "Severity remains high"),
+        ("Sign only if 120-day notice is added", "I maintain a high-severity risk"),
+    ],
+)
+async def test_restating_the_same_view_is_never_a_flip(result, said, now):
+    """Real pairs from the first live pressure trap: each was wrongly labelled while position text was compared."""
+    risk = _multi(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    first[0].position = said
+    _, sunny, _, _ = await _revise(result, risk, {"position": now, "revised": False, "severity": first[0].severity, "verdict": first[0].verdict}, first)
+    assert sunny.flip_basis is None and sunny.flip_note == ""
+
+
+async def test_the_stance_fields_match_the_question(result):
+    llm = RecordingLLM()
+    risk = _benched(result)
+    [focused] = await council.chat(llm, result, "How bad?", ["proud"], risk, [])
+    [general] = await council.chat(llm, result, "How bad?", ["proud"], None, [])
+    systems = [p["system"] for p in llm.payloads if p["task"] == "council_chat"]
+    assert '"verdict"' in systems[0] and '"stance"' not in systems[0] and '"stance"' in systems[1] and '"verdict"' not in systems[1]
+    assert focused.verdict == "supports" and focused.stance is None and general.stance == "renegotiate" and general.verdict is None
+
+
+async def test_a_bad_verdict_or_stance_from_the_model_is_no_comparison(result):
+    risk = _multi(result)
+    first, sunny, ruling, _ = await _revise(result, risk, {"position": None, "revised": False, "verdict": ["rejects"]})
+    assert sunny.verdict is None and sunny.flip_basis is None and ruling.votes[0].verdict == first[0].verdict
+
+
+# ------------------------------------------------------------------ wider evidence: retrieved sections
+
+
+async def test_round_two_gets_three_to_five_more_sections_that_are_in_force_and_apply(result):
+    risk = _benched(result)
+    _, allowed = council.build_context(result, risk, None)
+    extras = await council.extra_sections(result, risk, allowed)
+    assert 3 <= len(extras) <= 5
+    assert not {s.citation_id for s in extras} & set(allowed)
+    assert all(s.status != "repealed" and set(s.packs) & result.route.pack_ids for s in extras)
+    assert not any(s.citation_id.startswith("BD-LABOUR-2006") for s in extras)  # the EPZ sample switches the Labour Act off
+
+
+async def test_every_member_sees_the_further_law_but_the_chief_justice_cannot_cite_it(result):
+    risk = _benched(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    llm = RecordingLLM()
+    _, ruling = await council.deliberate(llm, result, "Sign?", first, risk, [])
+    members = [p["user"] for p in llm.payloads if p["task"] == "council_rebuttal"]
+    assert len(members) == 3 and all("FURTHER LAW" in u and "CONTRACT CLAUSES:" in u for u in members)
+    chair = next(p for p in llm.payloads if p["task"] == "council_ruling")["user"]
+    assert "FURTHER LAW" not in chair and "CONTRACT CLAUSES:" not in chair
+
+
+async def test_a_retrieved_section_can_be_evidence_and_is_marked_unverified(result):
+    risk = _benched(result)
+    _, allowed = council.build_context(result, risk, None)
+    extra = (await council.extra_sections(result, risk, allowed))[0]
+    quote = council._fake_quote(extra)
+    _, sunny, ruling, llm = await _revise(result, risk, {"position": "Heavier", "revised": True, "severity": "critical", "changed_because": {"citation_id": extra.citation_id, "quote": quote}})
+    assert sunny.flip_basis == "evidence" and sunny.changed_because.verified is False and sunny.changed_because.label and sunny.changed_because.url == extra.url
+    assert extra.citation_id not in ruling.citations
+    chair = next(p for p in llm.payloads if p["task"] == "council_ruling")["user"]
+    assert extra.citation_id in chair and "has not been checked against this risk" in chair
+
+
+async def test_a_ledger_section_stays_marked_verified(result):
+    risk = _multi(result)
+    cid, quote = _new_law(result, risk)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"citation_id": cid, "quote": quote}})
+    assert sunny.changed_because.verified is True
+
+
+async def test_a_section_verified_for_another_risk_is_not_in_this_members_list(result):
+    risk = _multi(result)
+    _, allowed = council.build_context(result, risk, None)
+    extras = {s.citation_id for s in await council.extra_sections(result, risk, allowed)}
+    other = next(v for v in result.ledger if v.section and v.verdict == "verified" and v.claim.risk_id != risk.id and v.section.citation_id not in allowed and v.section.citation_id not in extras)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"citation_id": other.section.citation_id, "quote": council._fake_quote(other.section)}})
+    assert sunny.flip_basis == "pressure" and "outside" in sunny.flip_note
+
+
+async def test_a_repealed_section_is_never_offered(result, monkeypatch):
+    risk = _benched(result)
+    corpus = council.get_corpus()
+    repealed = next(s for s in corpus.sections if s.status == "repealed")
+    in_force = next(s for s in corpus.sections if s.status == "in_force")
+    monkeypatch.setattr(type(corpus), "search", lambda self, q, packs=None, k=8, include_repealed=True: [(repealed, 1.0), (in_force, 0.9)])
+    assert [s.citation_id for s in await council.extra_sections(result, risk, [])] == [in_force.citation_id]
+
+
+async def test_a_whole_contract_deliberation_retrieves_nothing_extra(result):
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], None, [])
+    llm = RecordingLLM()
+    await council.deliberate(llm, result, "Sign?", first, None, [])
+    assert all("FURTHER LAW" not in p["user"] for p in llm.payloads)
+
+
+async def test_round_two_prompts_stay_within_a_budget(result):
+    risk = _multi(result)
+    extras = await council.extra_sections(result, risk, council.build_context(result, risk, None)[1])
+    further = council._further_material(result, risk, extras)
+    assert len(further) < council.EXTRA_SECTIONS * (council.EXTRA_CHARS + 200) + council.CLAUSE_BUDGET + 400
+
+
+# ------------------------------------------------------------------ wider evidence: the contract's own words
+
+
+def _clause(result, risk):
+    return next(c for c in result.document.clauses if c.id == risk.clause_ids[0])
+
+
+async def test_a_quote_from_a_new_contract_clause_counts(result):
+    risk = _benched(result)
+    c = _clause(result, risk)
+    quote = " ".join(c.text.split()[:9])
+    first, sunny, ruling, llm = await _revise(result, risk, {"position": "Heavier", "revised": True, "severity": "critical", "changed_because": {"clause_id": c.id, "quote": quote}})
+    assert sunny.flip_basis == "evidence" and sunny.changed_because.clause_id == c.id and sunny.changed_because.citation_id is None
+    assert sunny.changed_because.label == f"Clause {c.id}" and ruling.votes[0].severity == "critical"
+    assert sunny.citations == []  # a clause is not a law: it never becomes a citation
+    assert f"contract clause {c.id}" in next(p for p in llm.payloads if p["task"] == "council_ruling")["user"]
+
+
+async def test_a_clause_already_relied_on_in_round_one_is_pressure(result):
+    risk = _benched(result)
+    c = _clause(result, risk)
+    first = await council.chat(RecordingLLM(overrides={"council_chat": {"reply": "r", "clause_ids": [c.id, "C999"]}}), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    assert first[0].clause_ids == [c.id]  # one that is not in the contract is dropped
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"clause_id": c.id, "quote": " ".join(c.text.split()[:9])}}, first)
+    assert sunny.flip_basis == "pressure" and "already relied" in sunny.flip_note and sunny.changed_because is None
+
+
+async def test_a_fabricated_clause_quote_is_pressure(result):
+    risk = _benched(result)
+    c = _clause(result, risk)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"clause_id": c.id, "quote": "the worker shall forfeit ten years of wages at once"}})
+    assert sunny.flip_basis == "pressure" and "clause's text" in sunny.flip_note
+
+
+async def test_a_clause_that_is_not_in_the_contract_is_pressure(result):
+    risk = _benched(result)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"clause_id": "C999", "quote": "a perfectly long quotation"}})
+    assert sunny.flip_basis == "pressure" and "not in this contract" in sunny.flip_note
+
+
+async def test_a_trivial_clause_quote_is_pressure(result):
+    risk = _benched(result)
+    c = _clause(result, risk)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"clause_id": c.id, "quote": "the"}})
+    assert sunny.flip_basis == "pressure"
+
+
+async def test_a_section_wins_when_a_model_gives_both_sources(result):
+    risk = _multi(result)
+    cid, quote = _new_law(result, risk)
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Heavier", "revised": True, "changed_because": {"citation_id": cid, "clause_id": "C999", "quote": quote}})
+    assert sunny.flip_basis == "evidence" and sunny.changed_because.citation_id == cid and sunny.changed_because.clause_id is None
+
+
+async def test_clause_text_sent_to_the_models_is_redacted(result):
+    risk = _benched(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    llm = RecordingLLM()
+    await council.deliberate(llm, result, "Sign?", first, risk, [])
+    assert all(find_pii(p["system"] + p["user"]) == [] for p in llm.payloads)
+
+
+async def test_the_offline_stand_in_moves_on_the_contract_on_an_adversary_risk(result):
+    risk = next(k for k in result.risks if k.origin == "adversary" and k.bench and k.status != "dropped")
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    rebuttals, _ = await council.deliberate(RecordingLLM(), result, "Sign?", first, risk, [])
+    assert rebuttals[1].flip_basis == "evidence" and rebuttals[1].changed_because.clause_id

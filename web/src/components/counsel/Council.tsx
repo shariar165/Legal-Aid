@@ -7,6 +7,7 @@ import {
   type AnalysisResult,
   type BenchOpinion,
   type BenchResult,
+  type ChangedBecause,
   type ChatTurn,
   type CouncilLanguage,
   type CouncilMember,
@@ -734,7 +735,7 @@ function Stance({ r }: { r: CouncilReply }) {
   if (r.flip_basis === "evidence") {
     return (
       <span className={styles.stanceTag} data-basis="evidence">
-        Moved on evidence ✓
+        {r.changed_because?.clause_id ? "Moved on the contract text ✓" : "Moved on evidence ✓"}
       </span>
     );
   }
@@ -746,6 +747,31 @@ function Stance({ r }: { r: CouncilReply }) {
     );
   }
   return <span className={styles.stanceTag}>Kept position</span>;
+}
+
+/* The source of a revision: a contract clause, a verified section, or a section retrieved only for this deliberation. */
+function Because({ because, sections }: { because: ChangedBecause; sections: Map<string, Section> }) {
+  if (because.citation_id && because.verified) return <Cites ids={[because.citation_id]} sections={sections} />;
+  if (because.clause_id) {
+    return (
+      <div className={styles.msgCites}>
+        <span className={styles.citeChip}>
+          <Icon name="file" size={13} />
+          {because.label}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.msgCites}>
+      <a href={because.url || undefined} target="_blank" rel="noreferrer" className={styles.citeChip} title="Retrieved for this question · opens the official text">
+        <Icon name="scale" size={13} />
+        {because.label}
+        <Icon name="external" size={12} />
+      </a>
+      <span className={styles.unverifiedNote}>Real text, but not checked against this risk by the four gates</span>
+    </div>
+  );
 }
 
 function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<string, Section>; lang: CouncilLanguage }) {
@@ -796,10 +822,10 @@ function ReplyCard({ r, sections, lang }: { r: CouncilReply; sections: Map<strin
           <div className={styles.evidence}>
             <span className={styles.insetLabel}>What moved this member</span>
             <blockquote>{because.quote}</blockquote>
-            <Cites ids={[because.citation_id]} sections={sections} />
+            <Because because={because} sections={sections} />
           </div>
         )}
-        <Cites ids={r.citations.filter((c) => c !== because?.citation_id)} sections={sections} />
+        <Cites ids={r.citations.filter((c) => c !== because?.citation_id && sections.has(c))} sections={sections} />
       </div>
     </article>
   );

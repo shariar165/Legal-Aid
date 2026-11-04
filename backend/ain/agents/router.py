@@ -7,9 +7,12 @@ fill facts the regexes missed; it may add packs but can never re-enable an exclu
 
 from __future__ import annotations
 
+import logging
 from ain import countries
-from ain.llm import LLM
+from ain.llm import LLM, MalformedAnswer
 from ain.models import DocFacts, L10n, PackDecision, RouteDecision
+
+log = logging.getLogger(__name__)
 
 PACK_LABELS = {
     "bd_contract": "Contract Act 1872 · Stamp Act 1899 · CPC 1908",
@@ -99,14 +102,18 @@ def _fake_facts(facts: DocFacts) -> dict:
 
 async def refine_facts(llm: LLM, facts: DocFacts, redacted_text: str) -> DocFacts:
     """Fill gaps the regexes left, using the redacted text only."""
-    data = await llm.json(
-        role="fast",
-        system=FACTS_SYSTEM,
-        user=redacted_text[:12000],
-        task="facts",
-        agent="Jurisdiction Router",
-        fake=lambda: _fake_facts(facts),
-    )
+    try:
+        data = await llm.json(
+            role="fast",
+            system=FACTS_SYSTEM,
+            user=redacted_text[:12000],
+            task="facts",
+            agent="Jurisdiction Router",
+            fake=lambda: _fake_facts(facts),
+        )
+    except MalformedAnswer as e:  # the facts the regexes found still stand
+        log.warning("Jurisdiction Router: no usable answer: %s", e)
+        data = {}
     merged = facts.model_copy()
     for key in ("destination_country", "epz_name", "governing_law", "salary_currency"):
         if getattr(merged, key) is None and isinstance(data.get(key), str) and data[key].strip():
