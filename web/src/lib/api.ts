@@ -395,6 +395,8 @@ export interface CouncilReply {
   clause_ids?: string[];
   /** round 2, decided in code: evidence = new verified law; pressure = shown, but round 1 stands; null = no change of view */
   flip_basis?: "evidence" | "pressure" | null;
+  /** round 2, decided in code: declared a revision, but no rating changed. Not a flip, and round 1's position stands */
+  restated?: boolean;
   /** only on an evidence revision */
   changed_because?: ChangedBecause | null;
   /** why a pressure revision does not count */

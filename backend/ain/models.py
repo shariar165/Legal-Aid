@@ -405,7 +405,7 @@ class CouncilReply(BaseModel):
     position: str = ""  # one-line stance shown as the reply's headline
     confidence: Confidence = "medium"
     round: int = 1  # 1 = first answer, 2 = response to colleagues during deliberation
-    revised: bool = False  # round 2 only: the member changed their position
+    revised: bool = False  # round 2 only: the member SAID it changed its position; flip_basis and restated say what happened
     responds_to: str | None = None  # round 2 only: the colleague (member id) mainly addressed
     severity: Severity | None = None  # set when a risk is in focus; None if the model gave no valid rating
     verdict: Literal["supports", "rejects"] | None = None  # risk in focus: does this member uphold the risk's finding?
@@ -413,6 +413,7 @@ class CouncilReply(BaseModel):
     clause_ids: list[str] = Field(default_factory=list)  # contract clauses the answer relies on
     flip_basis: Literal["evidence", "pressure"] | None = None  # round 2 only, decided in code: None = no change of view
     changed_because: ChangedBecause | None = None  # kept only when flip_basis is "evidence": never an unchecked citation
+    restated: bool = False  # round 2 only, decided in code: declared a revision, but every rating equals round 1 (not a flip)
     flip_note: str = ""  # why a "pressure" revision does not count (fixed strings, never model text)
 
 

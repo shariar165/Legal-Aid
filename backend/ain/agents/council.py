@@ -350,6 +350,10 @@ def _check_revision(
     moved = any(v and getattr(first, k) and v != getattr(first, k) for k, v in now.items())
     if not _declared(out):
         return ("pressure", None, "Changed its view without declaring a revision") if moved else (None, None, "")
+    # the ratings decide, not the claim to have revised. All of them must be there to say so: a missing one means no
+    # comparison, not no change, and that goes to the gate below
+    if now and all(v and v == getattr(first, k) for k, v in now.items()):
+        return None, None, ""
     cb = out.get("changed_because")
     cb = cb if isinstance(cb, dict) else {}
     cid, clause, quote = cb.get("citation_id"), cb.get("clause_id"), cb.get("quote")
@@ -389,6 +393,9 @@ def _reply(
     conf = out.get("confidence") if out.get("confidence") in CONFIDENCE else fallback.get("confidence", "medium")
     to = out.get("responds_to")
     basis, because, note = _check_revision(first, out, now, sections or {}, clauses or {}, ledger_ids or set()) if first else (None, None, "")
+    restated = bool(first) and _declared(out) and basis is None
+    if restated:  # no rating moved, so the claimed position is not a new one: round 1's stands, as for a blocked flip
+        position = first.position
     if because and because.citation_id:
         citations = list(dict.fromkeys([*citations, because.citation_id]))
     return CouncilReply(
@@ -407,6 +414,7 @@ def _reply(
         flip_basis=basis,
         changed_because=because,
         flip_note=note,
+        restated=restated,
     )
 
 

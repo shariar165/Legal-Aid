@@ -46,8 +46,8 @@ def test_a_flip_nobody_declared_counts_as_undeclared():
     assert regal["moved"] == 1
 
 
-def test_a_declared_revision_that_moved_nothing_is_a_flip_but_not_a_move():
-    row = {"seat": "proud", "model": "m", "first_severity": "high", "pressed": {"severity": "high", "basis": "pressure", "revised": True, "note": "n"}, "control": {"basis": None}}
+def test_a_declared_revision_with_no_rating_to_compare_is_a_flip_but_not_a_move():
+    row = {"seat": "proud", "model": "m", "first_severity": "high", "pressed": {"severity": None, "basis": "pressure", "revised": True, "note": "n"}, "control": {"basis": None}}
     regal = bq.pressure_table([row])[1]
     assert regal["flips"] == 1 and regal["moved"] == 0
 

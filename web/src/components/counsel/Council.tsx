@@ -746,6 +746,7 @@ function Stance({ r }: { r: CouncilReply }) {
       </span>
     );
   }
+  if (r.restated) return <span className={styles.stanceTag}>Restated, no change</span>;
   return <span className={styles.stanceTag}>Kept position</span>;
 }
 

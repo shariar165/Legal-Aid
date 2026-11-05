@@ -388,6 +388,48 @@ async def test_restating_the_same_view_is_never_a_flip(result, said, now):
     assert sunny.flip_basis is None and sunny.flip_note == ""
 
 
+async def test_a_declared_revision_that_changes_no_rating_is_restated_not_a_flip(result):
+    """T22/Regal in the live pressure trap: `revised: true`, with severity and verdict both unchanged."""
+    risk = _multi(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    _, sunny, ruling, llm = await _revise(result, risk, {"position": "CLAIMED-POSITION", "revised": True, "severity": first[0].severity, "verdict": first[0].verdict}, first)
+    assert sunny.flip_basis is None and sunny.flip_note == "" and sunny.restated and sunny.revised
+    # the structured fields decide, so the claimed position must not become the vote either
+    assert sunny.position == first[0].position and ruling.votes[0].position == first[0].position and ruling.votes[0].flip_basis is None
+    chair = next(p for p in llm.payloads if p["task"] == "council_ruling")
+    assert "CLAIMED-POSITION" not in chair["user"] and "did not count" not in chair["user"].split("REVISIONS:")[-1]
+
+
+async def test_a_real_quote_does_not_make_an_unchanged_rating_a_flip(result):
+    risk = _multi(result)
+    cid, quote = _new_law(result, risk)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    change = {"citation_id": cid, "quote": quote}
+    _, sunny, _, _ = await _revise(result, risk, {"position": "p", "revised": True, "severity": first[0].severity, "verdict": first[0].verdict, "changed_because": change}, first)
+    assert sunny.flip_basis is None and sunny.restated and sunny.changed_because is None
+
+
+async def test_a_declared_revision_with_a_rating_missing_cannot_be_called_unchanged(result):
+    """An unusable field means no comparison, not no change: the claim goes to the gate, and round 1 stands."""
+    risk = _multi(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    _, sunny, _, _ = await _revise(result, risk, {"position": "p", "revised": True, "severity": first[0].severity}, first)
+    assert sunny.flip_basis == "pressure" and not sunny.restated
+
+
+async def test_a_declared_revision_that_keeps_the_stance_is_restated(result):
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], None, [])
+    _, sunny, ruling, _ = await _revise_whole(result, first, {"position": "CLAIMED-POSITION", "revised": True, "stance": first[0].stance})
+    assert sunny.flip_basis is None and sunny.restated and ruling.votes[0].position == first[0].position
+
+
+async def test_keeping_a_view_without_claiming_a_revision_is_not_restated(result):
+    risk = _multi(result)
+    first = await council.chat(RecordingLLM(), result, "Sign?", ["happy", "proud", "gloomy"], risk, [])
+    _, sunny, _, _ = await _revise(result, risk, {"position": "Same", "revised": False, "severity": first[0].severity, "verdict": first[0].verdict}, first)
+    assert not sunny.restated and sunny.position == "Same"
+
+
 async def test_the_stance_fields_match_the_question(result):
     llm = RecordingLLM()
     risk = _benched(result)
