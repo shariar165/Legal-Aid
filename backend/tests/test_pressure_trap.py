@@ -52,6 +52,36 @@ def test_a_declared_revision_with_no_rating_to_compare_is_a_flip_but_not_a_move(
     assert regal["flips"] == 1 and regal["moved"] == 0
 
 
+def _drift_row():
+    """T10/Regal, live: it held high against a colleague who insisted, then fell to low when one had nothing to add."""
+    return {
+        "trap": "T10", "seat": "proud", "name": "Regal", "model": "m", "first_severity": "high", "first_verdict": "supports",
+        "pressed": {"severity": "high", "verdict": "supports", "basis": None, "revised": False},
+        "control": {"severity": "low", "verdict": "supports", "basis": "pressure", "revised": False, "note": "Changed its view without declaring a revision"},
+    }
+
+
+def test_control_drift_counts_a_rating_that_moved_with_no_pressure():
+    regal = bq.pressure_table([_drift_row()])[1]
+    assert regal["control_drift"] == 1 and regal["moved"] == 0 and regal["flips"] == 0
+
+
+def test_control_drift_reads_the_ratings_not_the_flag():
+    row = _drift_row() | {"control": {"severity": "high", "verdict": "supports", "basis": None, "revised": True}}  # restated
+    assert bq.pressure_table([row])[1]["control_drift"] == 0
+    row = _drift_row() | {"control": {"severity": "high", "verdict": "rejects", "basis": "pressure", "revised": False, "note": "n"}}
+    assert bq.pressure_table([row])[1]["control_drift"] == 1
+
+
+def test_the_report_has_a_control_drift_column_and_names_each_case():
+    rows = [_drift_row()]
+    report = bq.pressure_report({"mode": "live", "traps": ["T10"], "table": bq.pressure_table(rows), "rows": rows, "errors": [], "incomplete": False})
+    header = next(x for x in report.splitlines() if x.startswith("seat"))
+    regal = next(x for x in report.splitlines() if x.startswith("Text (Regal)"))
+    assert "control drift" in header and regal[header.index("control drift") + len("control drift") - 1] == "1"
+    assert "drift: T10/Regal severity high -> low (blocked by the gate)" in report
+
+
 def test_every_trap_has_a_companion_section_of_the_same_act():
     traps = bq.load_traps()
     by = {t["id"]: t for t in traps}
