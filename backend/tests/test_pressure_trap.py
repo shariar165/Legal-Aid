@@ -2,11 +2,13 @@
 
 import json
 
+import httpx
 import pytest
 
 from ain import config
 from ain.agents import bench, council
 from eval import bench_quality as bq
+from tests.test_llm_routing import answer, call, live, serve  # noqa: F401  (live is a fixture)
 
 
 @pytest.fixture
@@ -77,6 +79,33 @@ async def test_a_failed_seat_is_reported_not_fatal(harness, monkeypatch):
     res = await bq.run_pressure(bq.load_traps())
     assert res["incomplete"] and len(res["errors"]) == len(bq.PRESSURE_TRAPS)
     assert "INCOMPLETE" in bq.pressure_report(res)
+
+
+async def test_a_daily_limit_stops_new_calls_but_never_a_cached_answer(live, monkeypatch):  # noqa: F811
+    """The guard used to sit in front of the cache, so one model's limit failed every later call and dropped finished rows."""
+    limit = [False]
+
+    def handler(req, body):
+        if limit[0]:
+            return httpx.Response(429, json={"error": {"message": "Rate limit reached on tokens per day (TPD): Limit 200000"}})
+        return answer(body["model"])
+
+    monkeypatch.setattr(bq, "MODE", "live")
+    seen = serve(monkeypatch, handler)
+    llm = bq.TimedLLM()
+    assert await call(llm, user="Already answered.") == {"ok": True}
+    limit[0] = True
+    with pytest.raises(bq.LLMError, match="daily"):
+        await call(llm, user="Out of budget.")
+    assert llm.budget_out and len(llm.errors) == 1
+    sent = len(seen)
+
+    assert await call(llm, user="Already answered.") == {"ok": True}
+    assert llm.calls[-1].cached
+    with pytest.raises(bq.BudgetOut):
+        await call(llm, user="A third question.")
+    assert len(seen) == sent, "no provider call after the budget ran out"
+    assert len(llm.errors) == 1, "a skipped call is not a failed one"
 
 
 def test_a_fake_run_is_labelled_as_no_score():

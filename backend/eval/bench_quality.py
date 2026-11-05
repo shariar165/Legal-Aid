@@ -113,10 +113,10 @@ class TimedLLM(LLM):
         # the Chief Justice only writes prose from the votes; skipping it saves a third of the Groq tokens per bench
         if task == "bench_chair" and self.skip_chair and fake is not None:
             return fake()
-        if self.budget_out:  # stop cleanly: no more calls once one judge model is out of today's budget
-            raise BudgetOut(self.budget_out)
         try:
             return await super().json(task=task, fake=fake, **kw)
+        except BudgetOut:  # skipped, not failed: see _post
+            raise
         except LLMError as e:
             self.errors.append(str(e))
             if "daily" in str(e) or "quota" in str(e):
@@ -124,6 +124,10 @@ class TimedLLM(LLM):
             raise
 
     async def _post(self, route, *a, **kw):
+        # stop cleanly: no more calls once one judge model is out of today's budget. Here and not in json(), because a
+        # cached answer costs nothing and never reaches this line: a resumed run must still read every one of them
+        if self.budget_out:
+            raise BudgetOut(self.budget_out)
         t = time.perf_counter()
         try:
             return await super()._post(route, *a, **kw)
