@@ -52,8 +52,14 @@ On the first question (EPZ R10, "Extended payment term violates Bangladesh forei
 
 Saved as `tests/fixtures/live_council_epz_r10_evidence.json`: a trimmed analysis with redaction markers only, the real round-1 answers, the extra sections by id, and each member's raw round-2 output paired by agent. `tests/test_live_fixtures.py` replays them through the real `rebut` and requires the same decision for every member. It failed when quote matching was broken on purpose.
 
+## Live gold-set eval across several days (2026-11-11)
+A live `run_eval` needs about 120 OpenRouter requests by a replay estimate, more than the 50 free a day. When the quota runs out the seats fall back to Groq, and that answer is cached and reused on every later run, so the eval would quietly become partly a Groq eval. Approved in chat: spread it over about three days.
+- `python -m eval.run_eval --stop-on-quota` calls `llm.halt_on_quota("openrouter")`. Once OpenRouter's daily quota trips, no new request goes out on any route (`QuotaHalt`, raised in `_post` just before sending, so calls queued behind a semaphore or a pacing wait stop too). Cached answers are still read.
+- The document in progress is dropped, not scored, whether the halt reached `run_eval` or an agent caught it. The run prints `INCOMPLETE`, exits 2 and does not write `last_eval.json`. Run it again after UTC midnight: what was already answered costs nothing.
+- Off by default: the app's routing and its visible Groq fallback are unchanged. `tests/test_run_eval.py` and a routing test cover it, and the routing test failed with the halt check removed.
+
 ## Files
-`ain/agents/council.py`, `ain/models.py`, `eval/bench_quality.py`, `web/src/components/counsel/Council.tsx`, `web/src/lib/api.ts`, `README.md`.
+`ain/agents/council.py`, `ain/llm.py`, `ain/models.py`, `eval/bench_quality.py`, `eval/run_eval.py`, `web/src/components/counsel/Council.tsx`, `web/src/lib/api.ts`, `README.md`.
 
 ## Verification
 - `tests/test_council.py`, `tests/test_pressure_trap.py`: all offline tests pass. The cache test failed before the fix.

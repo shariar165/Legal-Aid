@@ -102,6 +102,30 @@ async def test_daily_quota_trips_breaker_and_falls_back_to_groq(live, monkeypatc
     await call(llm, user="second")
     assert sum(h == "openrouter.ai" for h, _ in seen) == before
     assert llm.resolve("bench_a") == (config.provider("groq"), backup.model)
+    assert llm_mod.halted() is None, "the app never halts: only an eval that asks for it does"
+
+
+async def test_an_eval_that_asks_stops_at_the_quota_instead_of_answering_on_the_backup(live, monkeypatch):
+    def handler(req, body):
+        if req.url.host == "openrouter.ai" and body["messages"][1]["content"] != "answered yesterday":
+            return httpx.Response(429, json={"error": {"message": "Rate limit exceeded: free-models-per-day."}})
+        return answer(body["model"])
+
+    seen = serve(monkeypatch, handler)
+    llm = LLM(mode="live")
+    assert await call(llm, user="answered yesterday") == {"ok": True}
+    llm_mod.halt_on_quota("openrouter")
+    with pytest.raises(llm_mod.QuotaHalt, match="openrouter's daily quota"):
+        await call(llm, user="new today")
+    assert llm_mod.halted() == "openrouter"
+    assert not any(h == "api.groq.com" for h, _ in seen), "no backup answer that a later run would reuse from the cache"
+    sent = len(seen)
+    # a role whose primary is Groq stops too: the run is over for today, not just for OpenRouter's seats
+    with pytest.raises(llm_mod.QuotaHalt):
+        await call(llm, role="chairman", user="a ruling")
+    # an answer already in the cache costs nothing and is still read, so tomorrow's rerun picks up where this stopped
+    assert await call(llm, user="answered yesterday") == {"ok": True}
+    assert llm.calls[-1].cached and len(seen) == sent
 
 
 async def test_empty_answer_moves_to_next_route(live, monkeypatch):

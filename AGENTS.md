@@ -34,6 +34,7 @@ Instructions for any coding agent (Claude Code, Cursor, Codex…) and for people
 ```bash
 cd backend && python -m pytest -q          # offline (fake LLM); must pass before every commit
 python -m eval.run_eval                    # gold-set recall / precision / citation validity / ablation
+python -m eval.run_eval --stop-on-quota    # live over several days: stops at OpenRouter's daily quota, never on a backup
 python -m eval.bench_quality               # Virtual Bench trap set: a quota-saver flag stays off until this passes
 python -m scripts.smoke_live --docs 1      # live keys: model check, cache warm-up, free-quota left
 cd web && npm run lint && npm run build

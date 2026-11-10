@@ -53,6 +53,11 @@ class MalformedAnswer(LLMError):
     survive it, while an outage (plain LLMError) still fails loudly rather than pass as a clean report."""
 
 
+class QuotaHalt(LLMError):
+    """An eval asked to stop once a provider's daily quota runs out, rather than let a backup model answer for it. A
+    backup answer would be cached and reused on every later run, so the eval would quietly stop testing the real model."""
+
+
 class _RouteFailed(LLMError):
     """This route cannot answer; try the next one."""
 
@@ -140,6 +145,8 @@ class _TokenBucket:
 _pacers: dict[str, _Pacer] = {}
 _buckets: dict[tuple[str, str], _TokenBucket] = {}
 _tripped: dict[str, float] = {}  # provider -> wall-clock time its daily quota resets
+_halt_on: set[str] = set()  # providers whose daily quota stops every new call (evals only: empty in the app)
+_halted: list[str] = []
 
 
 def _pacer(name: str) -> _Pacer:
@@ -167,10 +174,25 @@ def trip(name: str, until: float | None = None) -> None:
         tomorrow = datetime.now(UTC).date() + timedelta(days=1)
         until = datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=UTC).timestamp()
     _tripped[name] = until
+    if name in _halt_on and not _halted:
+        _halted.append(name)
+
+
+def halt_on_quota(*providers: str) -> None:
+    """Opt in, for an eval: once one of these providers is out of today's quota, no new call goes out on any route.
+    Cached answers are still read, so a rerun the next day picks up where this one stopped."""
+    _halt_on.update(providers)
+
+
+def halted() -> str | None:
+    """The provider whose quota stopped this process, if any."""
+    return _halted[0] if _halted else None
 
 
 def reset_breakers() -> None:
     _tripped.clear()
+    _halt_on.clear()
+    _halted.clear()
     _pacers.clear()
     _buckets.clear()
 
@@ -382,6 +404,10 @@ class LLM:
                 if delay > 0:
                     self._rate_wait(delay, prov, model)
                     await asyncio.sleep(delay)
+                # here, just before sending, and not in json(): calls queued behind a semaphore or a pacing wait when the
+                # quota ran out must not go out either, and a backup route is tried only after the primary failed
+                if _halted:
+                    raise QuotaHalt(f"{_halted[0]}'s daily quota is used up: stopping rather than answering on {where}")
                 try:
                     r = await client.post(f"{prov.base_url}/chat/completions", json=body, headers=headers)
                 except httpx.TransportError as e:
