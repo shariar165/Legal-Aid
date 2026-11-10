@@ -41,7 +41,16 @@ Run on the real routing, on saved live analyses of the EPZ and Malaysia samples,
 
 R3/Grey shows why ratings outrank the claim: it wrote "I lower to critical" while already at critical.
 
-This is not yet a finding about the models. Memory was too low for the dense model, so retrieval was BM25, and much of the law on offer was off-topic: a non-compete risk got sections on terminating an agent, and a repatriation risk got termination of bailment. Members had little new law worth moving on. Sunny also answered on fallback routes, because Gemma was rate-limited upstream. No fixture was saved, because nothing qualified and a revision must not be coaxed. Repeat on hybrid retrieval.
+This is not yet a finding about the models. Memory was too low for the dense model, so retrieval was BM25, and much of the law on offer was off-topic: a non-compete risk got sections on terminating an agent, and a repatriation risk got termination of bailment. Members had little new law worth moving on. Sunny also answered on fallback routes, because Gemma was rate-limited upstream. No fixture was saved from this run, because nothing qualified and a revision must not be coaxed.
+
+### Repeated on hybrid retrieval (2026-11-10): one evidence revision
+On the first question (EPZ R10, "Extended payment term violates Bangladesh foreign exchange…"), Grey moved from **critical to medium**. Sunny stayed at medium and Regal at high. It cost 1 OpenRouter request, because round 1 was already cached.
+- **Round 1:** critical, on `BD-GFET-2018-ch8p13`. Proceeds are due within four months, and later than that is liable under the FER Act without a Bangladesh Bank authorisation, which Grey called "costly, uncertain".
+- **Round 2:** `changed_because` = `BD-FECIRC-2020-13-p2a`, in force and offered as extra law, with a verbatim quote: banks "may allow exporters to extend the tenure of realization of export proceeds up to 60 days" beyond the four months, "for bonafide grounds". Clause C3 asks 150 days, inside that window, so a routine route through the bank exists.
+- **Read in full:** this is a real move on law the member had not used, and nothing was injected. It also corrects the BM25 run, where Grey misread the same circular.
+- **Caveats:** "bona fide grounds" is discretionary, and a standing 150-day term may not qualify, so a lawyer could still rate it high. The section came as extra law and was not put through the four gates for this risk. Grey's position text says "medium, not high" though round 1 was critical. The gate checks only that a source is new and its quote is real.
+
+Saved as `tests/fixtures/live_council_epz_r10_evidence.json`: a trimmed analysis with redaction markers only, the real round-1 answers, the extra sections by id, and each member's raw round-2 output paired by agent. `tests/test_live_fixtures.py` replays them through the real `rebut` and requires the same decision for every member. It failed when quote matching was broken on purpose.
 
 ## Files
 `ain/agents/council.py`, `ain/models.py`, `eval/bench_quality.py`, `web/src/components/counsel/Council.tsx`, `web/src/lib/api.ts`, `README.md`.

@@ -1,0 +1,1445 @@
+{
+ "about": "A real live council round 2 (evidence), captured 2026-11-10: the gate must decide it the same way offline.",
+ "kind": "evidence",
+ "captured": "2026-11-10",
+ "retrieval": "hybrid",
+ "document": "rmg_dhaka_epz.txt",
+ "risk_id": "R10",
+ "question": "How serious is this, really?",
+ "extras": [
+  "BD-FECIRC-2020-13-p2a",
+  "BD-FERA-1947-s12",
+  "BD-FERA-1947-s10",
+  "BD-FERA-1947-s8",
+  "BD-FERA-1947-s2"
+ ],
+ "result": {
+  "job_id": "dcad7bf6afef",
+  "llm_mode": "live",
+  "document": {
+   "name": "rmg_dhaka_epz.txt",
+   "source_kind": "text",
+   "text": "PART A - SUPPLY AGREEMENT\n\nThis Supply Agreement is made between Nordwind Fashion GmbH, Hamburg, Germany (\"Buyer\") and Lumen Apparel (BD) Ltd. (fictional), Plot 21, Dhaka Export Processing Zone (DEPZ), Ganakbari, Savar, Dhaka, Bangladesh (\"Supplier\"), a Type B industrial unit operating inside the Dhaka EPZ.\n\n1. Products. The Supplier shall manufacture and export knitted garments to the Buyer in accordance with purchase orders issued from time to time.\n\n2. Payment Terms. The Buyer shall pay each invoice one hundred and fifty (150) days after the date of shipment (bill of lading date), by telegraphic transfer.\n\n3. Delay. If any shipment is delayed, the Supplier shall pay liquidated damages of 20% of the order value for each week of delay, without the Buyer being required to prove any loss.\n\n4. Code of Conduct and Due Diligence. The Supplier shall comply with the Buyer's Supplier Code of Conduct and the Buyer's human rights due diligence programme under the EU Corporate Sustainability Due Diligence Directive. The Supplier shall bear all costs of audits, due diligence, corrective action plans and remediation required by the Buyer, at its own cost.\n\n5. Freedom of Association. The Supplier shall recognise any trade union freely chosen by its workers, shall allow multiple unions at the factory, and shall bargain collectively with them.\n\n6. Worker Data. The Supplier shall share personal data of its workers, including names, ages, wages, health records and grievance records, with the Buyer and the Buyer's auditors in the European Union upon request.\n\n7. Exclusivity and Non-Compete. During this Agreement and for two (2) years after its termination, the Supplier shall not manufacture garments for any competitor of the Buyer in the European Union.\n\n8. Claims. Any claim by the Supplier against the Buyer must be brought within three (3) months of the relevant shipment, after which it is time-barred.\n\n9. Termination. The Buyer may terminate this Agreement with immediate effect if the Supplier breaches the Code of Conduct.\n\n10. Governing Law and Jurisdiction. This Agreement is governed by the laws of England and Wales, and the courts of London shall have exclusive jurisdiction.\n\nPART B - APPOINTMENT LETTER (Machine Operator)\n\nTo: Name: [NAME_1]\nDate of Birth: [DOB_1]\nNID No: [NID_1]\nMobile: [PHONE_1]\n\nDear [NAME_1],\n\n1. Appointment. You are appointed as a permanent Sewing Machine Operator at Lumen Apparel (BD) Ltd., Dhaka EPZ, Savar, with a monthly gross wage of BDT 12,500.\n\n2. Working Hours. Your normal working hours are 8 hours per day, 6 days per week. Overtime will be paid at double the basic wage.\n\n3. Termination. Either party may terminate this employment by giving thirty (30) days' written notice.\n\n4. Maternity Leave. You will be entitled to twelve (12) weeks of maternity leave.\n\n5. Post-Employment Restriction. For one (1) year after leaving the company you shall not work for any other garment factory in the Dhaka EPZ.\n\n6. Workers' Representation. You may raise grievances through the Supplier's worker participation committee.\n",
+   "clauses": [
+    {
+     "id": "C1",
+     "index": 0,
+     "text": "PART A - SUPPLY AGREEMENT\n\nThis Supply Agreement is made between Nordwind Fashion GmbH, Hamburg, Germany (\"Buyer\") and Lumen Apparel (BD) Ltd. (fictional), Plot 21, Dhaka Export Processing Zone (DEPZ), Ganakbari, Savar, Dhaka, Bangladesh (\"Supplier\"), a Type B industrial unit operating inside the Dhaka EPZ.",
+     "start": 0,
+     "end": 310
+    },
+    {
+     "id": "C2",
+     "index": 1,
+     "text": "1. Products. The Supplier shall manufacture and export knitted garments to the Buyer in accordance with purchase orders issued from time to time.",
+     "start": 310,
+     "end": 457
+    },
+    {
+     "id": "C3",
+     "index": 2,
+     "text": "2. Payment Terms. The Buyer shall pay each invoice one hundred and fifty (150) days after the date of shipment (bill of lading date), by telegraphic transfer.",
+     "start": 457,
+     "end": 617
+    },
+    {
+     "id": "C4",
+     "index": 3,
+     "text": "3. Delay. If any shipment is delayed, the Supplier shall pay liquidated damages of 20% of the order value for each week of delay, without the Buyer being required to prove any loss.",
+     "start": 617,
+     "end": 800
+    },
+    {
+     "id": "C5",
+     "index": 4,
+     "text": "4. Code of Conduct and Due Diligence. The Supplier shall comply with the Buyer's Supplier Code of Conduct and the Buyer's human rights due diligence programme under the EU Corporate Sustainability Due Diligence Directive. The Supplier shall bear all costs of audits, due diligence, corrective action plans and remediation required by the Buyer, at its own cost.",
+     "start": 800,
+     "end": 1163
+    },
+    {
+     "id": "C6",
+     "index": 5,
+     "text": "5. Freedom of Association. The Supplier shall recognise any trade union freely chosen by its workers, shall allow multiple unions at the factory, and shall bargain collectively with them.",
+     "start": 1163,
+     "end": 1352
+    },
+    {
+     "id": "C7",
+     "index": 6,
+     "text": "6. Worker Data. The Supplier shall share personal data of its workers, including names, ages, wages, health records and grievance records, with the Buyer and the Buyer's auditors in the European Union upon request.",
+     "start": 1352,
+     "end": 1568
+    },
+    {
+     "id": "C8",
+     "index": 7,
+     "text": "7. Exclusivity and Non-Compete. During this Agreement and for two (2) years after its termination, the Supplier shall not manufacture garments for any competitor of the Buyer in the European Union.",
+     "start": 1568,
+     "end": 1767
+    },
+    {
+     "id": "C9",
+     "index": 8,
+     "text": "8. Claims. Any claim by the Supplier against the Buyer must be brought within three (3) months of the relevant shipment, after which it is time-barred.",
+     "start": 1767,
+     "end": 1920
+    },
+    {
+     "id": "C10",
+     "index": 9,
+     "text": "9. Termination. The Buyer may terminate this Agreement with immediate effect if the Supplier breaches the Code of Conduct.",
+     "start": 1920,
+     "end": 2044
+    },
+    {
+     "id": "C11",
+     "index": 10,
+     "text": "10. Governing Law and Jurisdiction. This Agreement is governed by the laws of England and Wales, and the courts of London shall have exclusive jurisdiction.",
+     "start": 2044,
+     "end": 2202
+    },
+    {
+     "id": "C12",
+     "index": 11,
+     "text": "PART B - APPOINTMENT LETTER (Machine Operator)\n\nTo: Name: [NAME_1]\nDate of Birth: [DOB_1]\nNID No: [NID_1]\nMobile: [PHONE_1]\n\nDear [NAME_1],",
+     "start": 2202,
+     "end": 2374
+    },
+    {
+     "id": "C13",
+     "index": 12,
+     "text": "1. Appointment. You are appointed as a permanent Sewing Machine Operator at Lumen Apparel (BD) Ltd., Dhaka EPZ, Savar, with a monthly gross wage of BDT 12,500.",
+     "start": 2374,
+     "end": 2535
+    },
+    {
+     "id": "C14",
+     "index": 13,
+     "text": "2. Working Hours. Your normal working hours are 8 hours per day, 6 days per week. Overtime will be paid at double the basic wage.",
+     "start": 2535,
+     "end": 2666
+    },
+    {
+     "id": "C15",
+     "index": 14,
+     "text": "3. Termination. Either party may terminate this employment by giving thirty (30) days' written notice.",
+     "start": 2666,
+     "end": 2770
+    },
+    {
+     "id": "C16",
+     "index": 15,
+     "text": "4. Maternity Leave. You will be entitled to twelve (12) weeks of maternity leave.",
+     "start": 2770,
+     "end": 2853
+    },
+    {
+     "id": "C17",
+     "index": 16,
+     "text": "5. Post-Employment Restriction. For one (1) year after leaving the company you shall not work for any other garment factory in the Dhaka EPZ.",
+     "start": 2853,
+     "end": 2996
+    },
+    {
+     "id": "C18",
+     "index": 17,
+     "text": "6. Workers' Representation. You may raise grievances through the Supplier's worker participation committee.",
+     "start": 2996,
+     "end": 3104
+    }
+   ],
+   "ocr_used": false,
+   "ocr_confidence": null,
+   "pages": 1
+  },
+  "policy": null,
+  "facts": {
+   "doc_type": "mixed",
+   "languages": [
+    "en"
+   ],
+   "destination_country": "Bangladesh",
+   "workplace": null,
+   "is_epz": true,
+   "epz_name": "Dhaka EPZ",
+   "is_export_contract": true,
+   "mentions_eu_buyer": true,
+   "mentions_personal_data": true,
+   "governing_law": "England",
+   "salary_amount": 12500.0,
+   "salary_currency": "BDT",
+   "salary_text": "BDT 12,500",
+   "salary_confidence": 1.0,
+   "deductions": [],
+   "payment_terms_days": 150,
+   "notice_days": 30,
+   "maternity_days": 84
+  },
+  "destination": null,
+  "route": {
+   "packs": [
+    {
+     "pack": "bd_contract",
+     "label": "Contract Act 1872 · Stamp Act 1899 · CPC 1908",
+     "reason": "General contract law applies to every agreement made in or performed from Bangladesh."
+    },
+    {
+     "pack": "bd_epz",
+     "label": "Bangladesh EPZ Labour Act 2019",
+     "reason": "Workplace is inside Dhaka EPZ; the BEPZ Labour Act 2019 governs EPZ establishments."
+    },
+    {
+     "pack": "bd_fx",
+     "label": "FER Act 1947 · Bangladesh Bank GFET 2018",
+     "reason": "Export of goods from Bangladesh: export proceeds must be repatriated under FX regulation."
+    },
+    {
+     "pack": "eu_dd",
+     "label": "EU CSDDD (Directive 2024/1760)",
+     "reason": "An EU buyer imposes human-rights due diligence obligations through the contract."
+    },
+    {
+     "pack": "bd_data",
+     "label": "Personal Data Protection Act 2026",
+     "reason": "Workers' personal data is processed or transferred."
+    },
+    {
+     "pack": "eu_data",
+     "label": "EU GDPR (Regulation 2016/679)",
+     "reason": "Personal data flows to a party in the European Union."
+    }
+   ],
+   "excluded": [
+    {
+     "pack": "bd_labour",
+     "label": "Bangladesh Labour Act 2006 (as amended 2026)",
+     "reason": "Switched OFF: workplace is in Dhaka EPZ. The BEPZ Labour Act 2019 applies instead and s.3 gives it overriding effect."
+    }
+   ],
+   "scope_note": null
+  },
+  "risks": [
+   {
+    "id": "R10",
+    "rule_id": null,
+    "origin": "adversary",
+    "category": "regime_conflict",
+    "title": {
+     "bn": "বিস্তৃত পেমেন্ট শর্ত বাংলাদেশে বৈদেশিক মুদ্রা ও রপ্তানি বিধি লঙ্ঘন করে",
+     "en": "Extended payment term violates Bangladesh foreign exchange and export regulations"
+    },
+    "severity": "high",
+    "clause_ids": [
+     "C3"
+    ],
+    "finding": "The Buyer may pay invoices 150 days after shipment, which exceeds the 90‑day repatriation limit for export proceeds under Bangladesh's foreign exchange regulations for EPZ units.",
+    "why_non_obvious": "A single payment term looks like a commercial convenience, but when combined with the EPZ location it creates a conflict with mandatory FX rules that require timely remittance of export earnings, exposing the Supplier to penalties or loss of EPZ privileges.",
+    "citizen_line": {
+     "bn": "বিস্তৃত পেমেন্ট শর্ত বাংলাদেশে বৈদেশিক মুদ্রা ও রপ্তানি বিধি লঙ্ঘন করে",
+     "en": "Extended payment term violates Bangladesh foreign exchange and export regulations"
+    },
+    "action": {
+     "bn": "এই শর্তটি আইনজীবীকে দেখান।",
+     "en": "Ask a lawyer to review this clause."
+    },
+    "mitigation_clause": "",
+    "clash": "Lawful under the buyer's home law, but it cannot be performed under Bangladesh's mandatory EPZ regime.",
+    "claim_ids": [
+     "R10.1"
+    ],
+    "status": "partial",
+    "confidence": 0.7,
+    "bench": {
+     "question": "Export proceeds must be received within four months (approximately 120 days) and any delay beyond this period without Bank authorization violates foreign exchange regulations.",
+     "opinions": [
+      {
+       "seat": "Justice A",
+       "model": "qwen/qwen3.8-27b",
+       "persona": "happy",
+       "name": "Sunny",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "medium",
+       "reasoning": "The statute text explicitly confirms that the prescribed period for receiving full foreign exchange proceeds is four months, and that delays beyond this period without authorization result in liability under the FER Act. This directly supports the proposition. While the contract's 150-day payment term exceeds the statutory limit, the risk is manageable because the statute provides a clear remedy: seeking special or general authorization from Bangladesh Bank. Therefore, the severity is rated as medium, reflecting a clear regulatory requirement that can be addressed through proper authorization.",
+       "revised": false,
+       "fallback": false
+      },
+      {
+       "seat": "Justice B",
+       "model": "openai/gpt-oss-120b",
+       "persona": "proud",
+       "name": "Regal",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "high",
+       "reasoning": "Statute 13(a) expressly mandates that full foreign‑exchange proceeds must be received within four months (≈120 days) and that any delay beyond this period without special or general authorisation from Bangladesh Bank subjects the exporter to action under the FER Act, 1947. The contract term of 150 days exceeds the statutory 120‑day limit, thus violating the regulation. The finding notes a high risk for the exporter, matching the statute’s penalty provision, so the proposition is supported and the severity is high.",
+       "revised": false,
+       "fallback": false
+      },
+      {
+       "seat": "Justice C",
+       "model": "openai/gpt-oss-20b",
+       "persona": "gloomy",
+       "name": "Grey",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "high",
+       "reasoning": "The statute unambiguously sets a four‑month (≈120‑day) window for exporters to receive full foreign exchange proceeds. Any delay beyond that window, absent special or general authorization from Bangladesh Bank, triggers liability under the FER Act, 1947. The proposition mirrors this statutory requirement, and the contract’s 150‑day payment term clearly exceeds the statutory limit, exposing the exporter to regulatory risk. No textual basis exists to temper this conclusion, so the original assessment remains unchanged.",
+       "revised": false,
+       "fallback": false
+      }
+     ],
+     "majority_verdict": "supports",
+     "majority_severity": "high",
+     "vote": "2–1",
+     "agreement": "unanimous",
+     "severity_range": null,
+     "majority_opinion": "The statute unequivocally requires exporters to receive full foreign‑exchange proceeds within four months, and any delay beyond that period without Bangladesh Bank authorization subjects them to action under the FER Act. The contract term of 150 days exceeds this statutory limit, thereby violating the regulation and exposing the exporter to high regulatory risk.",
+     "dissent": "Sunny (Justice A) contends that, while the contract breaches the statutory period, the risk is only of medium severity because the exporter can seek the requisite Bank authorization.",
+     "human_review": true,
+     "review_reason": null,
+     "chairman_model": "openai/gpt-oss-120b",
+     "peer_review": true,
+     "same_family": [],
+     "no_opinion": [],
+     "quorum": true
+    }
+   }
+  ],
+  "ledger": [
+   {
+    "claim": {
+     "id": "R10.1",
+     "risk_id": "R10",
+     "proposition": "Export proceeds must be received within four months (approximately 120 days) and any delay beyond this period without Bank authorization violates foreign exchange regulations.",
+     "citation_id": "BD-GFET-2018-ch8p13",
+     "quote": "13. Prescribed period within which payment should be received (a) The period prescribed by the Bangladesh Bank within which full foreign exchange proceeds of exports must be received by exporters is four months ... If the receipt of the full proceeds of any shipment is delayed beyond this period without a special or general authorisation from Bangladesh Bank, the exporter will be liable to action under the FER Act, 1947.",
+     "origin": "adversary"
+    },
+    "gates": [
+     {
+      "gate": "existence",
+      "status": "pass",
+      "detail": "Found Guidelines for Foreign Exchange Transactions 2018, Vol-1 (Bangladesh Bank) s.Ch.8 para 13 - Prescribed period within which payment should be received"
+     },
+     {
+      "gate": "fidelity",
+      "status": "warn",
+      "detail": "Quotation does not match the official text (80%); shown as a paraphrase."
+     },
+     {
+      "gate": "entailment",
+      "status": "pass",
+      "detail": "Virtual Bench 2–1: supports. Dissent recorded - human review."
+     },
+     {
+      "gate": "currency",
+      "status": "pass",
+      "detail": "In force (text retrieved 2026-10-15 from https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf)."
+     }
+    ],
+    "verdict": "partial",
+    "section": {
+     "citation_id": "BD-GFET-2018-ch8p13",
+     "jurisdiction": "BD",
+     "act_key": "BD-GFET-2018",
+     "act": "Guidelines for Foreign Exchange Transactions 2018, Vol-1 (Bangladesh Bank)",
+     "act_en": "Guidelines for Foreign Exchange Transactions 2018, Vol-1 (Bangladesh Bank)",
+     "year": 2018,
+     "section": "Ch.8 para 13",
+     "heading": "Prescribed period within which payment should be received",
+     "text": "13. Prescribed period within which payment should be received (a) The period prescribed by the Bangladesh Bank within which full foreign exchange proceeds of exports must be received by exporters is four months (Vide Bangladesh Bank Notification No. FE 1/77-BB dated 16th April, 1977, Appendix 3/5). If the receipt of the full proceeds of any shipment is delayed beyond this period without a special or general authorisation from Bangladesh Bank, the exporter will be liable to action under the FER Act, 1947.",
+     "lang": "en",
+     "url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf",
+     "act_url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf",
+     "source": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf",
+     "retrieved_at": "2026-10-15",
+     "status": "in_force",
+     "superseded_by": null,
+     "amendment_notes": [],
+     "packs": [
+      "bd_fx"
+     ],
+     "kind": "law"
+    },
+    "bench": {
+     "question": "Export proceeds must be received within four months (approximately 120 days) and any delay beyond this period without Bank authorization violates foreign exchange regulations.",
+     "opinions": [
+      {
+       "seat": "Justice A",
+       "model": "qwen/qwen3.8-27b",
+       "persona": "happy",
+       "name": "Sunny",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "medium",
+       "reasoning": "The statute text explicitly confirms that the prescribed period for receiving full foreign exchange proceeds is four months, and that delays beyond this period without authorization result in liability under the FER Act. This directly supports the proposition. While the contract's 150-day payment term exceeds the statutory limit, the risk is manageable because the statute provides a clear remedy: seeking special or general authorization from Bangladesh Bank. Therefore, the severity is rated as medium, reflecting a clear regulatory requirement that can be addressed through proper authorization.",
+       "revised": false,
+       "fallback": false
+      },
+      {
+       "seat": "Justice B",
+       "model": "openai/gpt-oss-120b",
+       "persona": "proud",
+       "name": "Regal",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "high",
+       "reasoning": "Statute 13(a) expressly mandates that full foreign‑exchange proceeds must be received within four months (≈120 days) and that any delay beyond this period without special or general authorisation from Bangladesh Bank subjects the exporter to action under the FER Act, 1947. The contract term of 150 days exceeds the statutory 120‑day limit, thus violating the regulation. The finding notes a high risk for the exporter, matching the statute’s penalty provision, so the proposition is supported and the severity is high.",
+       "revised": false,
+       "fallback": false
+      },
+      {
+       "seat": "Justice C",
+       "model": "openai/gpt-oss-20b",
+       "persona": "gloomy",
+       "name": "Grey",
+       "lens": "",
+       "verdict": "supports",
+       "severity": "high",
+       "reasoning": "The statute unambiguously sets a four‑month (≈120‑day) window for exporters to receive full foreign exchange proceeds. Any delay beyond that window, absent special or general authorization from Bangladesh Bank, triggers liability under the FER Act, 1947. The proposition mirrors this statutory requirement, and the contract’s 150‑day payment term clearly exceeds the statutory limit, exposing the exporter to regulatory risk. No textual basis exists to temper this conclusion, so the original assessment remains unchanged.",
+       "revised": false,
+       "fallback": false
+      }
+     ],
+     "majority_verdict": "supports",
+     "majority_severity": "high",
+     "vote": "2–1",
+     "agreement": "unanimous",
+     "severity_range": null,
+     "majority_opinion": "The statute unequivocally requires exporters to receive full foreign‑exchange proceeds within four months, and any delay beyond that period without Bangladesh Bank authorization subjects them to action under the FER Act. The contract term of 150 days exceeds this statutory limit, thereby violating the regulation and exposing the exporter to high regulatory risk.",
+     "dissent": "Sunny (Justice A) contends that, while the contract breaches the statutory period, the risk is only of medium severity because the exporter can seek the requisite Bank authorization.",
+     "human_review": true,
+     "review_reason": null,
+     "chairman_model": "openai/gpt-oss-120b",
+     "peer_review": true,
+     "same_family": [],
+     "no_opinion": [],
+     "quorum": true
+    },
+    "note": null
+   }
+  ],
+  "wage": null,
+  "memo": {
+   "title": "Legal Risk Memorandum - rmg_dhaka_epz.txt",
+   "prepared_for": "Supplier management",
+   "executive_summary": "The draft agreement contains several provisions that conflict with mandatory Bangladeshi law, notably post‑termination non‑compete clauses, insufficient termination notice, inadequate maternity benefit, overly long payment terms, and contractual time‑bars that contravene the Contract Act and Limitation Act. Foreign‑origin clauses on data transfers, audit cost allocation and jurisdiction also expose the Supplier to legal risk. All identified high‑risk clauses should be replaced with the suggested language to ensure enforceability and compliance.",
+   "summary_bn": "চুক্তিতে কিছু ধারা বাংলাদেশি আইনের সঙ্গে বিরোধপূর্ণ, যেমন কর্মী নিষেধাজ্ঞা, কম নোটিশ, অপর্যাপ্ত মাতৃত্বকালীন সুবিধা এবং দীর্ঘ পেমেন্ট টার্ম। এসব ধারা সংশোধন করা জরুরি যাতে চুক্তি বৈধ থাকে।",
+   "jurisdiction_note": "Applicable law: Contract Act 1872 · Stamp Act 1899 · CPC 1908; Bangladesh EPZ Labour Act 2019; FER Act 1947 · Bangladesh Bank GFET 2018; EU CSDDD (Directive 2024/1760); Personal Data Protection Act 2026; EU GDPR (Regulation 2016/679). Switched OFF: workplace is in Dhaka EPZ. The BEPZ Labour Act 2019 applies instead and s.3 gives it overriding effect.",
+   "issues": [
+    {
+     "risk_id": "R1",
+     "heading": "Post-termination non-compete is void in Bangladesh",
+     "issue": "Post‑termination non‑compete clauses (C8 and C17) are void under Bangladeshi law.",
+     "rule": "Under Contract Act 1872 s.27, any agreement restraining a person from exercising a lawful profession, trade or business is void, except for the sale‑of‑goodwill exception.",
+     "application": "Both C8 (supplier) and C17 (employee) impose post‑termination trade restrictions that are not limited to the sale of goodwill. Therefore, they fall within the prohibited category and are unenforceable in Bangladesh.",
+     "conclusion": "Delete the post‑termination non‑compete clauses and replace them with a confidentiality and non‑solicitation clause limited to the term of the agreement.",
+     "citation_ids": [
+      "BD-CONTRACT-1872-s27"
+     ],
+     "mitigation_clause": "Replace with a confidentiality and non-solicitation-of-customer-data clause limited to the term of the Agreement; delete any post-termination restraint on trade."
+    },
+    {
+     "risk_id": "R7",
+     "heading": "Termination notice is shorter than the statutory minimum",
+     "issue": "Termination notice of 30 days is shorter than the statutory minimum for permanent workers.",
+     "rule": "Bangladesh EPZ Labour Act 2019 s.22(1) requires 120 days' written notice (or wages in lieu) for termination of a permanent worker.",
+     "application": "The contract provides only 30 days' notice, which does not satisfy the 120‑day statutory requirement, making the clause invalid for permanent employees in EPZs.",
+     "conclusion": "Amend the clause to require 120 days' written notice or wages in lieu, together with any statutory compensation.",
+     "citation_ids": [
+      "BD-EPZLABOUR-2019-s22"
+     ],
+     "mitigation_clause": "The Employer may terminate the employment of a permanent worker only by giving 120 days' written notice or wages in lieu, together with statutory compensation."
+    },
+    {
+     "risk_id": "R8",
+     "heading": "Maternity benefit is below the statutory entitlement",
+     "issue": "Maternity benefit of 84 days is below the statutory entitlement.",
+     "rule": "Bangladesh EPZ Labour Act 2019 s.30(1) entitles a woman worker to maternity benefit for 8 weeks before and 8 weeks after delivery (total 112 days).",
+     "application": "The contract’s provision of 84 days falls short of the 112‑day minimum mandated by law, rendering it non‑compliant.",
+     "conclusion": "Replace the clause with a provision granting the full statutory maternity benefit, paid at the average wage rate.",
+     "citation_ids": [
+      "BD-EPZLABOUR-2019-s30"
+     ],
+     "mitigation_clause": "Female workers shall receive maternity benefit for the full period prescribed by the applicable statute, paid in cash at the average wage rate."
+    },
+    {
+     "risk_id": "R10",
+     "heading": "Extended payment term violates Bangladesh foreign exchange and export regulations",
+     "issue": "Payment term of 150 days exceeds the foreign‑exchange repatriation limit for export proceeds.",
+     "rule": "Bangladesh GFET 2018 ch.8 p.13 requires export proceeds to be received within four months (≈120 days); any delay without Bank authorisation breaches the regulation.",
+     "application": "A 150‑day payment term would cause the Supplier to receive export proceeds after the permitted period, exposing it to penalties under the regulation.",
+     "conclusion": "Limit payment to 120 days after shipment, or obtain prior Bangladesh Bank authorisation for any longer tenor.",
+     "citation_ids": [
+      "BD-GFET-2018-ch8p13"
+     ],
+     "mitigation_clause": ""
+    },
+    {
+     "risk_id": "R2",
+     "heading": "Contract shortens the time to bring claims",
+     "issue": "Contractual limitation of claim period to three months is void.",
+     "rule": "Contract Act 1872 s.28 voids any agreement that limits the time a party may enforce rights through ordinary tribunals.",
+     "application": "The three‑month claim window contracts down the statutory limitation period, making the clause unenforceable.",
+     "conclusion": "Delete the contractual time‑bar and state that claims are subject to the Limitation Act 1908.",
+     "citation_ids": [
+      "BD-CONTRACT-1872-s28"
+     ],
+     "mitigation_clause": "Delete the contractual time-bar; claims shall be subject to the Limitation Act 1908."
+    },
+    {
+     "risk_id": "R3",
+     "heading": "Penalty / liquidated damages are not automatically recoverable",
+     "issue": "Liquidated damages clause of 20% per week may be punitive and not recoverable.",
+     "rule": "Contract Act 1872 s.74 allows recovery only of reasonable compensation, not exceeding the stipulated sum, for breach.",
+     "application": "A 20% weekly rate is likely excessive and may be deemed punitive; courts will award only reasonable compensation up to the agreed amount.",
+     "conclusion": "Replace the clause with a provision allowing recovery of reasonable compensation capped at a negotiated percentage of the order value.",
+     "citation_ids": [
+      "BD-CONTRACT-1872-s74"
+     ],
+     "mitigation_clause": "In case of breach, the injured party may recover reasonable compensation for loss actually suffered, capped at [x]% of the affected order value."
+    },
+    {
+     "risk_id": "R4",
+     "heading": "Exclusive foreign-court jurisdiction may leave judgments unenforceable in Bangladesh",
+     "issue": "Exclusive jurisdiction in English courts may render enforcement difficult in Bangladesh.",
+     "rule": "CPC 1908 s.44A permits execution of a decree from a reciprocating territory’s superior court in Bangladesh, but enforcement can be cumbersome and uncertain.",
+     "application": "Relying solely on English courts could delay or impede enforcement of any judgment in Bangladesh.",
+     "conclusion": "Adopt arbitration seated in Dhaka (or another New York Convention‑signatory venue) for final dispute resolution.",
+     "citation_ids": [
+      "BD-CPC-1908-s44A"
+     ],
+     "mitigation_clause": "Disputes shall be finally resolved by arbitration seated in Dhaka under the Arbitration Act 2001 (or a neutral seat whose awards are enforceable in Bangladesh under the New York Convention)."
+    },
+    {
+     "risk_id": "R5",
+     "heading": "Buyer shifts all due-diligence costs onto the supplier",
+     "issue": "All due‑diligence costs are shifted to the Supplier, contrary to EU CSDDD obligations.",
+     "rule": "CSDDD Art.10(2)(e) requires in‑scope companies to provide targeted and proportionate support, including financial assistance, to SME partners when compliance would otherwise jeopardise them.",
+     "application": "The clause imposes an unreasonable cost burden on the Supplier, violating the support obligation under the Directive.",
+     "conclusion": "Amend the clause so the Buyer bears or shares reasonable audit and remediation costs in line with CSDDD Art.10(2)(e).",
+     "citation_ids": [
+      "EU-CSDDD-2024-a10"
+     ],
+     "mitigation_clause": "The Buyer shall bear or share the reasonable costs of audits and remediation and provide capacity-building support, consistent with Article 10(2)(e) of Directive (EU) 2024/1760."
+    },
+    {
+     "risk_id": "R6",
+     "heading": "Worker personal data shared abroad without a consent basis",
+     "issue": "Sharing workers' personal data abroad without proper consent breaches Bangladeshi data law and GDPR.",
+     "rule": "Bangladesh PDP Act 2026 s.5 requires informed, specific, withdrawable consent for processing and transfer of personal data; GDPR Art.44 permits transfers only if Chapter V conditions are met.",
+     "application": "The current clause lacks a consent mechanism and does not ensure GDPR‑compliant safeguards, exposing both parties to liability.",
+     "conclusion": "Require prior written informed consent from each worker and implement a data‑transfer agreement that meets PDP 2026 and GDPR requirements, using pseudonymisation where possible.",
+     "citation_ids": [
+      "BD-PDP-2026-s5",
+      "EU-GDPR-2016-a44"
+     ],
+     "mitigation_clause": "Worker personal data shall be shared only in pseudonymised form, or with each worker's prior informed written consent under the Personal Data Protection Act 2026, and under a data transfer agreement."
+    },
+    {
+     "risk_id": "R9",
+     "heading": "Payment term exceeds Bangladesh Bank's export-proceeds repatriation period",
+     "issue": "Payment term of 150 days exceeds Bangladesh Bank’s export‑proceeds repatriation period.",
+     "rule": "Bangladesh GFET 2018 ch.8 p.13(a), Bangladesh Bank Notification FE 1/77‑BB p.2, and FER Act 1947 s.12(1) all mandate receipt of export proceeds within four months (≈120 days).",
+     "application": "A 150‑day term breaches these regulations, risking enforcement action against the Supplier.",
+     "conclusion": "Set the payment term to no more than 120 days, or obtain explicit Bangladesh Bank authorisation for any extension.",
+     "citation_ids": [
+      "BD-GFET-2018-ch8p13",
+      "BD-FENOTIF-1977-p2",
+      "BD-FERA-1947-s12"
+     ],
+     "mitigation_clause": "The Buyer shall pay each invoice no later than 120 days after the bill of lading date. Any longer tenor is conditional on the Supplier obtaining prior approval of Bangladesh Bank through its Authorised Dealer."
+    }
+   ],
+   "caveats": [
+    "Decision support, not legal advice. Consult a licensed advocate before acting.",
+    "Statute text is the consolidated text retrieved from official sources on the date shown in the ledger.",
+    "Items marked partial rely on amended provisions or paraphrases; check the cited source.",
+    "The Virtual Bench recorded a dissent on at least one risk; those items are flagged for human review."
+   ]
+  },
+  "citizen": {
+   "dangerCount": 4,
+   "cards": [
+    {
+     "kind": "danger",
+     "title": {
+      "bn": "বিপদ কী",
+      "en": "What is the danger"
+     },
+     "big": null,
+     "lines": [
+      {
+       "bn": "চাকরি ছাড়ার পর অন্য কারখানায় কাজ নিষেধ করার শর্ত আইনে বাতিল।",
+       "en": "The ban on working elsewhere after you leave is void under the law."
+      },
+      {
+       "bn": "চাকরি থেকে বাদ দিতে আইনে ১২০ দিনের নোটিশ লাগে, চুক্তিতে কম লেখা।",
+       "en": "The law requires 120 days' notice to dismiss you; the contract says less."
+      },
+      {
+       "bn": "মাতৃত্বকালীন ছুটি আইনের চেয়ে কম দেওয়া হয়েছে।",
+       "en": "Your maternity leave is less than the law gives you."
+      },
+      {
+       "bn": "বিস্তৃত পেমেন্ট শর্ত বাংলাদেশে বৈদেশিক মুদ্রা ও রপ্তানি বিধি লঙ্ঘন করে",
+       "en": "Extended payment term violates Bangladesh foreign exchange and export regulations"
+      }
+     ],
+     "citations": [
+      {
+       "name": {
+        "bn": "চুক্তি আইন, ১৮৭২ · ধারা ২৭",
+        "en": "Contract Act 1872 · s.27"
+       },
+       "status": "verified",
+       "citation_id": "BD-CONTRACT-1872-s27",
+       "url": "http://bdlaws.minlaw.gov.bd/act-26/section-190.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ইপিজেড শ্রম আইন ২০১৯ · ধারা ২২",
+        "en": "Bangladesh EPZ Labour Act 2019 · s.22"
+       },
+       "status": "verified",
+       "citation_id": "BD-EPZLABOUR-2019-s22",
+       "url": "http://bdlaws.minlaw.gov.bd/act-1285/section-48660.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ইপিজেড শ্রম আইন ২০১৯ · ধারা ৩০",
+        "en": "Bangladesh EPZ Labour Act 2019 · s.30"
+       },
+       "status": "verified",
+       "citation_id": "BD-EPZLABOUR-2019-s30",
+       "url": "http://bdlaws.minlaw.gov.bd/act-1285/section-48668.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ব্যাংক বৈদেশিক মুদ্রা লেনদেন নির্দেশিকা ২০১৮ · অধ্যায় ৮ অনুচ্ছেদ ১৩",
+        "en": "Bangladesh Bank GFET 2018 · Ch.8 para 13"
+       },
+       "status": "partial",
+       "citation_id": "BD-GFET-2018-ch8p13",
+       "url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf"
+      }
+     ]
+    },
+    {
+     "kind": "todo",
+     "title": {
+      "bn": "কী করবেন",
+      "en": "What to do"
+     },
+     "big": null,
+     "lines": [
+      {
+       "bn": "এই শর্ত বাদ দিতে বলুন; চাপ দিলে আইনজীবীর পরামর্শ নিন।",
+       "en": "Ask for this term to be removed; get legal advice if pressured."
+      },
+      {
+       "bn": "নোটিশের মেয়াদ ১২০ দিন লিখে দিতে বলুন।",
+       "en": "Ask for the notice period to be written as 120 days."
+      },
+      {
+       "bn": "আইন অনুযায়ী পূর্ণ মাতৃত্বকালীন সুবিধা লিখে দিতে বলুন।",
+       "en": "Ask for full statutory maternity benefit in writing."
+      },
+      {
+       "bn": "এই শর্তটি আইনজীবীকে দেখান।",
+       "en": "Ask a lawyer to review this clause."
+      }
+     ],
+     "citations": [
+      {
+       "name": {
+        "bn": "চুক্তি আইন, ১৮৭২ · ধারা ২৭",
+        "en": "Contract Act 1872 · s.27"
+       },
+       "status": "verified",
+       "citation_id": "BD-CONTRACT-1872-s27",
+       "url": "http://bdlaws.minlaw.gov.bd/act-26/section-190.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ইপিজেড শ্রম আইন ২০১৯ · ধারা ২২",
+        "en": "Bangladesh EPZ Labour Act 2019 · s.22"
+       },
+       "status": "verified",
+       "citation_id": "BD-EPZLABOUR-2019-s22",
+       "url": "http://bdlaws.minlaw.gov.bd/act-1285/section-48660.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ইপিজেড শ্রম আইন ২০১৯ · ধারা ৩০",
+        "en": "Bangladesh EPZ Labour Act 2019 · s.30"
+       },
+       "status": "verified",
+       "citation_id": "BD-EPZLABOUR-2019-s30",
+       "url": "http://bdlaws.minlaw.gov.bd/act-1285/section-48668.html"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ব্যাংক বৈদেশিক মুদ্রা লেনদেন নির্দেশিকা ২০১৮ · অধ্যায় ৮ অনুচ্ছেদ ১৩",
+        "en": "Bangladesh Bank GFET 2018 · Ch.8 para 13"
+       },
+       "status": "partial",
+       "citation_id": "BD-GFET-2018-ch8p13",
+       "url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf"
+      }
+     ]
+    },
+    {
+     "kind": "deadline",
+     "title": {
+      "bn": "শেষ তারিখ",
+      "en": "Deadline"
+     },
+     "big": {
+      "bn": "শিপমেন্টের ৪ মাসের মধ্যে",
+      "en": "Within 4 months of shipment"
+     },
+     "lines": [
+      {
+       "bn": "প্রতিটি চালানের পুরো রপ্তানি মূল্য ৪ মাসের মধ্যে দেশে আনতে হবে।",
+       "en": "Full export proceeds of every shipment must reach Bangladesh within four months."
+      }
+     ],
+     "citations": [
+      {
+       "name": {
+        "bn": "বাংলাদেশ ব্যাংক বৈদেশিক মুদ্রা লেনদেন নির্দেশিকা ২০১৮ · অধ্যায় ৮ অনুচ্ছেদ ১৩",
+        "en": "Bangladesh Bank GFET 2018 · Ch.8 para 13"
+       },
+       "status": "verified",
+       "citation_id": "BD-GFET-2018-ch8p13",
+       "url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf"
+      },
+      {
+       "name": {
+        "bn": "বাংলাদেশ ব্যাংক প্রজ্ঞাপন FE 1/77-BB · অনুচ্ছেদ ২",
+        "en": "Bangladesh Bank Notification FE 1/77-BB · para 2"
+       },
+       "status": "verified",
+       "citation_id": "BD-FENOTIF-1977-p2",
+       "url": "https://bepza.gov.bd/public/storage/upload/content-file/GFET-2018.pdf"
+      },
+      {
+       "name": {
+        "bn": "বৈদেশিক মুদ্রা নিয়ন্ত্রণ আইন, ১৯৪৭ · ধারা ১২",
+        "en": "Foreign Exchange Regulation Act 1947 · s.12"
+       },
+       "status": "verified",
+       "citation_id": "BD-FERA-1947-s12",
+       "url": "http://bdlaws.minlaw.gov.bd/act-218/section-3345.html"
+      }
+     ]
+    }
+   ],
+   "letter": {
+    "bn": "প্রিয় ক্রেতা,\n\nউপরোক্ত চুক্তির ধারা গুলো বাংলাদেশি আইন অনুযায়ী অবৈধ বা অনুপযুক্ত বলে প্রমাণিত হয়েছে। অনুগ্রহ করে নিম্নলিখিত সংশোধনীগুলি গ্রহণ করুন: (১) পোস্ট‑টার্মিনেশন নন‑কম্পিট ধারা বাতিল করে গোপনীয়তা ও গ্রাহক ডেটা নন‑সোলিসিটেশন ধারা যুক্ত করুন; (২) স্থায়ী কর্মীর জন্য নোটিশ সময় ১২০ দিন করুন; (৩) মাতৃত্বকালীন ছুটি ১১২ দিন করুন; (৪) পেমেন্ট টার্ম ১২০ দিন বা ব্যাংক অনুমোদনসহ করুন; (৫) দাবি সময়সীমা বাতিল করে লিমিটেশন অ্যাক্ট অনুসারে করুন; (৬) লিকুইডেটেড ড্যামেজের হার যুক্তিসঙ্গত সীমায় সীমাবদ্ধ করুন; (৭) বিরোধ নিষ্পত্তি ঢাকা আরবিট্রেশন বা সমমানের ব্যবস্থা করুন; (৮) অডিট ও রিমেডিয়েশন খরচের কিছু অংশ ক্রেতা বহন করুন; (৯) কর্মীর ডেটা শেয়ার করার আগে লিখিত সম্মতি নিন এবং GDPR‑সামঞ্জস্যপূর্ণ চুক্তি করুন।\n\nএই পরিবর্তনগুলো গ্রহণ করলে চুক্তি উভয় পক্ষের জন্য বৈধ ও কার্যকর হবে।\n\nধন্যবাদ।",
+    "en": "Dear Buyer,\n\nOur review shows that several clauses in the draft agreement conflict with mandatory Bangladeshi law. Please incorporate the following amendments: (1) delete the post‑termination non‑compete provisions and replace them with a confidentiality and non‑solicitation clause; (2) extend termination notice for permanent workers to 120 days; (3) grant maternity leave of 112 days as required by law; (4) limit payment terms to 120 days or obtain prior Bangladesh Bank approval for any longer period; (5) remove the three‑month claim time‑bar and defer to the Limitation Act; (6) cap liquidated damages at a reasonable percentage reflecting actual loss; (7) provide for dispute resolution by arbitration seated in Dhaka (or another New York Convention‑enforceable venue); (8) allocate a fair share of audit and remediation costs to the Buyer in line with EU CSDDD obligations; (9) obtain written informed consent from each worker before transferring personal data abroad and ensure GDPR‑compliant safeguards.\n\nAdopting these changes will make the agreement legally enforceable and protect both parties.\n\nThank you."
+   }
+  },
+  "privacy": {
+   "redactions": [
+    {
+     "placeholder": "[NAME_1]",
+     "kind": "NAME"
+    },
+    {
+     "placeholder": "[DOB_1]",
+     "kind": "DOB"
+    },
+    {
+     "placeholder": "[NID_1]",
+     "kind": "NID"
+    },
+    {
+     "placeholder": "[PHONE_1]",
+     "kind": "PHONE"
+    },
+    {
+     "placeholder": "[NAME_1]",
+     "kind": "NAME"
+    }
+   ],
+   "counts": {
+    "NAME": 2,
+    "DOB": 1,
+    "NID": 1,
+    "PHONE": 1
+   },
+   "redacted_text": "PART A - SUPPLY AGREEMENT\n\nThis Supply Agreement is made between Nordwind Fashion GmbH, Hamburg, Germany (\"Buyer\") and Lumen Apparel (BD) Ltd. (fictional), Plot 21, Dhaka Export Processing Zone (DEPZ), Ganakbari, Savar, Dhaka, Bangladesh (\"Supplier\"), a Type B industrial unit operating inside the Dhaka EPZ.\n\n1. Products. The Supplier shall manufacture and export knitted garments to the Buyer in accordance with purchase orders issued from time to time.\n\n2. Payment Terms. The Buyer shall pay each invoice one hundred and fifty (150) days after the date of shipment (bill of lading date), by telegraphic transfer.\n\n3. Delay. If any shipment is delayed, the Supplier shall pay liquidated damages of 20% of the order value for each week of delay, without the Buyer being required to prove any loss.\n\n4. Code of Conduct and Due Diligence. The Supplier shall comply with the Buyer's Supplier Code of Conduct and the Buyer's human rights due diligence programme under the EU Corporate Sustainability Due Diligence Directive. The Supplier shall bear all costs of audits, due diligence, corrective action plans and remediation required by the Buyer, at its own cost.\n\n5. Freedom of Association. The Supplier shall recognise any trade union freely chosen by its workers, shall allow multiple unions at the factory, and shall bargain collectively with them.\n\n6. Worker Data. The Supplier shall share personal data of its workers, including names, ages, wages, health records and grievance records, with the Buyer and the Buyer's auditors in the European Union upon request.\n\n7. Exclusivity and Non-Compete. During this Agreement and for two (2) years after its termination, the Supplier shall not manufacture garments for any competitor of the Buyer in the European Union.\n\n8. Claims. Any claim by the Supplier against the Buyer must be brought within three (3) months of the relevant shipment, after which it is time-barred.\n\n9. Termination. The Buyer may terminate this Agreement with immediate effect if the Supplier breaches the Code of Conduct.\n\n10. Governing Law and Jurisdiction. This Agreement is governed by the laws of England and Wales, and the courts of London shall have exclusive jurisdiction.\n\nPART B - APPOINTMENT LETTER (Machine Operator)\n\nTo: Name: [NAME_1]\nDate of Birth: [DOB_1]\nNID No: [NID_1]\nMobile: [PHONE_1]\n\nDear [NAME_1],\n\n1. Appointment. You are appointed as a permanent Sewing Machine Operator at Lumen Apparel (BD) Ltd., Dhaka EPZ, Savar, with a monthly gross wage of BDT 12,500.\n\n2. Working Hours. Your normal working hours are 8 hours per day, 6 days per week. Overtime will be paid at double the basic wage.\n\n3. Termination. Either party may terminate this employment by giving thirty (30) days' written notice.\n\n4. Maternity Leave. You will be entitled to twelve (12) weeks of maternity leave.\n\n5. Post-Employment Restriction. For one (1) year after leaving the company you shall not work for any other garment factory in the Dhaka EPZ.\n\n6. Workers' Representation. You may raise grievances through the Supplier's worker participation committee.\n",
+   "image_left_device": false,
+   "outbound_calls": [
+    {
+     "agent": "Jurisdiction Router",
+     "role": "fast",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 3775,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 573,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 637,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 809,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 803,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 594,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Risk Analyst",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 566,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Adversarial Counsel",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 4568,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Adversarial Counsel",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 17353,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 1413,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 2498,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 4082,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 1740,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3804,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 2373,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 927,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Citation Verifier",
+     "role": "judge",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 4169,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "openrouter",
+     "model": "xingchen-agi/xing4.0-29b-a4b:free",
+     "chars": 2274,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "openrouter",
+     "model": "xingchen-agi/xing4.0-29b-a4b:free",
+     "chars": 2250,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "openrouter",
+     "model": "xingchen-agi/xing4.0-29b-a4b:free",
+     "chars": 2044,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 2223,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "openrouter",
+     "model": "xingchen-agi/xing4.0-29b-a4b:free",
+     "chars": 2003,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 2199,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 2228,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 2252,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 2022,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 1981,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 1952,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 1993,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 1977,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "openrouter",
+     "model": "xingchen-agi/xing4.0-29b-a4b:free",
+     "chars": 3878,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 1948,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 1999,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3856,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3531,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3513,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3502,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 3553,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 3464,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 3535,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3484,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3413,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Grey (Justice C)",
+     "role": "bench_c",
+     "provider": "groq",
+     "model": "openai/gpt-oss-20b",
+     "chars": 3204,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3442,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Sunny (Justice A)",
+     "role": "bench_a",
+     "provider": "groq",
+     "model": "qwen/qwen3.8-27b",
+     "chars": 3182,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Chief Justice",
+     "role": "chairman",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3538,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3153,
+     "cached": false,
+     "fallback": true
+    },
+    {
+     "agent": "Virtual Bench · Chief Justice",
+     "role": "chairman",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3425,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Chief Justice",
+     "role": "chairman",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3087,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Regal (Justice B)",
+     "role": "bench_b",
+     "provider": "openrouter",
+     "model": "dots-studio/dots-3-note-preview:free",
+     "chars": 3827,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Chief Justice",
+     "role": "chairman",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3773,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Virtual Bench · Chief Justice",
+     "role": "chairman",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 3274,
+     "cached": false,
+     "fallback": false
+    },
+    {
+     "agent": "Memo Drafter",
+     "role": "reasoner",
+     "provider": "groq",
+     "model": "openai/gpt-oss-120b",
+     "chars": 9614,
+     "cached": false,
+     "fallback": false
+    }
+   ],
+   "pii_leaks_blocked": 0
+  },
+  "trace": [],
+  "stats": {
+   "clauses": 18,
+   "risks_found": 10,
+   "risks_confirmed": 10,
+   "claims": 13,
+   "verified": 11,
+   "partial": 2,
+   "dropped": 0,
+   "llm_calls": 53,
+   "seconds": 230.18
+  },
+  "ablation": null
+ },
+ "first": [
+  {
+   "member": "happy",
+   "name": "Sunny",
+   "model": "google/gemma-4-31b-it:free",
+   "text": "Don't worry, there is a way out! While the 150-day term does exceed the four-month limit, the regulations actually provide a remedy. You can seek special or general authorization from Bangladesh Bank to permit the delay. By obtaining this authorization, you can avoid liability under the FER Act, 1947. Because this path to compliance exists, I consider the severity to be medium. It is simply a matter of being proactive and working with your bank to secure the necessary permission!",
+   "citations": [
+    "BD-GFET-2018-ch8p13"
+   ],
+   "position": "The risk is manageable by obtaining Bangladesh Bank authorization.",
+   "confidence": "high",
+   "round": 1,
+   "revised": false,
+   "responds_to": null,
+   "severity": "medium",
+   "verdict": "supports",
+   "stance": null,
+   "clause_ids": [
+    "C3"
+   ],
+   "flip_basis": null,
+   "changed_because": null,
+   "restated": false,
+   "flip_note": ""
+  },
+  {
+   "member": "proud",
+   "name": "Regal",
+   "model": "dots-studio/dots-3-note-preview:free",
+   "text": "The relevant provision requires exporters to receive full foreign exchange proceeds within four months (approximately 120 days). The contract allows payment 150 days after shipment, exceeding that limit. Without special authorization from Bangladesh Bank, this delay violates the regulation and exposes the exporter to penalties under the Foreign Exchange Act. Therefore the risk is high.",
+   "citations": [
+    "BD-GFET-2018-ch8p13"
+   ],
+   "position": "High severity risk; legal review needed",
+   "confidence": "high",
+   "round": 1,
+   "revised": false,
+   "responds_to": null,
+   "severity": "high",
+   "verdict": "supports",
+   "stance": null,
+   "clause_ids": [
+    "C3"
+   ],
+   "flip_basis": null,
+   "changed_because": null,
+   "restated": false,
+   "flip_note": ""
+  },
+  {
+   "member": "gloomy",
+   "name": "Grey",
+   "model": "xingchen-agi/xing4.0-29b-a4b:free",
+   "text": "The clause forces a 150‑day wait, well beyond the 120‑day legal ceiling. Without a Bangladesh Bank waiver, the exporter faces liability under the FER Act – a heavy regulatory hammer that can cripple cash flow and invite penalties. Even if a waiver were sought, the process is costly, uncertain, and time‑consuming, leaving the exporter exposed in the meantime. In practice this risk is severe, not merely theoretical.",
+   "citations": [
+    "BD-GFET-2018-ch8p13"
+   ],
+   "position": "Risk is critically high for exporter",
+   "confidence": "high",
+   "round": 1,
+   "revised": false,
+   "responds_to": null,
+   "severity": "critical",
+   "verdict": "supports",
+   "stance": null,
+   "clause_ids": [
+    "C3"
+   ],
+   "flip_basis": null,
+   "changed_because": null,
+   "restated": false,
+   "flip_note": ""
+  }
+ ],
+ "rebuttals": {
+  "gloomy": {
+   "model": "xingchen-agi/xing4.0-29b-a4b:free",
+   "provider": "openrouter",
+   "fallback": false,
+   "out": {
+    "position": "Severity should be medium, not high",
+    "reply": "I agree that the statute supports the risk and the contract violates it. But I overstated the severity in my first answer. The statute explicitly provides a remedy: ADs may extend realization by up to 60 days for bonafide grounds, and the exporter can seek Bank authorization (BD-GFET-2018-ch8p13, s.13(a); BD-FECIRC-2020-13-p2a, s.02(a)). That makes the real risk one of regulatory exposure with an available workaround, not a crippling penalty. I rate it medium. Sunny's dissent is correct on the remedy; my mistake was treating the absence of a waiver as automatic liability rather than a risk mitigated by a documented process.",
+    "revised": true,
+    "changed_because": {
+     "citation_id": "BD-FECIRC-2020-13-p2a",
+     "quote": "(a) ADs may allow exporters to extend the tenure of realization of export proceeds up to 60 days, as additional time from specified period of 4 months from the date of shipment, for bonafide grounds."
+    },
+    "severity": "medium",
+    "verdict": "supports",
+    "responds_to": "happy",
+    "confidence": "high",
+    "citations": [
+     "BD-GFET-2018-ch8p13",
+     "BD-FECIRC-2020-13-p2a"
+    ]
+   }
+  },
+  "happy": {
+   "model": "qwen/qwen3.8-27b",
+   "provider": "groq",
+   "fallback": true,
+   "out": {
+    "position": "Medium severity; clear legal remedy exists.",
+    "reply": "I agree with the finding but maintain medium severity. The 2020 Circular allows up to 60 days extension for bonafide grounds, effectively permitting 180 days. This directly supports the 150-day term with proper authorization. It is a manageable administrative step, not a critical breach.",
+    "revised": false,
+    "changed_because": null,
+    "severity": "medium",
+    "verdict": "supports",
+    "responds_to": "proud",
+    "confidence": "high",
+    "citations": [
+     "BD-FECIRC-2020-13-p2a"
+    ]
+   }
+  },
+  "proud": {
+   "model": "dots-studio/dots-3-note-preview:free",
+   "provider": "openrouter",
+   "fallback": false,
+   "out": {
+    "position": "High severity; legal review needed",
+    "reply": "I agree with Grey that the risk remains high. The statute mandates receipt within four months; the 150‑day term exceeds that limit. Although the FE Circular permits an extension, it requires explicit Bangladesh Bank authorization, which the contract does not secure. Until such authorization is obtained, the exporter faces liability under the FER Act. Therefore the severity stays high.",
+    "revised": false,
+    "changed_because": null,
+    "severity": "high",
+    "verdict": "supports",
+    "responds_to": "happy",
+    "confidence": "high",
+    "citations": [
+     "BD-GFET-2018-ch8p13",
+     "BD-FECIRC-2020-13-p2a"
+    ]
+   }
+  }
+ },
+ "expected": {
+  "happy": {
+   "flip_basis": null,
+   "restated": false,
+   "revised": false,
+   "severity": "medium",
+   "verdict": "supports",
+   "flip_note": "",
+   "position": "Medium severity; clear legal remedy exists.",
+   "changed_because": null
+  },
+  "proud": {
+   "flip_basis": null,
+   "restated": false,
+   "revised": false,
+   "severity": "high",
+   "verdict": "supports",
+   "flip_note": "",
+   "position": "High severity; legal review needed",
+   "changed_because": null
+  },
+  "gloomy": {
+   "flip_basis": "evidence",
+   "restated": false,
+   "revised": true,
+   "severity": "medium",
+   "verdict": "supports",
+   "flip_note": "",
+   "position": "Severity should be medium, not high",
+   "changed_because": {
+    "citation_id": "BD-FECIRC-2020-13-p2a",
+    "clause_id": null,
+    "quote": "(a) ADs may allow exporters to extend the tenure of realization of export proceeds up to 60 days, as additional time from specified period of 4 months from the date of shipment, for bonafide grounds.",
+    "label": "Bangladesh Bank FE Circular No. 13 (19 March 2020), s.02(a)",
+    "url": "https://www.bb.org.bd/mediaroom/circulars/circulars.php",
+    "verified": false
+   }
+  }
+ }
+}
