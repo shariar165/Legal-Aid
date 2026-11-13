@@ -72,6 +72,26 @@ A live `run_eval` needs about 120 OpenRouter requests by a replay estimate, more
 - The document in progress is dropped, not scored, whether the halt reached `run_eval` or an agent caught it. The run prints `INCOMPLETE`, exits 2 and does not write `last_eval.json`. Run it again after UTC midnight: what was already answered costs nothing.
 - Off by default: the app's routing and its visible Groq fallback are unchanged. `tests/test_run_eval.py` and a routing test cover it, and the routing test failed with the halt check removed.
 
+### Result (2026-11-13)
+Day 1 (2026-11-11) scored the Malaysia contract and stopped cleanly on the quota during the Saudi one (exit 2). Day 2 finished all five from the cache onward (exit 0):
+
+| Document | Risks | Off-playbook | Recall | Precision | Citations verified | Plain LLM supported |
+|---|---|---|---|---|---|---|
+| migrant_my_contract | 7 | 2 (want 3) | 67% | 71% | 100% | 0/13 |
+| migrant_sa_contract | 11 | 5 | 78% | 64% | 100% | 0/14 |
+| rmg_dhaka_epz | 11 | 2 (want 3) | 92% | 91% | 100% | 0/13 |
+| long_migrant_msa | 8 | 2 (want 3) | 73% | 88% | 100% | 0/14 |
+| control_clean | 0 | 0 | - | 100% | - | - |
+
+All `must_cite` and `must_not_cite_prefix` checks pass. The three failures are the off-playbook minimum, which an offline test guarantees in fake mode but the live Adversary does not reach.
+
+**Grey's model is gone.** On day 2 OpenRouter answered 404 for `xingchen-agi/xing4.0-29b-a4b:free` ("no provider serves this model anymore"), 25 times. Those calls went to Grey's Groq backup, GPT-OSS 120B, as visible fallbacks; a 404 is not a quota trip, so the stop flag rightly let them through. Choosing a replacement is a routing change and waits for the user. It also needs the gold set and trap set rerun.
+
+## Step 6 summary
+- **Quota savers:** all five flags stay off. Every arm fails the flip check against `rubric`, and `rubric` itself is weak (6 of 13 correct traps, 2 seats with no opinion), so the savers cannot be judged until it is fixed.
+- **Pressure trap:** 0 false labels on the Groq backups; on the seats' own routing every pressure flip was blocked, and two of them were real sycophancy. Drift with no pressure is common (6 of 18), and the gate is what keeps it out of the vote.
+- **Gold set:** recall 67–92%, precision 64–91%, citations 100% verified, clean control clean; off-playbook minimum missed on three of four documents.
+
 ## Files
 `ain/agents/council.py`, `ain/llm.py`, `ain/models.py`, `eval/bench_quality.py`, `eval/run_eval.py`, `web/src/components/counsel/Council.tsx`, `web/src/lib/api.ts`, `README.md`.
 
