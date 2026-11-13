@@ -206,15 +206,17 @@ async def _run(
     text_risks, text_claims = await text_task
     for r in text_risks:
         _risk_found(job, "Risk Analyst", r)
-    adv_t = asyncio.create_task(
-        adversary.run(llm, corpus, doc.clauses, facts, route, text_risks, red_text, doc.text, start=100, emit=job.emit)
-    )
+    # the Adversary starts once the calculator has run, so it knows the wage risks too: the calculator is deterministic
+    # and quick (it waits only for a person confirming a blurry salary), and without them the Adversary raised a
+    # deduction it could not see as a new risk
     wage = await wage_t
     fact_risks, fact_claims = risk_analyst.run_fact_rules(facts, wage, doc.clauses, route, start=len(text_risks) + 1)
     for r in fact_risks:
         _risk_found(job, "Risk Analyst", r)
     job.say("agent_done", "Risk Analyst", f"{len(text_risks) + len(fact_risks)} playbook risks")
-    adv_risks, adv_claims, rejected = await adv_t
+    adv_risks, adv_claims, rejected = await adversary.run(
+        llm, corpus, doc.clauses, facts, route, text_risks + fact_risks, red_text, doc.text, start=100, emit=job.emit
+    )
     # renumber adversary risks to follow the playbook ones
     n = len(text_risks) + len(fact_risks)
     for r in adv_risks:
@@ -273,6 +275,9 @@ async def _run(
 
     job.say("agent_start", "Critic", "Re-checking dropped claims and enforcing citation rules")
     healed = await critic.heal(llm, corpus, route, risks, ledger, on_result=on_verified)
+    for r, dup in critic.restated_after_verification(risks, ledger):
+        r.status = "dropped"
+        job.say("hypothesis_dropped", "Critic", f"{r.title.en}: restates {dup} once verified, standing only on law that risk already cites", duplicate_of=dup, title=r.title.en, risk_id=r.id)
     job.say("agent_done", "Critic", f"{len(healed)} claim(s) re-anchored; {sum(r.status == 'dropped' for r in risks)} risk(s) withdrawn")
 
     # 6. drafting ----------------------------------------------------------------------

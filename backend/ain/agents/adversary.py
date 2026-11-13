@@ -502,6 +502,12 @@ async def _reduce(llm: LLM, head: str, by_part: list[list[dict]], digests: list[
     return dict_items(merged.get("hypotheses"), "adversary reduce") or flat
 
 
+def _unanswered(keys: list[str], answer: dict) -> list[str]:
+    """The hypotheses of one grounding batch that got no entry in its answer."""
+    seen = {str(g.get("key")) for g in dict_items(answer.get("risks"), "adversary grounding")}
+    return [k for k in keys if k not in seen]
+
+
 def _ground_batches(candidates: dict[str, dict]) -> list[list[str]]:
     batches: list[list[str]] = [[]]
     size = 0
@@ -603,7 +609,15 @@ async def run(
             emit(TraceEvent(t=0, type="agent_progress", agent="Adversarial Counsel", message=f"Could not ground {', '.join(keys)}: {str(e)[:160]}", data={"skipped": keys}))
             return {}
 
-    answers = await asyncio.gather(*(ground(keys) for keys in _ground_batches(candidates)))
+    batches = _ground_batches(candidates)
+    answers = list(await asyncio.gather(*(ground(keys) for keys in batches)))
+    # a batch can come back with nothing for some of its hypotheses (live, one EPZ batch returned no entry at all for two
+    # of them). Ask again for each of those alone: a different prompt, so not the same cached answer. A hypothesis the
+    # model answered, even with keep: false, is not asked again
+    missing = [k for keys, a in zip(batches, answers) if len(keys) > 1 for k in _unanswered(keys, a)]
+    if missing:
+        emit(TraceEvent(t=0, type="agent_progress", agent="Adversarial Counsel", message=f"Grounding came back without {', '.join(missing)}: asking again one at a time", data={"retried": missing}))
+        answers += await asyncio.gather(*(ground([k]) for k in missing))
 
     risks: list[Risk] = []
     claims: list[Claim] = []

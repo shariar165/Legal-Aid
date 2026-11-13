@@ -55,3 +55,25 @@ async def heal(llm: LLM, corpus: Corpus, route: RouteDecision, risks: list[Risk]
         else:
             r.status = "dropped"
     return added
+
+
+def restated_after_verification(risks: list[Risk], ledger: list[Verification]) -> list[tuple[Risk, str]]:
+    """Adversary risks that, once verified, stand only on law that a playbook or calculator risk on an overlapping clause
+    already cites: a restatement the filter before grounding could not see. Live, a "no medical insurance" risk whose own
+    claim was refuted survived on the return-ticket article, so it was the return-ticket risk again under a new title.
+    Returns each with the id of the risk it restates; the caller withdraws it."""
+    standing: dict[str, set[str]] = {}  # risk id -> citations it has a verified or partial claim on
+    for v in ledger:
+        if v.verdict in ("verified", "partial"):
+            standing.setdefault(v.claim.risk_id, set()).add(v.claim.citation_id)
+    others = [r for r in risks if r.origin != "adversary" and r.status != "dropped"]
+    out = []
+    for r in risks:
+        mine = standing.get(r.id, set())
+        if r.origin != "adversary" or r.status == "dropped" or not mine or not r.clause_ids:
+            continue
+        near = [k for k in others if set(k.clause_ids) & set(r.clause_ids)]
+        if near and mine <= set().union(*(standing.get(k.id, set()) for k in near)):
+            dup = next(k for k in near if standing.get(k.id, set()) & mine)
+            out.append((r, dup.rule_id or dup.id))
+    return out

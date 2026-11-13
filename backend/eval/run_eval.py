@@ -4,6 +4,7 @@ latency, and the plain-LLM ablation.
     python -m eval.run_eval                 (uses AIN_LLM_MODE / keys from .env)
     AIN_LLM_MODE=fake python -m eval.run_eval
     python -m eval.run_eval --stop-on-quota (live, over several days: stop when OpenRouter's free quota runs out)
+    python -m eval.run_eval --doc migrant_my_contract.txt   (only these gold documents; last_eval.json is left as it is)
 
 With --stop-on-quota no call goes to a backup model once OpenRouter's daily quota is used up: that answer would be cached
 and reused on every later run, so the eval would partly test the backup. The document in progress is dropped, not
@@ -34,12 +35,18 @@ GOLD = config.BACKEND / "eval" / "gold.yaml"
 def _match(expect: dict, risk) -> bool:
     if "rule" in expect:
         return risk.rule_id == expect["rule"]
+    if not set(expect.get("clauses", ())) <= set(risk.clause_ids):  # anchored on the clauses it must be about
+        return False
     title = (risk.title.en + " " + risk.title.bn + " " + risk.finding).lower()
     return any(k.lower() in title for k in expect["keywords"])
 
 
-async def evaluate(stop_on_quota: bool = False) -> dict:
+async def evaluate(stop_on_quota: bool = False, only: list[str] | None = None) -> dict:
     gold = yaml.safe_load(GOLD.read_text(encoding="utf-8"))
+    if only:
+        unknown = set(only) - set(gold)
+        assert not unknown, f"not in the gold set: {', '.join(sorted(unknown))}"
+        gold = {k: v for k, v in gold.items() if k in only}
     corpus = get_corpus()
     if stop_on_quota:
         llm_mod.halt_on_quota("openrouter")
@@ -100,7 +107,9 @@ async def evaluate(stop_on_quota: bool = False) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--stop-on-quota", action="store_true", help="stop when OpenRouter's daily quota runs out instead of answering on a backup")
-    out = asyncio.run(evaluate(ap.parse_args().stop_on_quota))
+    ap.add_argument("--doc", action="append", help="run only this gold document (repeatable); the full report is not overwritten")
+    args = ap.parse_args()
+    out = asyncio.run(evaluate(args.stop_on_quota, args.doc))
     print(f"{'document':<28}{'risks':>6}{'adv':>5}{'rest':>5}{'recall':>8}{'prec':>7}{'cite-ok':>9}{'drop':>7}{'secs':>8}  plain-LLM")
     for r in out["results"]:
         fmt = lambda x: "-" if x is None else f"{x:.0%}" if isinstance(x, float) else str(x)  # noqa: E731
@@ -112,6 +121,9 @@ def main() -> None:
         print(f"INCOMPLETE: {out['incomplete']}. {len(out['results'])} of the gold documents scored; run again after the "
               "quota resets (UTC midnight): cached answers cost nothing. last_eval.json was not written.")
         sys.exit(2)
+    if args.doc:  # a partial run must not replace the full report that /api/metrics shows
+        (config.BACKEND / "eval" / "last_eval.subset.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+        return
     (config.BACKEND / "eval" / "last_eval.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 

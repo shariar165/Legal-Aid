@@ -1,5 +1,8 @@
-# Expected findings per demo document. A risk counts as found when its playbook rule id
-# matches, or (for off-playbook risks) when its title or finding contains one of the keywords.
+# Expected findings per demo document. A risk counts as found when its playbook rule id matches, or (for off-playbook
+# risks) when it is about every one of the `clauses` listed AND its title or finding contains one of the `keywords`.
+# The clauses anchor each finding to the text it is about: keywords alone matched unrelated risks ("epz" appears in
+# most EPZ findings, "committee" in a worker-data one). Clause ids are those of ingestion.build_document, and `at` is a
+# phrase the first of them must contain, so a renumbered document fails a test instead of matching the wrong clause.
 # min_adversary: the least number of confirmed off-playbook (Adversarial Counsel) risks the document must yield.
 migrant_my_contract.txt:
   min_adversary: 3
@@ -9,10 +12,10 @@ migrant_my_contract.txt:
     - {rule: PB-MIN-WAGE}
     - {rule: PB-DEDUCTION-CAP}
     - {rule: PB-CLAIM-WAIVER}
-    - {keywords: [return, repatriat, ফেরা]}
-    - {keywords: [debt, bondage, penalty, exit]}
-    - {keywords: [forum]}
-    - {keywords: [english only, read and understood]}
+    - {keywords: [return, repatriat, homeward, ফেরা], clauses: [C7], at: "own air ticket to Malaysia"}          # travel: only the ticket out is mentioned
+    - {keywords: [debt, bondage], clauses: [C8], at: "together with a penalty"}                              # exit penalty + withheld wages
+    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C9, C10], at: "shall not file any complaint"}  # complaint ban in BD + foreign law
+    - {keywords: [english only, english-only, read and understood], clauses: [C11], at: "পড়িয়া ও বুঝিয়া"}  # Bangla line under English terms
 migrant_sa_contract.txt:
   min_adversary: 3
   expect:
@@ -22,9 +25,12 @@ migrant_sa_contract.txt:
     - {rule: PB-RETURN-TICKET}
     - {rule: PB-END-OF-SERVICE}
     - {rule: PB-CLAIM-WAIVER}
-    - {keywords: [iqama, residence permit]}
-    - {keywords: [forum]}
-    - {keywords: [english only, read and understood]}
+    - {keywords: [iqama, residence permit], clauses: [C6], at: "renewing his iqama"}                    # the worker pays his own iqama renewal
+    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C9, C10], at: "shall not file any complaint"}
+    - {keywords: [english only, english-only, read and understood], clauses: [C11], at: "পড়িয়া ও বুঝিয়া"}
+    # added 2026-11-13 from the live eval: passport kept (C5) while complaints to the Embassy are banned (C9) cuts the
+    # worker off from consular help. A reviewer would call it correct, and it is not the forum finding above
+    - {keywords: [consular, embassy, mission], clauses: [C5, C9], at: "hand over his passport"}
   must_cite: [SA-LABOR-2005-a40, SA-LABOR-2005-a84, SA-LABOR-2005-a93]
   must_not_cite_prefix: [MY-]
 rmg_dhaka_epz.txt:
@@ -39,9 +45,9 @@ rmg_dhaka_epz.txt:
     - {rule: PB-WORKER-DATA}
     - {rule: PB-NOTICE}
     - {rule: PB-MATERNITY}
-    - {keywords: [union, association, epz]}
-    - {keywords: [grievance, committee]}
-    - {keywords: [pregnan]}
+    - {keywords: [union, association], clauses: [C6], at: "allow multiple unions"}       # the buyer's multi-union clause inside an EPZ
+    - {keywords: [grievance, committee], clauses: [C18], at: "worker participation committee"}    # grievances only through a participation committee
+    - {keywords: [pregnan], clauses: [C15], at: "thirty (30) days' written notice"}                 # 30-day termination before maternity benefit is due
   must_cite: [BD-EPZLABOUR-2019-s22, BD-EPZLABOUR-2019-s30]
   must_not_cite_prefix: [BD-LABOUR-2006]
 long_migrant_msa.txt:
@@ -53,11 +59,11 @@ long_migrant_msa.txt:
     - {rule: PB-RETURN-TICKET}
     - {rule: PB-END-OF-SERVICE}
     - {rule: PB-CLAIM-WAIVER}
-    - {keywords: [abscond]}
-    - {keywords: [iqama, residence permit]}
-    - {keywords: [debt, bondage]}
-    - {keywords: [forum]}
-    - {keywords: [english only, read and understood]}
+    - {keywords: [abscond], clauses: [C153], at: "deemed to have absconded"}
+    - {keywords: [iqama, residence permit], clauses: [C62], at: "renewing his iqama"}
+    - {keywords: [debt, bondage], clauses: [C153], at: "outstanding Recruitment Costs"}          # absconding damages + outstanding recruitment costs
+    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C110, C112], at: "shall not file any complaint"}
+    - {keywords: [english only, english-only, read and understood], clauses: [C273], at: "পড়িয়া ও বুঝিয়া"}
   must_cite: [SA-LABOR-2005-a40]
   must_not_cite_prefix: [MY-]
 control_clean.txt:

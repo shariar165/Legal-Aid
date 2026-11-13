@@ -49,7 +49,7 @@ async def test_an_error_from_the_halt_drops_the_document_but_any_other_error_sti
 
 
 def test_an_incomplete_run_exits_2_and_keeps_the_last_report(monkeypatch, tmp_path, capsys):
-    async def stopped(stop_on_quota):
+    async def stopped(stop_on_quota, only=None):
         assert stop_on_quota
         return {"results": [], "incomplete": "openrouter's daily quota ran out during rmg_dhaka_epz.txt"}
 
@@ -62,3 +62,52 @@ def test_an_incomplete_run_exits_2_and_keeps_the_last_report(monkeypatch, tmp_pa
     assert e.value.code == 2
     assert "INCOMPLETE" in capsys.readouterr().out
     assert not (tmp_path / "eval" / "last_eval.json").exists()
+
+
+def test_every_gold_anchor_clause_exists_in_its_document():
+    import yaml
+
+    from ain.agents import ingestion
+
+    gold = yaml.safe_load(run_eval.GOLD.read_text(encoding="utf-8"))
+    for name, spec in gold.items():
+        data = (config.DEMO_DIR / "docs" / name).read_bytes()
+        text = {c.id: c.text for c in ingestion.build_document(data, name)[0].clauses}  # as the pipeline numbers them
+        for e in spec.get("expect", []):
+            assert set(e.get("clauses", ())) <= set(text), f"{name}: {e}"
+            if e.get("clauses"):
+                assert e["at"] in text[e["clauses"][0]], f"{name}: {e['clauses'][0]} is not the clause this finding is about: {e}"
+            assert "rule" in e or e.get("clauses"), f"{name}: a keyword finding must name the clauses it is about: {e}"
+
+
+def test_a_keyword_finding_needs_its_clauses_as_well():
+    from ain.models import L10n, Risk
+
+    def risk(clauses, title):
+        return Risk(id="R1", origin="adversary", category="x", title=L10n(en=title, bn=""), severity="high", clause_ids=clauses,
+                    finding="", citizen_line=L10n(en="", bn=""), action=L10n(en="", bn=""))
+
+    union = {"keywords": ["union", "association"], "clauses": ["C6"]}
+    assert run_eval._match(union, risk(["C6"], "Multi-union clause cannot be performed in an EPZ"))
+    assert not run_eval._match(union, risk(["C7"], "Worker data shared with the buyer's association")), "right word, wrong clause"
+    assert not run_eval._match(union, risk(["C6"], "Code of conduct costs")), "right clause, no keyword"
+
+
+async def test_a_subset_run_scores_only_those_documents(halt):
+    out = await run_eval.evaluate(only=["control_clean.txt"])
+    assert [r["document"] for r in out["results"]] == ["control_clean.txt"]
+    with pytest.raises(AssertionError, match="not in the gold set"):
+        await run_eval.evaluate(only=["no_such.txt"])
+
+
+def test_a_subset_run_keeps_the_full_report(monkeypatch, tmp_path):
+    async def one(stop_on_quota, only=None):
+        assert only == ["control_clean.txt"]
+        return {"results": [], "incomplete": None}
+
+    monkeypatch.setattr(run_eval, "evaluate", one)
+    monkeypatch.setattr(config, "BACKEND", tmp_path)
+    (tmp_path / "eval").mkdir()
+    monkeypatch.setattr("sys.argv", ["run_eval", "--doc", "control_clean.txt"])
+    run_eval.main()
+    assert not (tmp_path / "eval" / "last_eval.json").exists() and (tmp_path / "eval" / "last_eval.subset.json").exists()
