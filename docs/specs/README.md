@@ -23,3 +23,4 @@ the current state.
 | 14 | 2026-11-04 | [Evidence-gated deliberation, pressure trap, Case Room events](2026-11-04-14-evidence-gate.md) |
 | 15 | 2026-11-05 | [Malformed model output, structured stance, wider evidence](2026-11-05-15-stance-and-evidence.md) |
 | 16 | 2026-11-05 | [Restated answers, control drift, and an eval that reads its cache](2026-11-05-16-restated-and-control-drift.md) |
+| 17 | 2026-11-13 | [Grey on Qwen, ERNIE as its backup, and a seat health check](2026-11-13-17-grey-on-qwen-and-seat-health.md) |

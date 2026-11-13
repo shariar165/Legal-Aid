@@ -66,7 +66,7 @@ offline replay mode" · "Token-bucket rate pacing from provider headers".
 
 **Tick:** ChatGPT (OpenAI's open-weight **GPT-OSS 120B / 20B**, via Groq) · Qwen (**Qwen 3.8 27B**, via Groq) ·
 Claude (**development**: the code was written with Claude Code). **Add:** Google **Gemma 4 31B / 26B** ·
-rednote **dots.3** · Xingchen **Xing 4.0 29B** · **multilingual-e5-small** (embeddings) · **EasyOCR** (bn + en).
+rednote **dots.3** · Baidu **ERNIE 5.5 Flash** (Grey's backup) · **multilingual-e5-small** (embeddings) · **EasyOCR** (bn + en).
 (Not Gemini, Llama, Grok, Mistral, DeepSeek or Kimi: don't tick them.)
 
 ## How & why did you use these LLMs? (/5)
@@ -74,8 +74,8 @@ rednote **dots.3** · Xingchen **Xing 4.0 29B** · **multilingual-e5-small** (em
 **Paste:**
 Different families check each other, so no model grades its own work. GPT-OSS 120B (Groq) does risk analysis,
 adversarial counsel and drafting; GPT-OSS 20B does fast fact extraction. Qwen 3.8 27B is the single-judge
-entailment verifier: a different family from the drafter. The Virtual Bench seats three judges from three more
-families on OpenRouter's free tier (Gemma 4, dots.3, Xing 4.0), and their fallback chains never overlap, so no two
+entailment verifier: a different family from the drafter. The Virtual Bench seats three judges from three families,
+Gemma 4 and dots.3 on OpenRouter's free tier and Qwen 3.8 on Groq, and their fallback chains never overlap, so no two
 judges share a model. GPT-OSS 120B is the Chief Justice. Every role has a backup on the other provider, and a
 fallback is marked in the trace. The ablation baseline is deliberately the reasoner's own model with one prompt and
 no tools, so the comparison measures the pipeline, not the model. multilingual-e5-small gives cross-lingual dense

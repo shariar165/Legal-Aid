@@ -66,12 +66,18 @@ class _Malformed(_RouteFailed):
     """This route answered with something other than a JSON object, even after retries."""
 
 
+class _Gone(_RouteFailed):
+    """404: the provider does not serve this model (withdrawn, or no endpoint meets our data policy). Not a blip: the
+    model is skipped for GONE_TTL_S instead of being asked again on every call."""
+
+
 @dataclass(frozen=True)
 class Route:
     prov: config.ProviderConfig
     model: str
     fallbacks: tuple[str, ...] = ()
     backup: bool = False  # on the role's other provider
+    rerouted: bool = False  # not the configured primary (that one is gone): its answers are fallbacks
 
 
 _cache: diskcache.Cache | None = None
@@ -145,6 +151,9 @@ class _TokenBucket:
 _pacers: dict[str, _Pacer] = {}
 _buckets: dict[tuple[str, str], _TokenBucket] = {}
 _tripped: dict[str, float] = {}  # provider -> wall-clock time its daily quota resets
+_gone: dict[tuple[str, str], float] = {}  # (provider, model) -> when to try it again
+_picks: dict[str, tuple[str, str]] = {}  # role -> (provider, model) the seat health check chose to answer first
+GONE_TTL_S = 6 * 3600
 _halt_on: set[str] = set()  # providers whose daily quota stops every new call (evals only: empty in the app)
 _halted: list[str] = []
 
@@ -189,8 +198,44 @@ def halted() -> str | None:
     return _halted[0] if _halted else None
 
 
+def mark_gone(provider: str, model: str, ttl: float = GONE_TTL_S) -> None:
+    _gone[(provider, model)] = time.time() + ttl
+
+
+def is_gone(provider: str, model: str) -> bool:
+    until = _gone.get((provider, model))
+    if until is not None and time.time() >= until:
+        _gone.pop((provider, model), None)
+        return False
+    return until is not None
+
+
+def pick(role: str, provider: str, model: str) -> None:
+    """The seat health check's choice for a role whose primary is gone: it answers first, ahead of the configured order."""
+    _picks[role] = (provider, model)
+
+
+def plan(role: str) -> list[Route]:
+    """The role's routes as they stand: gone models taken out, the health check's pick first, the rest in configured
+    order. Models left of one configured route stay together, so OpenRouter still gets them as `models: [...]`."""
+    configured = all_routes(role)
+    flat = [(i, r, m) for i, r in enumerate(configured) for m in (r.model, *r.fallbacks) if not is_gone(r.prov.name, m)]
+    chosen = _picks.get(role)
+    if chosen:
+        flat.sort(key=lambda x: (x[1].prov.name, x[2]) != chosen)  # stable: only the pick moves
+    out: list[Route] = []
+    for n, (i, r, m) in enumerate(flat):
+        if n and flat[n - 1][0] == i and out[-1].prov is r.prov:
+            out[-1] = Route(r.prov, out[-1].model, (*out[-1].fallbacks, m), r.backup, out[-1].rerouted)
+        else:
+            out.append(Route(r.prov, m, (), r.backup, rerouted=i == 0 and m != r.model))  # a backup is marked by `backup`
+    return out
+
+
 def reset_breakers() -> None:
     _tripped.clear()
+    _gone.clear()
+    _picks.clear()
     _halt_on.clear()
     _halted.clear()
     _pacers.clear()
@@ -269,7 +314,7 @@ class LLM:
 
     def routes(self, role: str) -> list[Route]:
         """Routes that can be called right now: the provider has a key and is not out of quota."""
-        live = [r for r in all_routes(role) if r.prov.api_key and not is_tripped(r.prov.name)]
+        live = [r for r in plan(role) if r.prov.api_key and not is_tripped(r.prov.name)]
         if not live and self.mode == "live":
             primary = all_routes(role)[0]
             raise LLMError(f"No usable provider for role '{role}' ({primary.prov.key_env} missing or quota exhausted)")
@@ -314,7 +359,8 @@ class LLM:
         def key(r: Route) -> str:
             return hashlib.sha256(json.dumps([r.prov.name, r.model, messages, temperature, task], ensure_ascii=False).encode()).hexdigest()
 
-        for r in all_routes(role):
+        configured = all_routes(role)
+        for r in [*configured, *(p for p in plan(role) if p not in configured)]:  # a rerouted answer is cached under its own model
             hit = cache.get(key(r))
             if hit is not None:
                 data, used = _unwrap(hit, r.model)
@@ -336,6 +382,8 @@ class LLM:
                 async with self._sem, self._model_slot(r):
                     data, used = await self._post(r, messages, temperature, max_tokens, last=i == len(routes) - 1)
             except _RouteFailed as e:
+                if isinstance(e, _Gone):
+                    mark_gone(r.prov.name, r.model)
                 log.warning("%s: %s", agent, e)
                 errors.append(str(e))
                 malformed = malformed or isinstance(e, _Malformed)
@@ -437,6 +485,8 @@ class LLM:
                 if r.status_code == 400 and "response_format" in body and "json" in r.text.lower():
                     body.pop("response_format")  # some models reject json mode; prompt still demands JSON
                     continue
+                if r.status_code == 404:
+                    raise _Gone(f"{where}: {r.status_code} {r.text[:200]}")
                 if r.status_code >= 400:
                     # bad key, no endpoint for our data policy, model gone: this route cannot answer
                     raise _RouteFailed(f"{where}: {r.status_code} {r.text[:200]}")
@@ -466,4 +516,4 @@ def _unwrap(hit: Any, model: str) -> tuple[dict, str]:
 
 def _is_fallback(route: Route, used: str) -> bool:
     # openrouter/free always answers with some concrete free model; that is routing, not a fallback
-    return route.backup or (used != route.model and route.model != "openrouter/free")
+    return route.backup or route.rerouted or (used != route.model and route.model != "openrouter/free")

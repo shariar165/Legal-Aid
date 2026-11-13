@@ -4,6 +4,7 @@ and warms the LLM cache so the demo can later run with AIN_LLM_MODE=replay (no n
     python -m scripts.smoke_live            (from backend/, with keys in ../.env)
     python -m scripts.smoke_live --docs 1   (warm one hero doc: the OpenRouter free tier allows 50 requests/day)
     python -m scripts.smoke_live --doc long_migrant_msa.txt   (one named document, e.g. the ~25 page long-context sample)
+    python -m scripts.smoke_live --docs 0 --probe openrouter/baidu/ernie-5.5-flash-preview:free   (a candidate model)
 """
 
 from __future__ import annotations
@@ -11,12 +12,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+import time
 
 import httpx
 
-from ain import config
+from ain import config, seat_health
+from ain import llm as llm_mod
 from ain.llm import all_routes
 from ain.orchestrator import new_job, run_pipeline
+from ain.retrieval import get_corpus
 
 DOCS = ["migrant_my_contract.txt", "rmg_dhaka_epz.txt", "migrant_my_contract_photo.jpg", "migrant_sa_contract.txt"]
 
@@ -58,6 +62,45 @@ def free_quota() -> None:
         print(f"  openrouter free requests today: {q.get('used', '?')}/{q.get('limit', '?')} used, {q.get('remaining', '?')} left")
 
 
+PROBE_SECTION = "BD-EPZLABOUR-2019-s22"
+PROBE_CLAIMS = (
+    "A worker in an EPZ enterprise may be dismissed without any notice.",
+    "This section sets out how a worker in an EPZ enterprise may end the employment.",
+)
+VERDICTS = {"supports", "contradicts", "neutral"}
+
+
+async def probe(target: str, calls: int = 2) -> bool:
+    """A candidate judge model, through the real request path (OpenRouter's data_collection: deny, JSON mode), never
+    the cache: is it served under our policy, and does it return a well-formed verdict every time?"""
+    name, model = target.split("/", 1)
+    prov = config.provider(name)
+    llm = llm_mod.LLM(mode="live")
+    status = await seat_health.ping(llm, prov, model)
+    print(f"  probe {target}: ping {status}")
+    if status == "gone":
+        return False
+    text = get_corpus().get(PROBE_SECTION).text
+    good = 0
+    for claim in PROBE_CLAIMS[:calls]:
+        messages = [
+            {"role": "system", "content": 'You check whether a statute supports a proposition. Reply with a JSON object only: '
+                                          '{"verdict": "supports" | "contradicts" | "neutral", "reason": "<one sentence>"}'},
+            {"role": "user", "content": f"STATUTE ({PROBE_SECTION}):\n{text[:3000]}\n\nPROPOSITION: {claim}"},
+        ]
+        t = time.time()
+        try:
+            data, used = await llm._post(llm_mod.Route(prov, model), messages, 0.0, 800, last=True)
+        except llm_mod.LLMError as e:
+            print(f"    call failed: {str(e)[:200]}")
+            continue
+        ok = data.get("verdict") in VERDICTS and isinstance(data.get("reason"), str) and bool(data["reason"].strip())
+        good += ok
+        print(f"    {'valid' if ok else 'INVALID'} in {time.time() - t:.1f}s from {used}: {str(data)[:160]}")
+    print(f"  probe {target}: {good}/{calls} valid JSON verdicts")
+    return good == calls
+
+
 async def run_docs(docs: list[str]) -> None:
     for name in docs:
         path = config.DEMO_DIR / "docs" / name
@@ -82,15 +125,20 @@ async def run_docs(docs: list[str]) -> None:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(errors="replace")  # model answers quote Bangla; a Windows console must not crash on them
     ap = argparse.ArgumentParser()
     ap.add_argument("--docs", type=int, default=len(DOCS), help="how many hero documents to run")
     ap.add_argument("--doc", action="append", help="run this document from demo/docs instead (repeatable)")
+    ap.add_argument("--probe", action="append", default=[], help="provider/model to try as a judge: 2 JSON verdict calls (repeatable)")
     args = ap.parse_args()
     print("Checking providers and model ids…")
     if not check_models():
         print("\nFix the issues above (keys in .env, model ids in ain/config.yaml) and re-run.")
         sys.exit(1)
     free_quota()
+    for target in args.probe:
+        if not asyncio.run(probe(target)):
+            print(f"  {target}: NOT usable as a judge")
     asyncio.run(run_docs(args.doc or DOCS[: args.docs]))
     free_quota()
     print("\nCache warmed. To demo without network: set AIN_LLM_MODE=replay")

@@ -108,10 +108,10 @@ export default function DocsPage() {
               <span className={s.tag}>Qwen 3.8 27B</span>
               <span className={s.tag}>Gemma 4 31B</span>
               <span className={s.tag}>dots.3</span>
-              <span className={s.tag}>Xing 4.0</span>
+              <span className={s.tag}>ERNIE 5.5 Flash</span>
               <span className={s.tag}>multilingual-e5-small</span>
               <span className={s.tag}>EasyOCR</span>
-              <p>Groq runs the main pipeline; OpenRouter (free models only) seats the three judges, so no two judges share a model. Every role has a backup on the other provider.</p>
+              <p>Groq runs the main pipeline; two judges sit on OpenRouter&apos;s free models and one on Groq, and no two judges share a model. Every role has a backup on the other provider.</p>
             </div>
             <div className={s.card}>
               <h3>Prompting</h3>

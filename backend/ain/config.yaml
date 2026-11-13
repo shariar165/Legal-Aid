@@ -9,7 +9,7 @@
 # Verify ids: python -m scripts.smoke_live  (checks every id against the live /models lists)
 roles:
   fast:     {provider: groq, model: openai/gpt-oss-20b,                   # facts extraction, routing confirmation
-             backup: {provider: openrouter, model: "xingchen-agi/xing4.0-29b-a4b:free"}}
+             backup: {provider: openrouter, model: "google/gemma-4-26b-a4b-it:free"}}  # was Xing 4.0, withdrawn 2026-11
   reasoner: {provider: groq, model: openai/gpt-oss-120b,                  # risk analysis, adversarial counsel, drafting
              backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
   judge:    {provider: groq, model: qwen/qwen3.8-27b,                     # single-judge entailment (different family from drafter)
@@ -19,11 +19,13 @@ roles:
   # deliberately not a judge fallback: it routes to whatever free model is up, coding models included.)
   bench_a:  {provider: openrouter, model: "google/gemma-4-31b-it:free",   # Sunny - Google
              fallbacks: ["google/gemma-4-26b-a4b-it:free"],
-             backup: {provider: groq, model: qwen/qwen3.8-27b}}
+             backup: {provider: groq, model: openai/gpt-oss-120b}}  # Qwen is Grey's now; Groq has no third judge family
   bench_b:  {provider: openrouter, model: "dots-studio/dots-3-note-preview:free",   # Regal - rednote
              backup: {provider: groq, model: openai/gpt-oss-20b}}  # wanted: llama-3.3-70b (retired on Groq, no free OpenRouter endpoint)
-  bench_c:  {provider: openrouter, model: "xingchen-agi/xing4.0-29b-a4b:free",      # Grey - Xingchen
-             backup: {provider: groq, model: openai/gpt-oss-120b}}
+  # Grey moved to Groq when OpenRouter withdrew Xing 4.0 (2026-11-13): a free preview model can go without notice, and
+  # Qwen is a different family from the Chief Justice (GPT-OSS). See docs/specs/2026-11-13-17-grey-on-qwen-and-seat-health.md
+  bench_c:  {provider: groq, model: qwen/qwen3.8-27b,                     # Grey - Alibaba
+             backup: {provider: openrouter, model: "baidu/ernie-5.5-flash-preview:free"}}
   # The Chief Justice only writes the ruling from the judges' votes, so it runs on Groq: reliable, and it saves
   # one of every seven OpenRouter free requests a bench would otherwise spend.
   chairman: {provider: groq, model: openai/gpt-oss-120b,

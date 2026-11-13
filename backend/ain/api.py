@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ain import auth, automation, config, countries, mcp_server
+from ain import auth, automation, config, countries, mcp_server, seat_health
 from ain.agents import ablation, council
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
@@ -129,6 +129,7 @@ async def warm() -> None:
 
     _background(_warm())
     _background(_purge())
+    _background(seat_health.check_seats())  # live only; one ping per judge model, kept for six hours
     if mcp_server.http_token():
         _mcp_stop.clear()
         _background(mcp_server.serve_http_sessions(_mcp_stop))
@@ -233,6 +234,7 @@ def health() -> dict:
         "corpus_sections": len(corpus.sections),
         "acts": len({s.act_key for s in corpus.sections}),
         "dense_retrieval": corpus.dense_ready,
+        "seats": [h.model_dump() for h in seat_health.last()],  # empty until the live startup check has run
     }
 
 
