@@ -25,3 +25,4 @@ the current state.
 | 16 | 2026-11-05 | [Restated answers, control drift, and an eval that reads its cache](2026-11-05-16-restated-and-control-drift.md) |
 | 17 | 2026-11-13 | [Grey on Qwen, ERNIE as its backup, and a seat health check](2026-11-13-17-grey-on-qwen-and-seat-health.md) |
 | 18 | 2026-11-13 | [Where the Adversary loses risks, gold anchored on clauses, two new playbook rules](2026-11-13-18-adversary-funnel-and-gold-anchors.md) |
+| 19 | 2026-11-14 | [Rehearsal Council: practise the dalal conversation before paying](2026-11-14-19-rehearsal-council.md) |
