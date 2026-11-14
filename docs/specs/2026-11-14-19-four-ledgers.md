@@ -236,3 +236,34 @@ Then:
    migration documents even with the flag off. It would also have let the Adversary drop hypotheses as restating
    it. With the gate, the outbound prompts of all five gold documents hash identically to `evidence-gate` (fake
    mode), and `test_the_promise_rule_is_in_no_prompt_while_the_flag_is_off` checks the gate.
+
+## Follow-ups (2026-11-15, after v1 was committed as 4395c7d)
+1. **Break-even counts month by month.** `ledger.net_steps` splits take-home pay where a deduction with `months`
+   stops. In the Malaysia sample that is RM 550 for months 1–12 (the RM 250 recruitment recovery runs 12 months)
+   and RM 800 after. `break_even` walks those steps up to the contract term:
+   - Malaysia: 12 + 9,763.64 / 800 = **24.2 months**, against 29.8 from the flat figure.
+   - If the cost is not earned back within the contract, `months` is None and `earned_back` says how much was.
+
+   The result carries `is_minimum` and an `assumption` (all take-home pay is sent home), and the deductions paper
+   cell says "RM 400 a month after month 12".
+2. **The claim total is a projection.** `ClaimValue` is renamed `ClaimProjection`, `total` is renamed
+   `projected_total`, and `accrued_total` is reserved and always None.
+   - Each `ClaimLine` has `basis: "projected" | "accrued"`, always `projected` for now, plus `months` and `source`.
+   - The label reads: projected over the contract term at the rate on paper, not money owed, not a prediction of
+     any award.
+3. **`PB-PROMISE-GAP` on `POST /promises` (no model call).**
+   - **Before:** the risk copied the gates of the standing claim `L1`, an identical claim verified during the
+     analysis, and joined `result.risks` as confirmed. So it showed as verified, and Council and the Counsel UI
+     treated it as live, although no gate ran for it on that path. Nothing marked the copy. Nothing re-checked
+     whether the bench should sit (`bench.severities`) or whether the corpus had changed since.
+   - **Now:** the risk and its claims are held in `four_ledgers.pending_risks` / `pending_claims`, outside
+     `result.risks` and the citation ledger. The matching `said_vs_paper` mismatches carry
+     `risk_status: "not_verified_yet"` and severity `low`.
+   - `POST /api/jobs/{id}/promises/verify` runs `verifier.verify_all` on them, the same gates as a full run, with
+     the bench if the severity calls for it. Only then does the risk join the risk list. A risk with no passing
+     claim is withdrawn (`dropped`). The calls go into the privacy receipt and the stats.
+   - The standing `L1` claim and `verifier.reuse` are removed, which saves one judge call per migration document
+     with the flag on.
+   - A full run with promises on `POST /api/analyze` still verifies the risk in the pipeline, as before.
+
+   `risk_status` values: `verified`, `partial`, `not_verified` (the gates ran and refused it) and `not_verified_yet`.

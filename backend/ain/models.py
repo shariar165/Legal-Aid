@@ -309,6 +309,9 @@ class Mismatch(BaseModel):
     type: MismatchType
     detail: L10n
     risk_id: str | None = None
+    # the linked risk's standing with the 4 gates; not_verified_yet: raised with no model call (POST /promises), and
+    # held back until POST /promises/verify runs the gates on it
+    risk_status: Literal["verified", "partial", "not_verified", "not_verified_yet"] | None = None
 
 
 class LedgerRow(BaseModel):
@@ -328,14 +331,18 @@ class ClaimLine(BaseModel):
     currency: str
     citation_id: str
     risk_id: str
-    basis: str
+    # projected: over the contract term at the rate on paper; accrued: months actually worked (reserved for payslips)
+    basis: Literal["projected", "accrued"] = "projected"
+    months: int | None = None
+    source: str = ""  # where the months or amounts come from, e.g. "contract term on paper"
 
 
-class ClaimValue(BaseModel):
-    """পাওনা হিসাব: arithmetic under verified law only."""
+class ClaimProjection(BaseModel):
+    """Arithmetic under verified law only. A projection over the contract term, not money owed."""
 
     lines: list[ClaimLine] = Field(default_factory=list)
-    total: float = 0.0
+    projected_total: float = 0.0
+    accrued_total: float | None = None  # reserved: needs payslips (months actually worked)
     currency: str | None = None
     label: L10n
 
@@ -350,19 +357,36 @@ class PromiseGap(BaseModel):
     label: L10n
 
 
+class NetStep(BaseModel):
+    """Take-home pay on paper for a run of months (deductions can stop, e.g. a recruitment recovery for 12 months)."""
+
+    from_month: int
+    to_month: int | None = None  # None: to the end of the contract
+    net: float
+
+
 class BreakEven(BaseModel):
-    months: float | None = None
+    months: float | None = None  # a minimum: see `assumption`
     cost: float | None = None  # in `currency`, after the user's rate if one was needed
-    monthly_net: float | None = None
+    monthly_net: float | None = None  # in month 1
     currency: str | None = None
     rate: ExchangeRate | None = None
+    steps: list[NetStep] = Field(default_factory=list)
+    horizon_months: int | None = None  # the contract term it was counted over, when known
+    earned_back: float | None = None  # set when the cost is not earned back within the contract
+    is_minimum: bool = True
+    assumption: L10n | None = None
     note: str = ""
 
 
 class FourLedgers(BaseModel):
     promises: Promises | None = None
     rows: list[LedgerRow] = Field(default_factory=list)
-    claim_value: ClaimValue
+    claim_projection: ClaimProjection
+    # a promise-gap risk raised with no model call (POST /promises): kept out of `risks` and the citation ledger until
+    # POST /promises/verify puts its claims through the 4 gates
+    pending_risks: list[Risk] = Field(default_factory=list)
+    pending_claims: list[Claim] = Field(default_factory=list)
     promise_gap: PromiseGap | None = None
     break_even: BreakEven | None = None
     memo_includes_promises: bool = False

@@ -270,9 +270,6 @@ async def _run(
         Claim(id=f"P{i + 1}", risk_id="P", proposition=prop, citation_id=cid, quote=q, origin="drafter")
         for pack, items in PROCEDURAL.items() if pack in route.pack_ids for i, (cid, prop, q) in enumerate(items)
     ]
-    # Four Ledgers: the promise-gap rule's law is checked once even when no gap was found yet, so promises added later
-    # (POST /promises) reuse these gates instead of calling a model
-    standing = standing_claims(route) if ledger_on and not any(r.rule_id == ledger_mod.PROMISE_RULE for r in risks) else []
 
     # 5. verification ----------------------------------------------------------------
     job.say("agent_start", "Citation Verifier", f"Checking {len(claims) + len(proc_claims)} legal claims through 4 gates")
@@ -289,7 +286,6 @@ async def _run(
 
     ledger = await verifier.verify_all(llm, corpus, route, risks, claims, on_result=on_verified)
     proc_ledger = await verifier.verify_all(llm, corpus, route, [], proc_claims)
-    standing_ledger = await verifier.verify_all(llm, corpus, route, [], standing) if standing else []
     job.say("agent_done", "Citation Verifier", f"{sum(v.verdict == 'verified' for v in ledger)} verified · {sum(v.verdict == 'partial' for v in ledger)} partial · {sum(v.verdict == 'dropped' for v in ledger)} dropped")
 
     job.say("agent_start", "Critic", "Re-checking dropped claims and enforcing citation rules")
@@ -308,7 +304,7 @@ async def _run(
 
     privacy.outbound_calls = llm.calls
     privacy.pii_leaks_blocked = llm.blocked
-    full_ledger = ledger + proc_ledger + standing_ledger
+    full_ledger = ledger + proc_ledger
     red_clauses = [c.model_copy(update={"text": red_text(c.text)}) for c in doc.clauses]
     four = None
     if ledger_on:
@@ -365,49 +361,63 @@ def _promise_rule() -> risk_analyst.Rule:
     return next(r for r in risk_analyst.load_rules() if r.id == ledger_mod.PROMISE_RULE)
 
 
-def standing_claims(route: RouteDecision) -> list[Claim]:
-    """The promise-gap rule's anchors as claims of their own (risk "L"), verified whether or not a gap was found."""
-    rule, packs = _promise_rule(), route.pack_ids
-    if not rule.active(packs):
-        return []
-    return [
-        Claim(id=f"L{i + 1}", risk_id="L", proposition=a["proposition"], citation_id=a["citation_id"], quote=a.get("quote"), origin="playbook")
-        for i, a in enumerate(rule.anchors_for(packs))
-    ]
+def _restat(result: AnalysisResult, calls: int = 0) -> None:
+    st = result.stats
+    st.risks_found, st.risks_confirmed = len(result.risks), sum(r.status != "dropped" for r in result.risks)
+    st.claims = len(result.ledger)
+    st.verified, st.partial, st.dropped = (sum(v.verdict == k for v in result.ledger) for k in ("verified", "partial", "dropped"))
+    st.llm_calls += calls
 
 
 def recompute_ledger(result: AnalysisResult, promises: Promises) -> FourLedgers:
     """POST /promises: rebuild the Four Ledgers from the saved result. No LLM object is created, so nothing leaves the
-    machine. A new promise-gap risk takes the gates its identical claim already passed in this analysis; with none to
-    reuse, no risk is raised and the mismatch shows with its law cell `not_verified`. The memo is not redrafted."""
+    machine, and so no gate runs here: a promise-gap risk raised on this path is held in `pending_risks`, outside the
+    risk list and the citation ledger, and shows as `not_verified_yet` until verify_pending() puts it through the
+    verifier. The memo is not redrafted."""
     if promises.note:  # placeholders continue after the result's own; the sentinels never match real text
         seed = {r.placeholder: f"\x00{r.placeholder}" for r in result.privacy.redactions}
         nred = redact(promises.note, seed)
         _add_redactions(result.privacy, nred.redactions)
         promises = promises.model_copy(update={"note": nred.text})
-    pool = list(result.ledger)  # reuse may draw on an earlier promise-gap risk's own claim
+    # the earlier promises' risk no longer describes what the worker says: withdraw it, verified or pending
     old = {r.id for r in result.risks if r.rule_id == ledger_mod.PROMISE_RULE}
     result.risks = [r for r in result.risks if r.id not in old]
     result.ledger = [v for v in result.ledger if v.claim.risk_id not in old]
 
+    pending, pending_claims = [], []
     rule, packs = _promise_rule(), result.route.pack_ids
     finding = risk_analyst.run_fact_check("promise_gap", result.facts, result.wage, packs, promises) if rule.active(packs) else None
     if finding and rule.anchors_for(packs):
         n = 1 + max((int(r.id[1:]) for r in result.risks if r.id[1:].isdigit()), default=0)
         hint = re.compile(risk_analyst.FACT_CLAUSE_HINTS["promise_gap"], re.I)
         ids = [c.id for c in result.document.clauses if hint.search(c.text)][:2]
-        risk, claims = risk_analyst._risk_from_rule(rule, n, finding, ids, packs, result.wage)
-        passed = [v for c in claims if (v := verifier.reuse(c, pool)) is not None and v.verdict != "dropped"]
-        if passed:
-            risk.claim_ids = [v.claim.id for v in passed]
-            result.risks.append(risk)
-            result.ledger.extend(passed)
+        risk, pending_claims = risk_analyst._risk_from_rule(rule, n, finding, ids, packs, result.wage)
+        pending = [risk]
 
-    st = result.stats
-    st.risks_found, st.risks_confirmed = len(result.risks), sum(r.status != "dropped" for r in result.risks)
-    st.claims = len(result.ledger)
-    st.verified, st.partial, st.dropped = (sum(v.verdict == k for v in result.ledger) for k in ("verified", "partial", "dropped"))
-    result.four_ledgers = ledger_mod.build(result.facts, result.wage, result.document.clauses, result.risks, result.ledger, promises, memo_includes_promises=False)
+    _restat(result)
+    result.four_ledgers = ledger_mod.build(
+        result.facts, result.wage, result.document.clauses, result.risks, result.ledger, promises, memo_includes_promises=False,
+        pending_risks=pending, pending_claims=pending_claims,
+    )
+    save_result(result)
+    return result.four_ledgers
+
+
+async def verify_pending(result: AnalysisResult, llm: LLM) -> FourLedgers:
+    """POST /promises/verify: the pending promise-gap risk's claims go through the same verifier as in a full run
+    (4 gates; the Virtual Bench too if its severity calls for it). Only then does the risk join the risk list."""
+    four = result.four_ledgers
+    risks, claims = four.pending_risks, four.pending_claims
+    rows = await verifier.verify_all(llm, get_corpus(), result.route, risks, claims)
+    for r in risks:  # a risk none of whose claims passed is withdrawn, never shown as advice
+        if not any(v.claim.risk_id == r.id and v.verdict != "dropped" for v in rows):
+            r.status = "dropped"
+    result.risks += risks
+    result.ledger += rows
+    result.privacy.outbound_calls.extend(llm.calls)
+    result.privacy.pii_leaks_blocked += llm.blocked
+    _restat(result, len(llm.calls))
+    result.four_ledgers = ledger_mod.build(result.facts, result.wage, result.document.clauses, result.risks, result.ledger, four.promises, memo_includes_promises=False)
     save_result(result)
     return result.four_ledgers
 

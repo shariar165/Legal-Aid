@@ -9,12 +9,13 @@ from fastapi.testclient import TestClient
 from ain import api, config
 from ain.agents import ingestion, ledger
 from ain.llm import LLM
-from ain.models import Promises
+from ain.models import Deduction, Promises, WageCalc
 from ain.orchestrator import new_job, run_pipeline
 
 MY = "migrant_my_contract.txt"
 FIXTURE = config.DEMO_DIR / "promises" / "migrant_text.json"
 RAW_PHONE, RAW_NAME = "01812345678", "Rahim Talukder"
+PAY_TERMS = ("salary", "deductions", "ticket")
 
 
 @pytest.fixture
@@ -38,6 +39,16 @@ def _types(row):
     return [m.type for m in row.mismatches]
 
 
+def _said(row):
+    return next(m for m in row.mismatches if m.type == "said_vs_paper")
+
+
+def _wage(salary: float, deductions: list[Deduction]) -> WageCalc:
+    monthly = sum(d.amount for d in deductions if d.per == "month")
+    return WageCalc(currency="RM", promised=salary, confirmed_by_user=False, deductions=deductions, monthly_deductions=monthly,
+                    net=salary - monthly, pct_deducted=round(100 * monthly / salary, 1))
+
+
 def test_paper_facts_from_the_malaysia_sample(docs):
     _, facts, _ = ingestion.build_document((docs / MY).read_bytes(), MY, "sample")
     assert (facts.contract_months, facts.hours_per_day, facts.ticket_paid_by, facts.passport_held_by) == (36, 12, "worker", "employer")
@@ -56,6 +67,7 @@ async def test_malaysia_with_promises_gives_the_expected_rows(docs, ledger_on):
     assert (rows["salary"].said.amount, rows["salary"].paper.amount) == (1800, 1200)
     assert _types(rows["deductions"]) == ["said_vs_paper", "paper_vs_law"]
     assert "MY-EA-1955-s24" in rows["deductions"].law.citation_ids
+    assert "RM 400 a month after month 12" in rows["deductions"].paper.value  # the recruitment deduction ends
     assert _types(rows["recruitment_cost"]) == ["paper_vs_law"] and rows["recruitment_cost"].paper.amount == 3000
     assert _types(rows["hours_per_day"]) == ["said_vs_paper"] and rows["hours_per_day"].law.status == "none"
     # the travel clause's risk is about the trip home: its law is shown, but it makes no paper_vs_law on the ticket out
@@ -68,18 +80,44 @@ async def test_malaysia_with_promises_gives_the_expected_rows(docs, ledger_on):
     gap = next(k for k in r.risks if k.rule_id == "PB-PROMISE-GAP")
     assert gap.severity == "medium" and gap.bench is None
     assert [(v.claim.citation_id, v.verdict) for v in r.ledger if v.claim.risk_id == gap.id] == [("BD-OEMA-2013-s31", "verified")]
-    for term in ("salary", "deductions", "ticket"):
-        assert next(m for m in rows[term].mismatches if m.type == "said_vs_paper").risk_id == gap.id
-    assert next(m for m in rows["hours_per_day"].mismatches).risk_id is None  # hours are not pay or benefits
+    for term in PAY_TERMS:
+        assert (_said(rows[term]).risk_id, _said(rows[term]).risk_status) == (gap.id, "verified")
+        assert rows[term].severity in ("medium", "high", "critical")
+    hours = _said(rows["hours_per_day"])
+    assert (hours.risk_id, hours.risk_status) == (None, None)  # hours are not pay or benefits
+    assert four.pending_risks == []
 
-    # পাওনা হিসাব: verified law only; the promise gap stays out of the total
-    cv = four.claim_value
-    assert [(x.amount, x.citation_id) for x in cv.lines] == [(18000, "MY-MWO-2024-p3"), (3000, "MY-EA-1955-s24")]
-    assert (cv.total, cv.currency) == (21000, "RM") and "not a prediction" in cv.label.en
+    # a projection under verified law only, never "money owed"; the promise gap stays out of the total
+    cp = four.claim_projection
+    assert [(x.amount, x.citation_id, x.basis) for x in cp.lines] == [(18000, "MY-MWO-2024-p3", "projected"), (3000, "MY-EA-1955-s24", "projected")]
+    assert (cp.projected_total, cp.currency, cp.accrued_total) == (21000, "RM", None)
+    assert "not money owed" in cp.label.en.lower() and cp.lines[0].months == 36
     assert (four.promise_gap.total, four.promise_gap.currency) == (21600, "RM")
+
+    # break-even, month by month: RM 16,363.64 at RM 550 for 12 months (6,600), then RM 800 → 12 + 12.2 months
     be = four.break_even
-    assert be.months == 29.8 and be.monthly_net == 550 and be.rate.source == "user-entered"
+    assert be.months == 24.2 and be.rate.source == "user-entered"
+    assert [(s.from_month, s.to_month, s.net) for s in be.steps] == [(1, 12, 550), (13, None, 800)]
+    assert be.is_minimum and "whole take-home pay" in be.assumption.en
     assert four.memo_includes_promises
+
+
+def test_break_even_counts_a_time_limited_deduction_month_by_month():
+    w = _wage(1000, [Deduction(label="recovery of recruitment costs", amount=400, months=3), Deduction(label="housing", amount=100)])
+    be = ledger.break_even(w, Promises(recruitment_cost_paid=2000, recruitment_cost_currency="RM"), contract_months=24)
+    # months 1-3 keep RM 500 each (1,500); then RM 900, so the last RM 500 takes 0.6 of month 4 (a flat 2,000/500 said 4.0)
+    assert be.months == 3.6
+    assert [(s.from_month, s.to_month, s.net) for s in be.steps] == [(1, 3, 500), (4, None, 900)]
+    assert be.monthly_net == 500 and be.rate is None and be.is_minimum
+
+
+def test_break_even_not_reached_within_the_contract():
+    w = _wage(1000, [Deduction(label="recovery of agency fee", amount=850, months=12), Deduction(label="housing", amount=100)])
+    be = ledger.break_even(w, Promises(recruitment_cost_paid=9000, recruitment_cost_currency="RM"), contract_months=24)
+    # RM 50 a month for 12 months (600), then RM 900: 8,400 more takes 9.3 months; the 24-month contract earns 11,400 in all
+    assert be.months == 21.3
+    never = ledger.break_even(w, Promises(recruitment_cost_paid=20000, recruitment_cost_currency="RM"), contract_months=24)
+    assert never.months is None and never.earned_back == 11400 and "24-month contract" in never.note
 
 
 async def test_no_promises_gives_paper_and_law_only(docs, ledger_on):
@@ -89,9 +127,7 @@ async def test_no_promises_gives_paper_and_law_only(docs, ledger_on):
     assert {m.type for row in four.rows for m in row.mismatches} == {"paper_vs_law"}
     assert not any(k.rule_id == "PB-PROMISE-GAP" for k in r.risks)
     assert four.promise_gap is None and four.break_even is None and not four.memo_includes_promises
-    # the rule's law is checked once anyway, so promises added later need no model call
-    standing = [v for v in r.ledger if v.claim.risk_id == "L"]
-    assert [(v.claim.id, v.claim.citation_id, v.verdict) for v in standing] == [("L1", "BD-OEMA-2013-s31", "verified")]
+    assert not any(v.claim.citation_id == "BD-OEMA-2013-s31" and v.claim.risk_id not in {k.id for k in r.risks} for v in r.ledger)
 
 
 @pytest.mark.parametrize("how", ["claim dropped", "risk dropped"])
@@ -107,8 +143,17 @@ async def test_an_unverified_risk_gives_no_law_cell_and_no_claim_line(docs, ledg
     salary = _rows(four)["salary"]
     assert salary.law.status == "not_verified" and salary.law.citation_ids == []
     assert "paper_vs_law" not in _types(salary)
-    assert "MY-MWO-2024-p3" not in [x.citation_id for x in four.claim_value.lines]
-    assert four.claim_value.total == 3000  # the recruitment line still stands on its own verified law
+    assert "MY-MWO-2024-p3" not in [x.citation_id for x in four.claim_projection.lines]
+    assert four.claim_projection.projected_total == 3000  # the recruitment line still stands on its own verified law
+
+
+async def test_a_promise_gap_the_gates_refused_is_not_verified(docs, ledger_on):
+    r = await _run(docs, _promises())
+    gap = next(k for k in r.risks if k.rule_id == "PB-PROMISE-GAP")
+    rows = [v.model_copy(update={"verdict": "dropped"}) if v.claim.risk_id == gap.id else v for v in r.ledger]
+    four = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, rows, r.four_ledgers.promises, True)
+    m = _said(_rows(four)["salary"])
+    assert (m.risk_id, m.risk_status) == (gap.id, "not_verified")
 
 
 async def test_no_rate_gives_no_break_even(docs, ledger_on):
@@ -116,7 +161,7 @@ async def test_no_rate_gives_no_break_even(docs, ledger_on):
     four = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger, _promises(exchange_rate=None), False)
     assert four.break_even.months is None and four.break_even.rate is None and "exchange rate" in four.break_even.note
     assert four.promise_gap.total == 21600 and four.promise_gap.currency == "RM"  # same currency: no rate needed
-    # a cost in the pay's own currency needs no rate either
+    # a cost in the pay's own currency needs no rate either: RM 5,500 at RM 550 a month
     same = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger,
                         _promises(exchange_rate=None, recruitment_cost_paid=5500, recruitment_cost_currency="MYR"), False)
     assert same.break_even.months == 10.0 and same.break_even.rate is None
@@ -146,7 +191,7 @@ def _wait(client, job_id, timeout=90):
     raise AssertionError("job did not finish")
 
 
-def test_promises_recompute_makes_no_outbound_call(docs, ledger_on, monkeypatch):
+def test_promises_added_later_are_not_verified_until_the_gates_run(docs, ledger_on, monkeypatch):
     with TestClient(api.app) as client:
         job = client.post("/api/analyze", files={"file": (MY, (docs / MY).read_bytes(), "text/plain")}).json()["job_id"]
         assert _wait(client, job)["status"] == "done"
@@ -156,27 +201,49 @@ def test_promises_recompute_makes_no_outbound_call(docs, ledger_on, monkeypatch)
         async def no_model(*a, **k):
             raise AssertionError("a model was called")
 
+        real_json = LLM.json
         monkeypatch.setattr(LLM, "json", no_model)
         body = json.loads(FIXTURE.read_text(encoding="utf-8"))
         four = client.post(f"/api/jobs/{job}/promises", json=body)
         assert four.status_code == 200, four.text
-        rows = {row["term"]: row for row in four.json()["rows"]}
+        f = four.json()
+        rows = {row["term"]: row for row in f["rows"]}
         assert [m["type"] for m in rows["salary"]["mismatches"]] == ["said_vs_paper", "paper_vs_law"]
 
+        # no model call on this path, so the gap's risk is held back: never shown as verified, never a live risk
+        [pending] = f["pending_risks"]
+        assert pending["rule_id"] == "PB-PROMISE-GAP" and pending["id"] == f"R{len(before['risks']) + 1}"
+        for term in PAY_TERMS:
+            said = next(m for m in rows[term]["mismatches"] if m["type"] == "said_vs_paper")
+            assert (said["risk_id"], said["risk_status"]) == (pending["id"], "not_verified_yet")
         after = client.get(f"/api/jobs/{job}/result").json()
         assert len(after["privacy"]["outbound_calls"]) == len(before["privacy"]["outbound_calls"])
-        gap = next(k for k in after["risks"] if k["rule_id"] == "PB-PROMISE-GAP")
-        assert gap["id"] == f"R{len(before['risks']) + 1}"
-        mine = [v for v in after["ledger"] if v["claim"]["risk_id"] == gap["id"]]
-        standing = next(v for v in before["ledger"] if v["claim"]["id"] == "L1")
-        assert [v["gates"] for v in mine] == [standing["gates"]] and mine[0]["verdict"] == "verified"
-        assert after["four_ledgers"]["memo_includes_promises"] is False
+        assert not any(k["rule_id"] == "PB-PROMISE-GAP" for k in after["risks"])
+        assert not any(v["claim"]["risk_id"] == pending["id"] for v in after["ledger"])
+        assert after["stats"] == before["stats"] and after["four_ledgers"]["memo_includes_promises"] is False
         note = after["four_ledgers"]["promises"]["note"]
         assert RAW_PHONE not in note and "[PHONE_2]" in note  # numbering continues after the contract's own
 
+        # a later run verifies it: the same verifier and 4 gates, with a model call
+        monkeypatch.setattr(LLM, "json", real_json)
+        v = client.post(f"/api/jobs/{job}/promises/verify")
+        assert v.status_code == 200, v.text
+        assert v.json()["pending_risks"] == []
+        final = client.get(f"/api/jobs/{job}/result").json()
+        gap = next(k for k in final["risks"] if k["rule_id"] == "PB-PROMISE-GAP")
+        mine = [x for x in final["ledger"] if x["claim"]["risk_id"] == gap["id"]]
+        assert [(x["claim"]["citation_id"], x["verdict"]) for x in mine] == [("BD-OEMA-2013-s31", "verified")]
+        assert [g["gate"] for g in mine[0]["gates"]] == ["existence", "fidelity", "entailment", "currency"]
+        new_calls = final["privacy"]["outbound_calls"][len(after["privacy"]["outbound_calls"]):]
+        assert any(c["agent"] == "Citation Verifier" for c in new_calls)
+        said = next(m for row in final["four_ledgers"]["rows"] if row["term"] == "salary" for m in row["mismatches"] if m["type"] == "said_vs_paper")
+        assert (said["risk_id"], said["risk_status"]) == (gap["id"], "verified")
+        assert final["stats"]["risks_found"] == before["stats"]["risks_found"] + 1
+        assert client.post(f"/api/jobs/{job}/promises/verify").status_code == 409  # nothing left to verify
+
         # told what the paper says: the gap and its risk go away
         same = client.post(f"/api/jobs/{job}/promises", json={"salary_amount": 1200, "salary_currency": "RM"}).json()
-        assert "said_vs_paper" not in [m["type"] for row in same["rows"] for m in row["mismatches"]]
+        assert "said_vs_paper" not in [m["type"] for row in same["rows"] for m in row["mismatches"]] and same["pending_risks"] == []
         assert not any(k["rule_id"] == "PB-PROMISE-GAP" for k in client.get(f"/api/jobs/{job}/result").json()["risks"])
         assert client.post(f"/api/jobs/{job}/promises", json={"hours_per_day": 30}).status_code == 422
 
@@ -199,9 +266,9 @@ def test_flag_off_refuses_promises_and_adds_nothing(docs):
         assert _wait(client, job)["status"] == "done"
         r = client.get(f"/api/jobs/{job}/result").json()
         assert r["four_ledgers"] is None
-        assert not any(v["claim"]["risk_id"] == "L" for v in r["ledger"])
         assert not any(k["rule_id"] == "PB-PROMISE-GAP" for k in r["risks"])
         assert client.post(f"/api/jobs/{job}/promises", json={"salary_amount": 1800}).status_code == 404
+        assert client.post(f"/api/jobs/{job}/promises/verify").status_code == 404
 
 
 def test_the_promise_rule_is_in_no_prompt_while_the_flag_is_off(monkeypatch):

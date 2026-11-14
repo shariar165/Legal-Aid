@@ -39,7 +39,7 @@ from ain.models import (
     Risk,
     Section,
 )
-from ain.orchestrator import JOBS, delete_result, load_result, new_job, recompute_ledger, run_pipeline, save_result
+from ain.orchestrator import JOBS, delete_result, load_result, new_job, recompute_ledger, run_pipeline, save_result, verify_pending
 from ain.retrieval import get_corpus
 
 MAX_BYTES = 15 * 1024 * 1024
@@ -443,6 +443,23 @@ def update_promises(job_id: str, body: Promises) -> FourLedgers:
     if not config.ledger_enabled():
         raise HTTPException(404, "Not Found")
     return recompute_ledger(_result_or_409(job_id), body)
+
+
+@app.post("/api/jobs/{job_id}/promises/verify", response_model=FourLedgers, dependencies=[Depends(owned_job)])
+async def verify_promises(job_id: str) -> FourLedgers:
+    """Put a promise-gap risk raised by /promises through the 4 gates (model calls). Until then it is `not_verified_yet`.
+    The claims sent are playbook text and statute text only; the LLM layer's PII guard still checks every payload."""
+    if not config.ledger_enabled():
+        raise HTTPException(404, "Not Found")
+    r = _result_or_409(job_id)
+    if r.four_ledgers is None or not r.four_ledgers.pending_risks:
+        raise HTTPException(409, "Nothing is waiting for verification.")
+    try:
+        return await verify_pending(r, LLM(mode=r.llm_mode))
+    except PIILeakError:
+        raise HTTPException(422, PII_MESSAGE) from None
+    except LLMError as e:
+        raise HTTPException(502, "The verifier could not reach a judge model just now. Please try again.") from e
 
 
 @app.get("/api/jobs/{job_id}/memo.docx", dependencies=[Depends(owned_job)])

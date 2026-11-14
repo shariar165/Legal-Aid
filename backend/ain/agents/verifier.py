@@ -183,17 +183,6 @@ def _bench_detail(b: BenchResult) -> str:
     return head + sev + review + fam
 
 
-def reuse(claim: Claim, ledger: list[Verification]) -> Verification | None:
-    """The gates an identical claim (same citation, proposition and quote) already passed in this analysis, for a claim
-    raised later with no model call (Four Ledgers' /promises). Only single-judge verifications are reused: a bench
-    ruling belongs to the risk it sat on."""
-    for v in ledger:
-        c = v.claim
-        if (c.citation_id, c.proposition, c.quote) == (claim.citation_id, claim.proposition, claim.quote) and v.bench is None:
-            return v.model_copy(update={"claim": claim})
-    return None
-
-
 async def verify_all(llm: LLM, corpus: Corpus, route: RouteDecision, risks: list[Risk], claims: list[Claim], on_result=None) -> list[Verification]:
     by_risk = {r.id: r for r in risks}
     bench_sev = config.bench_severities()
