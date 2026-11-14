@@ -109,6 +109,19 @@ def _law(common: dict, *sections: dict) -> list[dict]:
 
 
 # the compilation's running page header and footnote links, which can fall inside a cut that crosses a page
+# the AGC updated text's running page headers ("26 Laws of Malaysia ACT 265", "Employment 27") and one footnote about
+# another Act that falls inside s.12 at a page break; none of it is part of a section
+MY_EA_PAGE_FURNITURE = (
+    r" \d+ Laws of Malaysia ACT 265| Employment \d+(?= )"
+    r"| \*NOTE—The Children and Young Persons \(Employment\) Act 1966 \[Act 40 of 1966\] has since been revised as the Children and"
+    r" Young Persons \(Employment\) Act 1966 \[Act 350\]\."
+)
+MY_EA = dict(jurisdiction="MY", act_key="MY-EA-1955", act="Employment Act 1955 (Act 265), Malaysia", year=1955, file="my_ea_mohr.pdf",
+             url="https://jtksm.mohr.gov.my/sites/default/files/2023-11/Akta%20Kerja%201955%20(Akta%20265).pdf", via=None,
+             packs=["my_employment"], drop=MY_EA_PAGE_FURNITURE,
+             note="AGC updated text as at 1 January 2023, after the latest amendment by Act A1651 (in operation 1 January 2023). "
+                  "The AGC says it is an updated text, not an authentic reprint.")
+
 CEACR_PAGE_FURNITURE = (
     r" ?►Compilation of selected observations and direct requests of the Committee of Experts on the Application of Conventions"
     r" and Recommendations: Bangladesh \d+| ?\d+ https://www\.ilo\.org/\S+"
@@ -155,6 +168,14 @@ SPECS = [
          start="90B. Any employer who threatens, deceives or forces an employee", end=" Employment 101",
          url="https://jtksm.mohr.gov.my/sites/default/files/2023-11/Akta%20Kerja%201955%20(Akta%20265).pdf",
          via=None, packs=["my_employment"], note="AGC updated text as at 1 January 2023."),
+    # added 2026-11-13: the live Adversary raised notice, rest-day and hours risks on the Malaysia sample that no
+    # Malaysian section in the corpus could ground (spec 18)
+    dict(MY_EA, citation_id="MY-EA-1955-s12", section="12", heading="Notice of termination of contract",
+         start="12. (1) Either party to a contract of service may at any time give", end=" Termination of contract without notice 13. (1)"),
+    dict(MY_EA, citation_id="MY-EA-1955-s59", section="59", heading="Rest day",
+         start="59. (1) Every employee shall be allowed in each week a rest day", end=" Work on rest day 60. (1)"),
+    dict(MY_EA, citation_id="MY-EA-1955-s60A", section="60A", heading="Hours of work and working at night",
+         start="60A. (1) Except as hereinafter provided, an employee shall not be required", end=" Task work 60B."),
     # --- Saudi Arabia ------------------------------------------------------------------
     *_law(
         dict(jurisdiction="SA", act_key="SA-LABOR-2005", act="Labor Law, Royal Decree No. M/51 of 1426H (Saudi Arabia)", year=2005,
