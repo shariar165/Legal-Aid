@@ -5,19 +5,19 @@
 # phrase the first of them must contain, so a renumbered document fails a test instead of matching the wrong clause.
 # min_adversary: the least number of confirmed off-playbook (Adversarial Counsel) risks the document must yield.
 migrant_my_contract.txt:
-  min_adversary: 3
+  min_adversary: 2  # forum (and, in Malaysia, the trip home) became playbook rules on 2026-11-14 (spec 18, step 4)
   expect:
     - {rule: PB-PASSPORT}
     - {rule: PB-RECRUIT-FEE}
     - {rule: PB-MIN-WAGE}
     - {rule: PB-DEDUCTION-CAP}
     - {rule: PB-CLAIM-WAIVER}
-    - {keywords: [return, repatriat, homeward, ফেরা], clauses: [C7], at: "own air ticket to Malaysia"}          # travel: only the ticket out is mentioned
+    - {rule: PB-RETURN-COST}                                                                                 # travel: only the ticket out is mentioned (C7)
     - {keywords: [debt, bondage], clauses: [C8], at: "together with a penalty"}                              # exit penalty + withheld wages
-    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C9, C10], at: "shall not file any complaint"}  # complaint ban in BD + foreign law
+    - {rule: PB-NO-FORUM}                                                                                    # complaint ban in BD + foreign law
     - {keywords: [english only, english-only, read and understood], clauses: [C11], at: "পড়িয়া ও বুঝিয়া"}  # Bangla line under English terms
 migrant_sa_contract.txt:
-  min_adversary: 3
+  min_adversary: 2  # forum (and, in Malaysia, the trip home) became playbook rules on 2026-11-14 (spec 18, step 4)
   expect:
     - {rule: PB-PASSPORT}
     - {rule: PB-RECRUIT-FEE}
@@ -26,7 +26,7 @@ migrant_sa_contract.txt:
     - {rule: PB-END-OF-SERVICE}
     - {rule: PB-CLAIM-WAIVER}
     - {keywords: [iqama, residence permit], clauses: [C6], at: "renewing his iqama"}                    # the worker pays his own iqama renewal
-    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C9, C10], at: "shall not file any complaint"}
+    - {rule: PB-NO-FORUM}                                                                                    # complaint ban in BD + foreign law
     - {keywords: [english only, english-only, read and understood], clauses: [C11], at: "পড়িয়া ও বুঝিয়া"}
     # added 2026-11-13 from the live eval: passport kept (C5) while complaints to the Embassy are banned (C9) cuts the
     # worker off from consular help. A reviewer would call it correct, and it is not the forum finding above
@@ -62,7 +62,7 @@ long_migrant_msa.txt:
     - {keywords: [abscond], clauses: [C153], at: "deemed to have absconded"}
     - {keywords: [iqama, residence permit], clauses: [C62], at: "renewing his iqama"}
     - {keywords: [debt, bondage], clauses: [C153], at: "outstanding Recruitment Costs"}          # absconding damages + outstanding recruitment costs
-    - {keywords: [forum, nowhere to complain, no remedy], clauses: [C110, C112], at: "shall not file any complaint"}
+    - {rule: PB-NO-FORUM}                                                                                    # complaint ban in BD + foreign law
     - {keywords: [english only, english-only, read and understood], clauses: [C273], at: "পড়িয়া ও বুঝিয়া"}
   must_cite: [SA-LABOR-2005-a40]
   must_not_cite_prefix: [MY-]

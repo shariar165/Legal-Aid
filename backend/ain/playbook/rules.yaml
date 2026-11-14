@@ -239,6 +239,57 @@
   action: {bn: "ফেরার টিকিট মালিক দেবে, এটা চুক্তিতে লিখে নিন।", en: "Ask for the employer-paid ticket home to be written into the contract."}
   mitigation: "The Employer shall bear the cost of the Worker's return journey to Bangladesh at the end of this Contract or on any earlier termination, as required by the labour law of {country}."
 
+- id: PB-RETURN-COST
+  category: repatriation
+  severity: high
+  # Destinations whose own labour law puts the trip home on the employer have PB-RETURN-TICKET; everywhere else the
+  # Bangladesh Act still requires the contract to say what the return costs and who bears it.
+  packs: [bd_migration]
+  exclude_packs: [sa_labour, ae_labour, qa_labour, om_labour, kw_labour]
+  title: {en: "The contract does not give the worker a paid trip home", bn: "চুক্তিতে দেশে ফেরার খরচ মালিক দেবে, এমন কথা নেই"}
+  trigger:
+    regex: ['(worker|employee|labou?rer).{0,60}(shall|will|must) (bear|pay).{0,60}(return|homeward|repatriation).{0,30}(ticket|air ?fare|passage|travel|journey)', '(return|homeward|repatriation).{0,30}(ticket|air ?fare|passage|travel|journey).{0,60}(borne|paid) by the (worker|employee)']
+    # protective wording, searched within one sentence ([^.] stops at the full stop)
+    absent: ['employer shall (bear|pay|provide)[^.]{0,80}(return|repatriation|homeward)', '(return|repatriation|homeward)[^.]{0,60}(borne|paid) by the employer', 'at the employer.{0,4}s? (cost|expense)[^.]{0,60}(return|repatriat)', 'ফেরত[^।.]{0,30}(মালিক|নিয়োগকর্তা)']
+    hint: 'ticket|travel|passage|return|repatriat|terminat'
+    absent_finding: "The contract says nothing about who pays for the worker's journey home at the end of the job."
+  question: Does the contract fail to give the worker a paid journey home at the end of the job, either by saying nothing about the cost of return or by making the worker pay it?
+  anchors:
+    - citation_id: BD-OEMA-2013-s22
+      proposition: Under OEMA 2013 s.22(1), the employment contract between the worker and the employer must state, among other things, the cost of going abroad and of returning from abroad.
+      quote: বিদেশে গমন এবং বিদেশ হইতে ফেরত আসিবার খরচ
+  pack_anchors:
+    std_recruitment:
+      - citation_id: STD-EPP-LGRR
+        proposition: Under the Employer Pays Principle, a voluntary employer commitment, the costs of recruitment, travel and processing of migrant workers, including the return journey when the move is not permanent, are covered by the employer.
+        quote: including through to return when the relocation is not permanent, shall be covered by the employer
+  why_non_obvious: The contract deals with the flight out and is silent on the flight home, so a worker dismissed early can be stranded abroad with no ticket.
+  citizen_line: {en: "The contract does not say the employer pays for your ticket home.", bn: "চুক্তিতে লেখা নেই যে দেশে ফেরার টিকিট মালিক দেবে।"}
+  action: {en: "Ask for the employer-paid ticket home to be written into the contract.", bn: "ফেরার টিকিট মালিক দেবে, এটা চুক্তিতে লিখে নিন।"}
+  mitigation: "The Employer shall bear the cost of the Worker's return journey to Bangladesh at the end of this Contract or on any earlier termination."
+
+- id: PB-NO-FORUM
+  category: access_to_justice
+  severity: high
+  packs: [bd_migration]
+  title: {en: "The worker is left with nowhere to bring a complaint or dispute", bn: "অভিযোগ বা বিরোধ নিয়ে যাওয়ার কোনো জায়গা কর্মীর থাকছে না"}
+  trigger:
+    # a ban on going to BMET, the mission or the courts in Bangladesh, and the clause that sends the contract to foreign law
+    regex: ['shall not (file|bring|lodge|make) any (complaint|claim|case|suit)[^.]{0,120}(BMET|Bangladesh|embassy|high commission|mission|court)', 'governed by the laws? of (?!(the People.s Republic of )?Bangladesh)']
+  question: Taken together, do these clauses leave the worker nowhere to bring a complaint or dispute, because complaints in Bangladesh (BMET, the Bangladesh mission, the courts) are barred while the contract is governed by foreign law and names no court, tribunal or labour office the worker can go to instead?
+  clash: "A Bangladeshi migrant worker keeps the statutory right to sue in Bangladesh and to the help of the Bangladesh mission abroad, whatever law the contract chooses."
+  anchors:
+    - citation_id: BD-OEMA-2013-s28
+      proposition: Under OEMA 2013 s.28, a migrant worker harmed by a breach of the Act or of the employment contract may file a civil suit for compensation, without prejudice to criminal proceedings.
+      quote: ক্ষতিপূরণের জন্য দেওয়ানী মামলা দায়ের করিতে পারিবে
+    - citation_id: BD-OEMA-2013-s29
+      proposition: Under OEMA 2013 s.29(1), a migrant worker has the right to the necessary assistance of the Bangladesh mission or embassy abroad.
+      quote: বিদেশে অবস্থিত বাংলাদেশ মিশন বা দূতাবাসের নিকট হইতে প্রয়োজনীয় সহায়তা পাইবার অধিকার থাকিবে
+  why_non_obvious: Each clause looks ordinary alone, a complaint procedure and a choice of law, but together they close every door, in Bangladesh and abroad.
+  citizen_line: {en: "The contract tries to leave you with no place to complain. You can still go to BMET, the embassy or a court.", bn: "চুক্তিটি আপনার অভিযোগ করার সব পথ বন্ধ করতে চায়। তবুও আপনি BMET, দূতাবাস বা আদালতে যেতে পারবেন।"}
+  action: {en: "Ask for a clause naming where you can complain, and keep the BMET and embassy contacts.", bn: "কোথায় অভিযোগ করবেন, তা চুক্তিতে লিখে নিন, আর BMET ও দূতাবাসের যোগাযোগ রাখুন।"}
+  mitigation: "Nothing in this Contract limits the Worker's right to complain to BMET or the Bangladesh Mission, or to sue in Bangladesh under section 28 of the Overseas Employment and Migrants Act 2013; disputes may also be referred to the labour authority of the host country."
+
 - id: PB-END-OF-SERVICE
   category: wage
   severity: high

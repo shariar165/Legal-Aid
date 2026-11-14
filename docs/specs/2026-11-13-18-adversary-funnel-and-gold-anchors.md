@@ -65,3 +65,48 @@ Offline (fake mode) on the new matching: Saudi 90% (the stand-in never proposes 
 - `tests/test_run_eval.py`: every anchor clause exists and contains its `at` phrase. Pointing the absconding anchor at C149 ("Sleeping on duty") fails it. A keyword finding needs its clause; a subset run leaves the full report alone.
 - `pytest`: 309 passed.
 - Live rerun (step 4): see below.
+
+## Live rerun of Malaysia, Saudi and EPZ (step 4, 2026-11-14)
+Fixes 1, 2 and 5, before the corpus and rule changes below, with dense retrieval on, as on the eval day. `--stop-on-quota`; the run finished in one go (exit 0).
+
+| Document | Eval day, new matching | Rerun | Off-playbook (adv / restated) |
+|---|---|---|---|
+| Malaysia | 56%, 71% | **56%, 100%** | 0 / 3 |
+| Saudi | 80%, 73% | **80%, 80%** | 4 / 1 |
+| EPZ | 75%, 82% | **83%, 100%** | 1 / 1 |
+
+- Every memo citation was verified, and the plain-LLM ablation was 0 of 40.
+- Precision rose on all three. The safety net withdrew restated Adversary risks, three of them on Malaysia.
+- Malaysia's recall did not move. The return-home, forum and English-only findings were still not raised live, which is what steps 5 and 6 address.
+- **Backup models answered some bench calls.** OpenRouter rate-limited Sunny's Gemma 4 31B upstream (27 failed after retries), so bench calls went to backups: 15 of 80 calls on Malaysia, 22 of 104 on Saudi and 10 of 65 on EPZ. Most went to GPT-OSS 120B, the Chief Justice's family. These are design fallbacks, flagged per call, but this rerun's bench is partly not the configured one.
+- The report (`eval/last_eval.subset.json`, gitignored) was overwritten by a later offline `--doc` run and rebuilt from the live run's printed results.
+
+## Step 5: Malaysian Employment Act s.12, s.59, s.60A (2026-11-14)
+- Built through `rebuild-corpus`: 1157 to 1160 sections.
+- The three new sections are in force (G4), have no page furniture, and only those three were encoded.
+- No existing section changed. `pytest` passed 309.
+
+## Step 6: PB-RETURN-COST and PB-NO-FORUM (2026-11-14)
+- **PB-RETURN-COST.**
+  - It covers destinations where PB-RETURN-TICKET does not fire (the rule excludes the five Gulf packs), so Malaysia gets it.
+  - It uses the same triggers and absence patterns as PB-RETURN-TICKET.
+  - Anchor: OEMA s.22(1) ("বিদেশে গমন এবং বিদেশ হইতে ফেরত আসিবার খরচ"), plus the Employer Pays Principle under `std_recruitment`.
+- **PB-NO-FORUM.**
+  - It fires on a complaint ban that names BMET, Bangladesh, the mission or a court, read with a foreign governing-law clause.
+  - Anchors: OEMA s.28 and s.29(1).
+  - Its question asks whether the clauses together leave no forum.
+- All four quotes are verbatim (`test_corpus`). English-only terms stay with the Adversary.
+- **Gold set.** Malaysia's return finding is now `{rule: PB-RETURN-COST}`, and the forum finding is `{rule: PB-NO-FORUM}` in Malaysia, Saudi and the long MSA.
+- **Offline stand-in.** It no longer proposes the return or forum hypotheses once PB-RETURN-COST or PB-NO-FORUM has fired, as it already did for PB-RETURN-TICKET. Without that, the forum finding was reported twice: the Adversary's version rests on s.22 and s.41, so the restated-risk net could not catch it. No live prompt changed.
+- **The user's decision:** `min_adversary` is 2 for Malaysia and Saudi, because the findings moved to the playbook rather than being lost. EPZ and the MSA keep 3. The test reads each document's own bar.
+- **Offline results.**
+
+  | Document | Recall | Precision |
+  |---|---|---|
+  | Malaysia | 100% | 100% |
+  | Saudi | 90% | 100% |
+  | EPZ | 100% | 100% |
+  | MSA | 100% | 100% |
+
+  The control has no risk. Every document meets its bar, and `pytest` passed 309.
+- **Next (step 7):** all five documents live, over several days for the quota, then the README numbers.

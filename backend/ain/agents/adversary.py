@@ -167,7 +167,7 @@ def _fake_hypotheses(clauses: list[Clause], facts: DocFacts, route: RouteDecisio
     flagged = {r.rule_id for r in known}
     if (
         "bd_migration" in packs
-        and "PB-RETURN-TICKET" not in flagged  # the playbook already raised it under the destination country's law
+        and not {"PB-RETURN-TICKET", "PB-RETURN-COST"} & flagged  # the playbook already raised it
         and not re.search(r"return (air|ticket|flight|passage|journey)|ফেরত আসিবার খরচ", low)
         and re.search(r"terminate", low)
     ):
@@ -214,7 +214,12 @@ def _fake_hypotheses(clauses: list[Clause], facts: DocFacts, route: RouteDecisio
                 "queries": ["residence permit iqama renewal fees borne by employer", "foreign worker free to return home identity documents not retained", "অভিবাসী কর্মীর দেশে ফিরিয়া আসিবার অধিকার"],
             }
         )
-    if "bd_migration" in packs and re.search(r"shall not (file|bring|lodge) any (complaint|claim|case)", low) and re.search(r"governed by the laws? of", low):
+    if (
+        "bd_migration" in packs
+        and "PB-NO-FORUM" not in flagged  # the playbook already raised it
+        and re.search(r"shall not (file|bring|lodge) any (complaint|claim|case)", low)
+        and re.search(r"governed by the laws? of", low)
+    ):
         hyps.append(
             {
                 "key": "h5", "title_en": "Foreign governing law plus a ban on complaints in Bangladesh leaves no forum", "title_bn": "বিদেশি আইন আর দেশে অভিযোগ নিষেধ: কোথাও অভিযোগের জায়গা থাকে না",

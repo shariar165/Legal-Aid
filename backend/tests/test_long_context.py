@@ -1,7 +1,9 @@
 """Long documents and off-playbook depth: segmentation, map -> reduce Adversary, token pacing (offline, fake LLM)."""
 
 import pytest
+import yaml
 
+from ain import config
 from ain import llm as llm_mod
 from ain.agents import adversary, ingestion
 from ain.agents.risk_analyst import load_rules
@@ -76,10 +78,13 @@ async def test_long_document_map_reduce_finds_the_cross_part_trap(docs, monkeypa
 
 
 @pytest.mark.parametrize("name", ["migrant_my_contract.txt", "migrant_sa_contract.txt", "rmg_dhaka_epz.txt"])
-async def test_every_hero_document_has_three_off_playbook_risks(docs, name):
+async def test_every_hero_document_meets_its_off_playbook_bar(docs, name):
+    """Each document's own `min_adversary` in the gold set: 3, or 2 where the playbook now covers a finding the
+    Adversary used to raise (PB-NO-FORUM, PB-RETURN-COST)."""
+    least = yaml.safe_load((config.BACKEND / "eval" / "gold.yaml").read_text(encoding="utf-8"))[name]["min_adversary"]
     r = await run_pipeline(new_job(name), (docs / name).read_bytes(), name, llm=RecordingLLM(), confirm_timeout=0.1)
     adv = [k for k in r.risks if k.status != "dropped" and k.origin == "adversary"]
-    assert len(adv) >= 3, [k.title.en for k in adv]
+    assert len(adv) >= least, [k.title.en for k in adv]
     playbook = [k for k in r.risks if k.origin != "adversary"]
     rules = [x for x in load_rules() if x.active(r.route.pack_ids)]
     for k in adv:
