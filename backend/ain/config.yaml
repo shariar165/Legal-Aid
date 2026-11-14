@@ -62,3 +62,12 @@ council:
 
 verifier:
   quote_fidelity_threshold: 90
+
+rehearsal:
+  # Rehearsal Council (docs/specs/2026-11-14-19-rehearsal-council.md). While `live` is false every rehearsal call is
+  # an offline stand-in, whatever AIN_LLM_MODE says: no Groq or OpenRouter quota. Live, it costs about two OpenRouter
+  # requests a turn (Sunny and Regal), so weigh it against the 50 a day before turning it on.
+  live: false
+  min_turns: 6
+  max_turns: 10
+  roles: {dalal: reasoner, debrief: chairman}  # the coaches keep their own seats (bench_a / bench_b / bench_c)

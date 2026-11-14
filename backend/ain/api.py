@@ -18,8 +18,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from ain import auth, automation, config, countries, mcp_server, seat_health
 from ain.agents import ablation, council
+from ain.agents.pii import rehydrate
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
+from ain.rehearsal import record as rehearsal_record
+from ain.rehearsal import session as rehearsal
+from ain.rehearsal import store as rehearsal_store
 from ain.llm import LLM, LLMError, PIILeakError
 from ain.llm import _get_cache as _llm_cache  # entry count for /api/metrics
 from ain.models import (
@@ -34,6 +38,10 @@ from ain.models import (
     Destination,
     JobSummary,
     Me,
+    PromiseContacts,
+    RehearsalSession,
+    RehearsalSetup,
+    RehearsalTurnRequest,
     Risk,
     Section,
 )
@@ -125,6 +133,7 @@ async def warm() -> None:
     async def _purge():
         while True:
             _delete_job_files(await asyncio.to_thread(auth.purge_expired))
+            await asyncio.to_thread(rehearsal_store.purge_orphans)  # sessions of purged guests
             await asyncio.sleep(PURGE_EVERY_S)
 
     _background(_warm())
@@ -201,6 +210,8 @@ def me(request: Request, response: Response) -> Me:
 def delete_account(response: Response, p: Principal = Depends(require_account)) -> dict:
     """Right to erasure: the account, its sessions, and every analysis it owns."""
     _delete_job_files(auth.delete_user(p.user_id))
+    for sid in rehearsal_store.purge_orphans():  # the user's rehearsals went with the account row
+        rehearsal.RUNNERS.pop(sid, None)
     auth.clear_cookie(response)
     return {"ok": True}
 
@@ -496,6 +507,121 @@ async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> Cou
         raise HTTPException(502, "The council could not answer just now. Please try again.") from e
     _save_council_calls(r, llm)
     return CouncilDeliberateResponse(rebuttals=rebuttals, ruling=ruling)
+
+
+# ---------------------------------------------------------------- rehearsal council (docs/specs/2026-11-14-19-...)
+
+
+def owned_rehearsal(sid: str, request: Request) -> rehearsal.Runner:
+    """The session, if the caller owns it. Otherwise 404, as for a session that does not exist."""
+    p = auth.principal(request)
+    r = rehearsal.get(sid) if p is not None and rehearsal_store.owns(p.user_id, sid) else None
+    if r is None:
+        raise HTTPException(404, "Unknown rehearsal")
+    return r
+
+
+def _public(r: rehearsal.Runner) -> RehearsalSession:
+    """What the browser sees: redacted text, and never the placeholder mapping."""
+    return r.session.model_copy(update={"mapping": {}, "trace": []})
+
+
+async def _step(r: rehearsal.Runner, coro) -> None:
+    async with r.lock:
+        try:
+            await coro
+        except PIILeakError:
+            r.say("error", rehearsal.AGENT, PII_MESSAGE)
+        except LLMError as e:
+            r.say("error", rehearsal.AGENT, f"The council could not answer just now. Please try again. ({type(e).__name__})")
+        r.save()
+
+
+@app.post("/api/rehearsals", status_code=201)
+async def rehearsal_create(body: RehearsalSetup, owner: Principal = Depends(require_principal)) -> dict:
+    if body.country and not countries.by_name(body.country):
+        raise HTTPException(400, "Unknown country. See /api/countries.")
+    if body.job_id and not auth.JOB_ID.match(body.job_id):
+        raise HTTPException(400, "Bad job_id")
+    r = rehearsal.create(owner.user_id, body)
+    _background(_step(r, rehearsal.open_turn(r)))
+    return {"id": r.session.id}
+
+
+@app.get("/api/rehearsals/{sid}", response_model=RehearsalSession)
+def rehearsal_get(r: rehearsal.Runner = Depends(owned_rehearsal)) -> RehearsalSession:
+    return _public(r)
+
+
+@app.get("/api/rehearsals/{sid}/events")
+async def rehearsal_events(last_event_id: int | None = None, r: rehearsal.Runner = Depends(owned_rehearsal)):
+    async def gen():
+        start = (last_event_id + 1) if last_event_id is not None else 0
+        async for i, ev in r.job.stream(start):
+            if ev is None:
+                yield {"event": "ping", "data": "{}"}
+                continue
+            yield {"id": str(i), "event": "trace", "data": ev.model_dump_json()}
+        yield {"event": "end", "data": json.dumps({"status": r.session.status})}
+
+    return EventSourceResponse(gen())
+
+
+@app.post("/api/rehearsals/{sid}/turns", status_code=202)
+async def rehearsal_turn(body: RehearsalTurnRequest, r: rehearsal.Runner = Depends(owned_rehearsal)) -> dict:
+    if r.session.status == "done":
+        raise HTTPException(409, "This rehearsal is finished.")
+    if r.lock.locked() or rehearsal.pending(r) is None:
+        raise HTTPException(409, "Wait for the dalal's next line.")
+    if not body.reply.strip() and body.action == "none":
+        raise HTTPException(422, "Type a reply or choose an action.")
+    _background(_step(r, rehearsal.answer(r, body.reply, body.action)))
+    return {"ok": True, "turn": len(r.session.turns)}
+
+
+@app.post("/api/rehearsals/{sid}/finish", status_code=202)
+async def rehearsal_finish(r: rehearsal.Runner = Depends(owned_rehearsal)) -> dict:
+    if r.session.status != "done":
+        _background(_step(r, rehearsal.finish(r)))
+    return {"ok": True}
+
+
+@app.put("/api/rehearsals/{sid}/record", response_model=RehearsalSession)
+async def rehearsal_record_put(body: PromiseContacts, r: rehearsal.Runner = Depends(owned_rehearsal)) -> RehearsalSession:
+    if r.session.record is None:
+        raise HTTPException(409, "Finish the rehearsal first.")
+    async with r.lock:
+        r.session.record.contacts = rehearsal.set_contacts(r, body)
+        r.save()
+    return _public(r)
+
+
+@app.get("/api/rehearsals/{sid}/record.docx")
+def rehearsal_record_docx(r: rehearsal.Runner = Depends(owned_rehearsal)) -> Response:
+    if r.session.record is None:
+        raise HTTPException(409, "Finish the rehearsal first.")
+    return Response(
+        rehearsal_record.record_docx(r.session),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="ain-promise-record-{r.session.id}.docx"'},
+    )
+
+
+@app.get("/api/rehearsals/{sid}/record/print", response_model=dict)
+def rehearsal_record_print(r: rehearsal.Runner = Depends(owned_rehearsal)) -> dict:
+    """The record with the worker's own values put back, for the browser's print-to-PDF view (this machine only)."""
+    if r.session.record is None:
+        raise HTTPException(409, "Finish the rehearsal first.")
+    k = r.session.record.contacts
+    real = {f: rehydrate(getattr(k, f), r.session.mapping) for f in PromiseContacts.model_fields}
+    rows = [{"field": row.field, "promised": rehydrate(row.promised, r.session.mapping)} for row in r.session.record.rows]
+    return {"contacts": real, "rows": rows, "job": rehydrate(r.session.setup.job or r.session.setup.promises.job, r.session.mapping)}
+
+
+@app.delete("/api/rehearsals/{sid}")
+def rehearsal_delete(r: rehearsal.Runner = Depends(owned_rehearsal)) -> dict:
+    rehearsal.forget(r.session.id)
+    return {"ok": True}
 
 
 @app.get("/api/corpus/{citation_id}", response_model=Section)

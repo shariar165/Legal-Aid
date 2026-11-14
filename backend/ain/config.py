@@ -140,6 +140,10 @@ def council_settings() -> dict:
     return dict(_raw()["council"])
 
 
+def rehearsal_settings() -> dict:
+    return dict(_raw().get("rehearsal") or {})
+
+
 def quote_threshold() -> int:
     return int(_raw()["verifier"]["quote_fidelity_threshold"])
 

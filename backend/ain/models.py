@@ -479,3 +479,121 @@ class JobSummary(BaseModel):
     job_id: str
     name: str
     created_at: float
+
+
+# ---------------------------------------------------------------- rehearsal council (docs/specs/2026-11-14-19-...)
+
+PassportKeeper = Literal["me", "agent", "employer", "unsure"]
+WorkerAction = Literal["none", "paid", "gave_passport"]
+
+
+class PromisedTerms(BaseModel):
+    """What the worker says the agent has promised so far. Every field is optional; all of it is redacted before use."""
+
+    salary: str = Field("", max_length=120)
+    total_cost: str = Field("", max_length=120)
+    job: str = Field("", max_length=160)
+    duration: str = Field("", max_length=120)
+    passport_keeper: PassportKeeper = "unsure"
+    paid_so_far: str = Field("", max_length=120)
+    extra: list[str] = Field(default_factory=list, max_length=10)
+
+
+class RehearsalSetup(BaseModel):
+    country: str | None = None  # a code or name from /api/countries
+    job: str = Field("", max_length=160)
+    promises: PromisedTerms = Field(default_factory=PromisedTerms)
+    has_contract: bool = False
+    through_dalal: bool = True  # the offer came through a middleman, not straight from a licensed agency
+    job_id: str | None = None  # an existing analysis of the worker's contract, if they ran one
+    language: Literal["bn", "en"] = "bn"
+
+
+class CoachHint(BaseModel):
+    member: str  # happy | proud | gloomy
+    name: str
+    lens: str
+    text: str
+    say: str = ""  # Sunny only: a polite reply the worker can tap
+    citations: list[str] = Field(default_factory=list)
+    gates: list[GateResult] = Field(default_factory=list)  # Regal only: the evidence gate on the one citation
+    dropped: str = ""  # why a citation or the model's hint was not shown ("" if nothing was dropped)
+
+
+class RehearsalTurn(BaseModel):
+    n: int
+    tactic_id: str
+    dalal_line: str
+    guardrail: str = ""  # why the model's own line was replaced by the tactic's example line
+    worker_reply: str = ""  # redacted
+    action: WorkerAction = "none"
+    hints: list[CoachHint] = Field(default_factory=list)
+    hits: list[str] = Field(default_factory=list)  # rubric items this reply asked for (shown as ticks)
+
+
+class RubricItem(BaseModel):
+    id: str
+    label: L10n
+    status: Literal["met", "missed", "not_tested"]
+    turn: int | None = None
+    weight: int = 1
+
+
+class RehearsalDebrief(BaseModel):
+    score: int  # 0-100, from the rubric in code; no model sees or sets it
+    items: list[RubricItem]
+    checklist: list[L10n]
+    note: str = ""  # the Chief Justice's words
+    citations: list[str] = Field(default_factory=list)
+    model: str = ""
+
+
+class PromiseRow(BaseModel):
+    field: str
+    label: L10n
+    promised: str  # the worker's words, redacted
+    checks: list[Verification] = Field(default_factory=list)  # verified or partial only
+    unverified: list[str] = Field(default_factory=list)  # citation ids whose check did not pass, so are not shown
+
+
+class ComplaintPath(BaseModel):
+    id: str
+    label: L10n  # what this pathway is for, in plain words
+    check: Verification
+
+
+class PromiseContacts(BaseModel):
+    """Typed into the Promise Record only. Stored as placeholders; the values never reach a model."""
+
+    agent_name: str = Field("", max_length=120)
+    agent_phone: str = Field("", max_length=40)
+    agency_name: str = Field("", max_length=160)
+    place: str = Field("", max_length=160)
+    notes: str = Field("", max_length=1000)
+
+
+class PromiseRecord(BaseModel):
+    created_at: str  # ISO date
+    contacts: PromiseContacts = Field(default_factory=PromiseContacts)  # placeholders, e.g. [NAME_1]
+    rows: list[PromiseRow] = Field(default_factory=list)
+    paths: list[ComplaintPath] = Field(default_factory=list)
+    unverified: list[str] = Field(default_factory=list)
+
+
+class RehearsalSession(BaseModel):
+    id: str
+    created_at: float
+    setup: RehearsalSetup  # redacted
+    turns: list[RehearsalTurn] = Field(default_factory=list)
+    status: Literal["running", "done"] = "running"
+    debrief: RehearsalDebrief | None = None
+    record: PromiseRecord | None = None
+    mode: str = "fake"
+    outbound_calls: list[OutboundCall] = Field(default_factory=list)
+    trace: list[TraceEvent] = Field(default_factory=list)
+    mapping: dict[str, str] = Field(default_factory=dict)  # placeholder -> value; only ever on disk encrypted, never sent
+
+
+class RehearsalTurnRequest(BaseModel):
+    reply: str = Field("", max_length=600)
+    action: WorkerAction = "none"

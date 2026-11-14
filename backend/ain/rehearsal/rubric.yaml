@@ -1,0 +1,70 @@
+# Rehearsal Council readiness rubric. Scored in code only (rubric.py); no model sees or sets the score.
+# A reply asks for an item when one `hit` pattern matches and no `negate` pattern does. Patterns run on the
+# NFC-normalised, redacted, lower-cased reply with Bangla digits made ASCII. Bangla, English and Banglish.
+# applies: always | tactic:<id> (the item counts only if that tactic was played)
+
+items:
+  - id: receipt
+    label: {bn: "টাকার রসিদ চেয়েছেন", en: "Asked for a receipt"}
+    ask: {bn: "যত টাকা দেব, প্রতিবার তারিখ আর সইসহ রসিদ দেবেন তো?", en: "Will you give me a dated, signed receipt for every payment?"}
+    applies: always
+    hit:
+      - "রসিদ|রশিদ|রিসিট|রিসিপ্ট|receipt|rosid|roshid|risit"
+      - "টাকা(?:র)? (?:যে )?(?:দিলাম|দেব|দিব)(?:,)? (?:তা|সেটা) লিখে"
+    negate:
+      - "(?:রসিদ|রশিদ|রিসিট|রিসিপ্ট|receipt|rosid|roshid)\\W*(?:\\S+\\s+){0,2}(?:লাগবে ?না|লাগে ?না|দরকার (?:নেই|নাই)|lagbe ?na|no need|not needed)"
+      - "(?:no|don'?t need (?:a|any)?)\\s*receipts?\\s*(?:needed|is fine|ok)?$"
+
+  - id: written_contract_first
+    label: {bn: "টাকা দেওয়ার আগে লিখিত চুক্তি চেয়েছেন", en: "Asked for a written contract before paying"}
+    ask: {bn: "টাকা দেওয়ার আগে লিখিত চুক্তিটা দেখাবেন? বেতন, কাজ আর মেয়াদ কোথায় লেখা?", en: "Can I see the written contract, with salary, job and duration, before I pay?"}
+    applies: always
+    before_paying: true  # counts only if asked before any "paid" action
+    hit:
+      - "চুক্তি|কন্ট্রাক্ট|কনট্রাক্ট|contract|chukti|নিয়োগপত্র|appointment letter"
+    negate:
+      - "(?:চুক্তি|কন্ট্রাক্ট|কনট্রাক্ট|contract|chukti)\\W*(?:\\S+\\s+){0,2}(?:লাগবে ?না|দরকার (?:নেই|নাই)|পরে (?:দিলেও|দিলে) (?:হবে|চলবে)|lagbe ?na|no need|later is fine)"
+
+  - id: licence
+    label: {bn: "এজেন্সির লাইসেন্স আছে কিনা জিজ্ঞেস করেছেন", en: "Asked whether the agency is licensed"}
+    ask: {bn: "আপনার এজেন্সির নাম আর লাইসেন্স নম্বর কী? আপনি কি নিবন্ধিত সাব-এজেন্ট?", en: "What is your agency's name and licence number? Are you a registered sub-agent?"}
+    applies: always
+    hit:
+      - "লাইসেন্স|লাইসেনস|license|licence|licensed|নিবন্ধ|রেজিস্ট্রেশন|রেজিস্টার্ড|registered|registration|আরএল নম্বর|\\brl\\b|বিএমইটি|bmet|ব্যুরো"
+    negate:
+      - "(?:লাইসেন্স|license|licence)\\W*(?:\\S+\\s+){0,2}(?:লাগবে ?না|দরকার (?:নেই|নাই)|lagbe ?na|no need)"
+
+  - id: kept_passport
+    label: {bn: "পাসপোর্ট হাতছাড়া করেননি", en: "Kept the passport"}
+    ask: {bn: "পাসপোর্ট আমার কাছেই থাকবে। জমা দিতে হলে আমি নিজে অফিসে গিয়ে দেব, রসিদসহ।", en: "My passport stays with me. If it must be submitted, I will take it to the office myself and get a receipt."}
+    applies: "tactic:passport_for_processing"
+    refuse_action: gave_passport  # missed outright if the worker pressed this
+    hit:
+      - "পাসপোর্ট\\S*\\s+(?:\\S+\\s+){0,4}(?:দেব ?না|দিব ?না|দিবো ?না|দিমু ?না|দিতে পারব ?না|দিচ্ছি ?না|নিজের কাছে|আমার কাছে(?:ই)? থা|রাখব|রাখবো|রাখি)"
+      - "(?:দেব ?না|দিব ?না|দিবো ?না|দিতে পারব ?না)\\S*\\s+(?:\\S+\\s+){0,3}পাসপোর্ট"
+      - "(?:নিজে|আমি নিজেই?) (?:অফিসে )?(?:গিয়ে )?জমা দেব"
+      - "keep (?:my|the) passport|passport stays with me|won'?t (?:give|hand)|not (?:give|hand)(?:ing)? (?:you )?(?:my|the) passport|passport (?:dibo|debo) na|passport amar kache"
+
+  - id: total_cost_in_writing
+    label: {bn: "মোট খরচ লিখিত চেয়েছেন", en: "Asked for the total cost in writing"}
+    ask: {bn: "সব মিলিয়ে মোট খরচ কত? সেটা কাগজে লিখে সই করে দেবেন?", en: "What is the total cost, all included? Will you write it down and sign it?"}
+    applies: always
+    hit:
+      - "(?:মোট|সব মিলিয়ে|সর্বমোট|টোটাল|total|mot|shob miliye)\\s*(?:\\S+\\s+){0,3}(?:খরচ|টাকা|cost|khoroch|কত)[^।!.]{0,60}(?:লিখে|লিখিত|কাগজে|in writing|written|write|likhe)"
+      - "(?:লিখে|লিখিত|কাগজে|in writing|write down|likhe)[^।?!.]{0,60}(?:মোট|সব মিলিয়ে|সর্বমোট|টোটাল|total|mot)\\s*(?:\\S+\\s+){0,2}(?:খরচ|cost|khoroch|টাকা)"
+    negate: []
+
+  - id: no_pay_on_spot
+    label: {bn: "সঙ্গে সঙ্গে টাকা দেননি", en: "Did not pay on the spot"}
+    ask: {bn: "আমি পরিবারের সঙ্গে কথা বলে, কাগজ দেখে তারপর টাকা দেব।", en: "I will talk to my family and see the papers before I pay anything."}
+    applies: always
+    refuse_action: paid
+    # a reply that agrees to pay now counts as paying
+    agree:
+      - "(?:এখনই|আজই|এখুনি|এখন|আজকেই)\\s*(?:\\S+\\s+){0,2}(?:দিচ্ছি|দিয়ে দিচ্ছি|দিয়ে দিব|দিয়ে দেব|দিয়ে দিবো|দিবো|দেব|দিব|দিমু)"
+      - "ঠিক আছে,?\\s*(?:টাকা\\s*)?(?:দিচ্ছি|দিয়ে দিচ্ছি|দেব|দিব|দিবো)"
+      - "টাকা (?:দিয়ে দিলাম|নেন|নিন|ধরেন)"
+      - "(?:ok|okay|thik ache|thik ase),?\\s*(?:taka\\s*)?(?:dicchi|dibo|debo|dichi)"
+      - "(?:i'?ll|i will|let me) pay (?:now|today|right away)|here is the money|take the money"
+    hit: []
+    negate: []

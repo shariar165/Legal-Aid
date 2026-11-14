@@ -237,5 +237,26 @@ The request named s.29 as a complaint pathway. It is the right to return home an
    - stopping early gives a debrief that matches the rubric by hand;
    - the DOCX and the print PDF hold the name, and the trace does not.
 
-## Unverified tactics
-To be filled during stage 2: every candidate tactic for which no source I could open documents the tactic.
+## Sources used (opened and read 2026-11-14)
+| Source | Tactics |
+|---|---|
+| TIB, *Good Governance in the Labour Migration Process: Challenges and the Way Forward* (2017), pp. 24-25, 28, 31 | trust_me, lucrative_job, pay_in_parts, passport_for_processing, contract_later, free_visa; licence_dodge (second source) |
+| Winrock International for USAID Asia CTIP, *Hidden Costs of Migration: BD-MY Corridor* (2022), pp. 15, 40-41 | land_loan |
+| The Business Standard, 17 May 2025, reporting a 2010 IOM survey ("recruiting agencies routinely failed to provide receipts") | no_receipt |
+| The Business Standard, 9 July 2025, reporting OKUP's *A Far Cry from Justice for Migrants* (75% no contract, 80% unauthorised sub-agents) | licence_dodge; contract_later (second source) |
+
+The two TBS sources are press reports of the IOM survey and the OKUP study. I could open the reports, but not the underlying studies: the IOM/GoB *The Cost* report on probashi.portal.gov.bd did not load. If you can get the originals, they should replace the press reports.
+
+## Unverified tactics (left out)
+No source I could open documents these as dalal tactics, so the dalal never uses them:
+- **"Pay today or the visa goes"** (urgency). The sources describe installments paid long before the visa is confirmed (now `pay_in_parts`), but not a deadline threat.
+- **"Everyone pays this much"** (normalising the fee). The sources document high prices, but not that framing.
+- **"Tell no one or you lose the seat"** (secrecy).
+
+The rubric's "didn't pay on the spot" item still applies on every turn.
+
+## Built differently from the plan
+- **Figures in the Promise Record.** A gated claim whose proposition has a figure missing from its section's own text is held back and listed as unverified. This catches the playbook's Malaysian passport anchor, which writes "RM100,000" where the statute uses words. The Malaysian minimum wage (RM1,700, stated in the order) is shown.
+- **Name redaction.** The PII Shield only catches names that come with a label. Rehearsal adds two things locally, without changing `pii.py`:
+  - contact fields always become placeholders;
+  - "আমার নাম …", "my name is …" and any value already in the session's mapping are replaced in every reply.

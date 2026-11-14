@@ -1,0 +1,96 @@
+# Promise Record: which law each promise or fact is checked against. Every quote is a verbatim substring of an
+# in-force corpus section (tests/test_rehearsal_record.py) and every proposition passes the verifier's gates before
+# it is shown. Propositions are plain Bangla and name no section number: the label comes from the corpus.
+# when: always | <field> in [values] | <field> is false | <field> given (non-empty)
+
+checks:
+  - id: passport
+    label: {bn: "পাসপোর্ট কার কাছে থাকবে", en: "Who keeps the passport"}
+    field: passport_keeper
+    when: "passport_keeper in [agent, employer]"
+    playbook_rule: PB-PASSPORT  # also the destination's own anchors from playbook/rules.yaml (pack_anchors)
+    claims:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "কোন অভিবাসী কর্মীর পাসপোর্ট, ভিসা বা অভিবাসন সংক্রান্ত কাগজপত্র বৈধ কারণ ব্যতীত আটকাইয়া রাখিলে"
+        proposition: "বৈধ কারণ ছাড়া কোনো অভিবাসী কর্মীর পাসপোর্ট, ভিসা বা অভিবাসনের কাগজপত্র আটকে রাখা অপরাধ।"
+
+  - id: contract
+    label: {bn: "লিখিত চুক্তি", en: "Written contract"}
+    field: has_contract
+    when: "has_contract is false"
+    claims:
+      - citation_id: BD-OEMA-2013-s22
+        quote: "রিক্রুটিং এজেন্ট নির্বাচিত কর্মী এবং তাহার নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি সম্পাদন করিবে"
+        proposition: "রিক্রুটিং এজেন্টকে কর্মী আর নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি করাতে হয়, যাতে বেতন, থাকার ব্যবস্থা, কাজের মেয়াদ ও যাতায়াতের খরচ লেখা থাকে।"
+      - citation_id: BD-OEMA-2013-s26
+        quote: "বিদেশে যাইবার পূর্বে অভিবাসন প্রক্রিয়া এবং কর্মসংস্থান চুক্তি বা বিদেশে কর্মের পরিবেশ সম্পর্কে অবহিত হইবার"
+        proposition: "বিদেশে যাওয়ার আগে কর্মীর অভিবাসন প্রক্রিয়া আর কর্মসংস্থান চুক্তি সম্পর্কে জানার অধিকার আছে।"
+
+  - id: middleman
+    label: {bn: "দালালের মাধ্যমে যোগাযোগ", en: "Recruited through a middleman"}
+    field: through_dalal
+    when: "through_dalal is true"
+    claims:
+      - citation_id: BD-OEMA-2013-s9
+        quote: "এই আইনের অধীন ইস্যুকৃত লাইসেন্স ব্যতীত কোন ব্যক্তি রিক্রুটমেন্ট সংক্রান্ত কোন কার্যক্রম করিতে পারিবে না"
+        proposition: "লাইসেন্স ছাড়া কেউ কর্মী পাঠানোর (রিক্রুটমেন্ট) কোনো কাজ করতে পারে না।"
+      - citation_id: BD-OEMA-2013-s14A
+        quote: "নিবন্ধিত কোন ব্যক্তিকে সাব-এজেন্ট বা প্রতিনিধি নিয়োগ করিতে পারিবে"
+        proposition: "রিক্রুটিং এজেন্ট শুধু নিবন্ধিত কাউকে সাব-এজেন্ট বা প্রতিনিধি নিয়োগ করতে পারে।"
+
+  - id: salary
+    label: {bn: "প্রতিশ্রুত বেতন", en: "Promised salary"}
+    field: salary
+    when: "salary given"
+    min_wage: true  # plus the destination's minimum wage, when countries.yaml has one tied to a section
+    claims:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "প্রতারণামূলকভাবে অধিক বেতন-ভাতা ও সুযোগ সুবিধার মিথ্যা আশ্বাস প্রদান করিয়া"
+        proposition: "প্রতারণা করে বেশি বেতন-ভাতা ও সুবিধার মিথ্যা আশ্বাস দিয়ে কাউকে বিদেশে পাঠানো অপরাধ।"
+
+  - id: cost
+    label: {bn: "মোট খরচ", en: "Total cost"}
+    field: total_cost
+    when: "total_cost given"
+    note: {bn: "সরকার আদেশ দিয়ে খরচের সর্বোচ্চ সীমা ঠিক করতে পারে। সেই আদেশ Ain-এর কাছে নেই, তাই এখানে কোনো অঙ্ক দেখানো হলো না। বর্তমান সীমা কত, তা বিএমইটি থেকে লিখিতভাবে জেনে নিন।", en: "The Government may set a ceiling on the cost by order. Ain does not hold that order, so no figure is shown here. Ask BMET for the current ceiling in writing."}
+    claims:
+      - citation_id: BD-OEMA-2013-s21
+        quote: "অভিবাসন ব্যয়ের সর্বোচ্চ সীমা নির্ধারণ করিতে পারিবে"
+        proposition: "বিদেশে যাওয়ার খরচের সর্বোচ্চ সীমা সরকার আদেশ দিয়ে ঠিক করে দিতে পারে।"
+
+  - id: paid
+    label: {bn: "এ পর্যন্ত দেওয়া টাকা", en: "Money paid so far"}
+    field: paid_so_far
+    when: "paid_so_far given"
+    claims:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "কোন ব্যক্তিকে বৈদেশিক কর্মসংস্থানের মিথ্যা আশ্বাস প্রদান করিয়া কোন অর্থ বা মূল্যবান দ্রব্য গ্রহণ করিলে বা গ্রহণ করিবার চেষ্টা করিলে"
+        proposition: "বিদেশে চাকরির মিথ্যা আশ্বাস দিয়ে টাকা নেওয়া, বা নেওয়ার চেষ্টা করাও, অপরাধ।"
+
+# Where to complain. Each is a claim like any other and is shown only if it passes the gates.
+paths:
+  - id: complaint
+    label: {bn: "সরকারের কাছে অভিযোগ (প্রতারণা, অবৈধভাবে টাকা নেওয়া, চুক্তি ভঙ্গ)", en: "Complaint to the Government (fraud, money taken illegally, breach of contract)"}
+    citation_id: BD-OEMA-2013-s41
+    quote: "সরকারের নিকট রিক্রুটিং এজেন্টসহ যে কোন ব্যক্তির বিরুদ্ধে প্রতারনা, অবৈধভাবে অর্থ গ্রহণ অথবা কর্মসংস্থান চুক্তি লঙ্ঘনের অভিযোগসহ"
+    proposition: "ক্ষতিগ্রস্ত যে কেউ রিক্রুটিং এজেন্টসহ যে কারও বিরুদ্ধে প্রতারণা, অবৈধভাবে টাকা নেওয়া বা চুক্তি ভঙ্গের অভিযোগ সরকারের কাছে করতে পারেন।"
+  - id: recovery
+    label: {bn: "অবৈধভাবে নেওয়া টাকা উদ্ধার", en: "Recovery of money taken illegally"}
+    citation_id: BD-OEMA-2013-s43
+    quote: "কোন অর্থ গ্রহণ করা হইলে সরকার, প্রয়োজনীয় তদন্ত সাপেক্ষে"
+    proposition: "আইন ভেঙে কেউ টাকা নিলে সরকার তদন্ত করে লিখিত আদেশে সেই টাকা উদ্ধার করে ক্ষতিগ্রস্তকে দিতে পারে।"
+  - id: civil_suit
+    label: {bn: "ক্ষতিপূরণের দেওয়ানি মামলা", en: "Civil suit for compensation"}
+    citation_id: BD-OEMA-2013-s28
+    quote: "ক্ষতিপূরণের জন্য দেওয়ানী মামলা দায়ের করিতে পারিবে"
+    proposition: "আইন বা চুক্তি ভঙ্গে ক্ষতিগ্রস্ত হলে ক্ষতিপূরণের জন্য দেওয়ানি মামলা করা যায়।"
+  - id: legal_aid
+    label: {bn: "আইনগত সহায়তা", en: "Legal aid"}
+    citation_id: BD-OEMA-2013-s27
+    quote: "অভিবাসনের নামে প্রতারণার শিকার ব্যক্তিদের যুক্তিসঙ্গত আইনগত সহায়তা পাইবার অধিকার থাকিবে"
+    proposition: "অভিবাসী কর্মী আর অভিবাসনের নামে প্রতারণার শিকার মানুষের যুক্তিসঙ্গত আইনগত সহায়তা পাওয়ার অধিকার আছে।"
+  - id: mission
+    label: {bn: "বিদেশে বিপদে পড়লে বাংলাদেশ মিশনের সহায়তা", en: "Help from the Bangladesh Mission once abroad"}
+    citation_id: BD-OEMA-2013-s29
+    quote: "বাংলাদেশ মিশন বা দূতাবাসের নিকট হইতে প্রয়োজনীয় সহায়তা পাইবার অধিকার থাকিবে"
+    proposition: "বিদেশে আটকে পড়া বা বিপদে পড়া কর্মীর দেশে ফেরার এবং বাংলাদেশ মিশন বা দূতাবাসের সহায়তা পাওয়ার অধিকার আছে।"

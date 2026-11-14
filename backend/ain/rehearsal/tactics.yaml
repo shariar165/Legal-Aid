@@ -1,0 +1,202 @@
+# Rehearsal Council: the pressure tactics the dalal seat may use, and nothing else.
+# docs/specs/2026-11-14-19-rehearsal-council.md, "Tactic sourcing rules".
+#
+# Every tactic has a source that was opened and read (2026-11-14), with a locator, and `supports`, a short paraphrase
+# of what that source documents. A tactic no openable source documents is left out; the spec lists those.
+# example_bn: one Bangla line in the dalal's voice, with no digits, no names and no statement about the law.
+# tests:      the rubric items (rubric.yaml) this tactic probes.
+# counter_of: the scheduler plays this tactic next when the worker's last reply asked for one of these items.
+# law:        what Regal may cite on this turn, beyond retrieval. Each quote is a verbatim substring of an in-force
+#             corpus section (tests/test_rehearsal_tactics.py), never typed from memory. regal_bn is the offline
+#             stand-in's plain reading of the first anchor, and must name no section number.
+
+sources:
+  tib2017: &tib2017
+    title: "Good Governance in the Labour Migration Process: Challenges and the Way Forward"
+    publisher: Transparency International Bangladesh (TIB)
+    year: 2017
+    url: https://ti-bangladesh.org/images/2017/FullReport_Migration_English.pdf
+  winrock2022: &winrock2022
+    title: "Hidden Costs of Migration: BD-MY Corridor (JDR3 research)"
+    publisher: Winrock International, for USAID Asia Counter Trafficking in Persons
+    year: 2022
+    url: https://winrock.org/wp-content/uploads/2022/05/JDR3-Full-Report_May-2022.pdf
+  tbs_iom2025: &tbs_iom2025
+    title: "Despite laws and pledges, migrant workers remain prey to exploitation (reporting a 2010 IOM survey)"
+    publisher: The Business Standard
+    year: 2025
+    url: https://www.tbsnews.net/bangladesh/migration/despite-laws-and-pledges-migrant-workers-remain-prey-exploitation-1144111
+  tbs_okup2025: &tbs_okup2025
+    title: "False promises abroad, no justice at home: New study sheds light on migrants' perils (reporting OKUP, A Far Cry from Justice for Migrants)"
+    publisher: The Business Standard
+    year: 2025
+    url: https://www.tbsnews.net/bangladesh/migration/false-promises-abroad-no-justice-home-new-study-sheds-light-migrants-perils
+
+tactics:
+  - id: trust_me
+    label: {bn: "আমি তো আপনার এলাকার মানুষ", en: "Trust me, I'm from your area"}
+    example_bn: "আমি তো আপনার এলাকারই মানুষ, ভাই। আমাকে বিশ্বাস করেন না? কাগজপত্রের ঝামেলা সব আমি দেখব।"
+    source:
+      <<: *tib2017
+      locator: "pp. 24-25 (Sub-agents or Dalals) and p. 31 (item 5)"
+      supports: "Workers reach dalals through relatives, friends and acquaintances, deal face to face, and believe whatever the dalal tells them because of reliance created by the social network."
+    tests: [licence, written_contract_first]
+    counter_of: []
+    sunny_ask_bn: "বিশ্বাস রেখেও কাগজ চাওয়া যায়। ভদ্রভাবে এজেন্সির নাম আর লাইসেন্স নম্বর জিজ্ঞেস করুন।"
+    sunny_say_bn: "ভাই, আপনাকে বিশ্বাস করি। তবু এজেন্সির নাম আর লাইসেন্স নম্বরটা একটু লিখে দেবেন?"
+    grey_flag_bn: "সতর্ক সংকেত: চেনা মুখ দিয়ে ভরসা তৈরি করে, যাতে আপনি কোনো কাগজ না চান। পরে প্রমাণ থাকে না।"
+    regal_bn: "যার লাইসেন্স নেই, সে কর্মী পাঠানোর কোনো কাজ করতে পারে না।"
+    law:
+      - citation_id: BD-OEMA-2013-s9
+        quote: "এই আইনের অধীন ইস্যুকৃত লাইসেন্স ব্যতীত কোন ব্যক্তি রিক্রুটমেন্ট সংক্রান্ত কোন কার্যক্রম করিতে পারিবে না"
+
+  - id: lucrative_job
+    label: {bn: "ওখানে অনেক বেতন", en: "Big salary over there"}
+    example_bn: "ওখানে কাজ খুব ভালো, ওভারটাইম মিলিয়ে বেতন অনেক বেশি পাবেন। কয়েক মাসেই খরচ উঠে যাবে।"
+    source:
+      <<: *tib2017
+      locator: "p. 31 (item 6, Charging higher prices)"
+      supports: "Dalals are outside any accountability framework and charge higher amounts by alluring workers with lucrative job offers."
+    tests: [written_contract_first, total_cost_in_writing]
+    counter_of: []
+    sunny_ask_bn: "মুখের কথা নয়, বেতন আর কাজের কথা লিখিত চুক্তিতে চান।"
+    sunny_say_bn: "বেতন কত আর কী কাজ, সেটা লিখিত চুক্তিতে দেখাতে পারবেন?"
+    grey_flag_bn: "সতর্ক সংকেত: বড় বেতনের মুখের কথা দিয়ে বেশি টাকা আদায় করা হয়। ওখানে গিয়ে অন্য বেতন ধরিয়ে দেওয়া হয়।"
+    regal_bn: "প্রতারণা করে বেশি বেতন-ভাতা আর সুবিধার মিথ্যা আশ্বাস দিয়ে কাউকে বিদেশে পাঠানো অপরাধ।"
+    law:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "প্রতারণামূলকভাবে অধিক বেতন-ভাতা ও সুযোগ সুবিধার মিথ্যা আশ্বাস প্রদান করিয়া"
+
+  - id: pay_in_parts
+    label: {bn: "এখন অল্প দিন, বাকিটা পরে", en: "Pay a little now, the rest later"}
+    example_bn: "এখন অল্প কিছু দিয়ে নামটা লিখিয়ে রাখেন, বাকিটা ভিসা এলে দিবেন।"
+    source:
+      <<: *tib2017
+      locator: "p. 25 and p. 31 (item 5)"
+      supports: "Workers pay dalals in installments, long before the visa is confirmed, and so become dependent on the dalal for the visa, the destination and even the money already paid."
+    tests: [no_pay_on_spot, total_cost_in_writing]
+    counter_of: [total_cost_in_writing]
+    sunny_ask_bn: "এক টাকাও দেওয়ার আগে মোট খরচ কত, তা লিখিত চান।"
+    sunny_say_bn: "আগে মোট খরচ কত, সেটা কাগজে লিখে দিন। তারপর ভেবে বলব।"
+    grey_flag_bn: "সতর্ক সংকেত: কিস্তিতে টাকা নিলে আপনি তার ওপর নির্ভরশীল হয়ে পড়েন। আগের টাকা ফেরত পাওয়ার ভয়ে আরও দিতে থাকেন।"
+    regal_bn: "বিদেশে চাকরির মিথ্যা আশ্বাস দিয়ে টাকা নেওয়া, বা নেওয়ার চেষ্টা করাও, অপরাধ।"
+    law:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "কোন ব্যক্তিকে বৈদেশিক কর্মসংস্থানের মিথ্যা আশ্বাস প্রদান করিয়া কোন অর্থ বা মূল্যবান দ্রব্য গ্রহণ করিলে বা গ্রহণ করিবার চেষ্টা করিলে"
+
+  - id: no_receipt
+    label: {bn: "রসিদ লাগবে না", en: "No receipt needed"}
+    example_bn: "রসিদ-টসিদ লাগবে না, আমরা তো চেনাজানা মানুষ। হাতে হাতে দিয়ে দেন।"
+    source:
+      <<: *tbs_iom2025
+      locator: "paragraph on the 2010 IOM survey"
+      supports: "An IOM survey found that recruiting agencies routinely failed to provide receipts for the substantial sums they collected."
+    tests: [receipt, no_pay_on_spot]
+    counter_of: [receipt]
+    sunny_ask_bn: "যত টাকা দেবেন, প্রতিবার তার রসিদ চান: তারিখ, টাকার অঙ্ক আর কে নিলেন।"
+    sunny_say_bn: "ভাই, যত টাকাই দিই, তারিখ আর সইসহ একটা রসিদ দেবেন।"
+    grey_flag_bn: "সতর্ক সংকেত: রসিদ না থাকলে পরে প্রমাণ করা যায় না যে টাকা দিয়েছিলেন। অভিযোগ করতে গেলে এটাই প্রথম বাধা।"
+    regal_bn: "আইন ভেঙে কেউ টাকা নিলে সরকার তদন্ত করে সেই টাকা উদ্ধার করতে পারে।"
+    law:
+      - citation_id: BD-OEMA-2013-s43
+        quote: "কোন অর্থ গ্রহণ করা হইলে সরকার, প্রয়োজনীয় তদন্ত সাপেক্ষে"
+
+  - id: passport_for_processing
+    label: {bn: "পাসপোর্টটা আমার কাছে দিন", en: "Give me your passport for processing"}
+    example_bn: "প্রসেসিং-এর জন্য পাসপোর্টটা আমার কাছে দিয়ে যান, আমি অফিসে জমা দিয়ে দেব।"
+    source:
+      <<: *tib2017
+      locator: "p. 31 (Dalals at the grassroots ...)"
+      supports: "Grassroots dalals take the remaining money and send the workers' passports and details to the recruiting agency through the first-tier broker."
+    tests: [kept_passport]
+    counter_of: []
+    sunny_ask_bn: "পাসপোর্ট নিজের কাছে রাখুন। দরকার হলে নিজে এজেন্সির অফিসে গিয়ে জমা দিন, আর জমার রসিদ নিন।"
+    sunny_say_bn: "পাসপোর্ট আমার কাছেই থাকুক। দরকার হলে আমি নিজে অফিসে গিয়ে জমা দেব।"
+    grey_flag_bn: "সতর্ক সংকেত: পাসপোর্ট হাতছাড়া হলে আপনি আটকে যান। টাকা ফেরত চাইলে বা অন্য কোথাও যেতে চাইলে পাসপোর্ট আটকে রাখার ভয় দেখানো যায়।"
+    regal_bn: "বৈধ কারণ ছাড়া কোনো অভিবাসী কর্মীর পাসপোর্ট, ভিসা বা কাগজপত্র আটকে রাখা অপরাধ।"
+    law:
+      - citation_id: BD-OEMA-2013-s31
+        quote: "কোন অভিবাসী কর্মীর পাসপোর্ট, ভিসা বা অভিবাসন সংক্রান্ত কাগজপত্র বৈধ কারণ ব্যতীত আটকাইয়া রাখিলে"
+
+  - id: contract_later
+    label: {bn: "চুক্তি পরে, এয়ারপোর্টে পাবেন", en: "The contract comes later, at the airport"}
+    example_bn: "চুক্তির কাগজ এখন লাগবে না, ওটা ফ্লাইটের দিন এয়ারপোর্টেই পেয়ে যাবেন।"
+    source:
+      <<: *tib2017
+      locator: "p. 31 (item 5, Selling of visa by dalals)"
+      supports: "In most cases workers are handed the job contract just before departure, as they reach the airport."
+    tests: [written_contract_first]
+    counter_of: [written_contract_first]
+    sunny_ask_bn: "টাকা দেওয়ার আগেই লিখিত চুক্তি দেখতে চান, যাতে বেতন, কাজ আর মেয়াদ লেখা থাকে।"
+    sunny_say_bn: "টাকা দেওয়ার আগে চুক্তির কাগজটা দেখতে চাই। বেতন আর কাজের মেয়াদ কোথায় লেখা?"
+    grey_flag_bn: "সতর্ক সংকেত: এয়ারপোর্টে চুক্তি হাতে দিলে তখন আর না বলার উপায় থাকে না। টাকা আগেই চলে গেছে।"
+    regal_bn: "রিক্রুটিং এজেন্টকে কর্মী আর নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি করাতে হয়।"
+    law:
+      - citation_id: BD-OEMA-2013-s22
+        quote: "রিক্রুটিং এজেন্ট নির্বাচিত কর্মী এবং তাহার নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি সম্পাদন করিবে"
+      - citation_id: BD-OEMA-2013-s26
+        quote: "বিদেশে যাইবার পূর্বে অভিবাসন প্রক্রিয়া এবং কর্মসংস্থান চুক্তি বা বিদেশে কর্মের পরিবেশ সম্পর্কে অবহিত হইবার"
+    also_source:
+      <<: *tbs_okup2025
+      locator: "summary of the OKUP study's findings"
+      supports: "75% of the complainants in the OKUP study said they were not given job contracts before migrating."
+
+  - id: licence_dodge
+    label: {bn: "লাইসেন্স বড় অফিসের ব্যাপার", en: "The licence is the big office's business"}
+    example_bn: "লাইসেন্স-টাইসেন্স বড় অফিসের ব্যাপার, ওসব নিয়ে আপনি চিন্তা করবেন না।"
+    source:
+      <<: *tbs_okup2025
+      locator: "summary of the OKUP study's findings"
+      supports: "80% of the respondents in the OKUP study were recruited through unauthorised sub-agents, although only licensed agencies may recruit."
+    also_source:
+      <<: *tib2017
+      locator: "p. 31 (item 6, Charging higher prices)"
+      supports: "Dalals are not covered by any institutional framework, so they are outside any accountability framework."
+    tests: [licence]
+    counter_of: [licence]
+    sunny_ask_bn: "এজেন্সির নাম আর লাইসেন্স নম্বর জিজ্ঞেস করুন, আর আপনি নিবন্ধিত সাব-এজেন্ট কিনা।"
+    sunny_say_bn: "আপনি কোন এজেন্সির হয়ে কাজ করেন? তাদের লাইসেন্স নম্বর আর আপনার নিবন্ধনের কাগজ দেখাবেন?"
+    grey_flag_bn: "সতর্ক সংকেত: লাইসেন্সের প্রশ্ন এড়িয়ে গেলে, কিছু হলে কাউকে দায়ী করা কঠিন হয়ে যায়।"
+    regal_bn: "রিক্রুটিং এজেন্ট শুধু নিবন্ধিত কাউকে সাব-এজেন্ট বা প্রতিনিধি নিয়োগ করতে পারে।"
+    law:
+      - citation_id: BD-OEMA-2013-s14A
+        quote: "নিবন্ধিত কোন ব্যক্তিকে সাব-এজেন্ট বা প্রতিনিধি নিয়োগ করিতে পারিবে"
+      - citation_id: BD-OEMA-2013-s9
+        quote: "এই আইনের অধীন ইস্যুকৃত লাইসেন্স ব্যতীত কোন ব্যক্তি রিক্রুটমেন্ট সংক্রান্ত কোন কার্যক্রম করিতে পারিবে না"
+
+  - id: land_loan
+    label: {bn: "জমি বন্ধক রেখে টাকা জোগাড় করুন", en: "Mortgage the land to raise the money"}
+    example_bn: "জমিটা বন্ধক রেখে টাকাটা জোগাড় করে ফেলেন, ওখানে গিয়ে কয়েক মাসেই ছাড়িয়ে নিবেন।"
+    source:
+      <<: *winrock2022
+      locator: "p. 15 (Introduction) and pp. 40-41 (land ownership, Figure 11 sources of migration financing)"
+      supports: "Low-income migrants often take on heavy debt or sell and mortgage household and land assets to pay migration costs; land-owning households become a target for exploitation because of the asset they hold."
+    tests: [no_pay_on_spot, total_cost_in_writing]
+    counter_of: []
+    sunny_ask_bn: "জমি বা ধারের সিদ্ধান্ত পরে। আগে মোট খরচ লিখিত নিন আর পরিবারের সঙ্গে কথা বলুন।"
+    sunny_say_bn: "জমির ব্যাপারে পরিবারের সঙ্গে কথা বলে জানাব। আগে মোট খরচটা লিখে দিন।"
+    grey_flag_bn: "সতর্ক সংকেত: জমি বা ধার জড়ালে পিছিয়ে আসা কঠিন হয়। ওখানে কাজ না মিললে ঋণের বোঝা পরিবারের ঘাড়ে পড়ে।"
+    regal_bn: "বিদেশে যাওয়ার খরচের সর্বোচ্চ সীমা সরকার আদেশ দিয়ে ঠিক করে দিতে পারে।"
+    law:
+      - citation_id: BD-OEMA-2013-s21
+        quote: "অভিবাসন ব্যয়ের সর্বোচ্চ সীমা নির্ধারণ করিতে পারিবে"
+
+  - id: free_visa
+    label: {bn: "এটা ফ্রি ভিসা", en: "It's a free visa"}
+    example_bn: "এটা ফ্রি ভিসা, ওখানে গিয়ে নিজের মতো যেকোনো কাজ করতে পারবেন।"
+    source:
+      <<: *tib2017
+      locator: "p. 28 ('free visa')"
+      supports: "So-called free visas are extra demand notes sold at a high price; the sponsor does not guarantee a job, the worker must find work and keep paying the sponsor, and the system is not a legal one."
+    tests: [written_contract_first, licence]
+    counter_of: []
+    sunny_ask_bn: "কোন নিয়োগকারীর অধীনে কী কাজ, তা লিখিত চুক্তিতে চান।"
+    sunny_say_bn: "কোন কোম্পানিতে কী কাজ, সেটা চুক্তিতে লেখা থাকবে তো? কাগজটা দেখান।"
+    grey_flag_bn: "সতর্ক সংকেত: ফ্রি ভিসায় নির্দিষ্ট চাকরির নিশ্চয়তা থাকে না। ওখানে কাজ খুঁজতে হয়, আর স্পনসরকে টাকা দিয়ে যেতে হয়।"
+    regal_bn: "রিক্রুটিং এজেন্টকে কর্মী আর নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি করাতে হয়।"
+    law:
+      - citation_id: BD-OEMA-2013-s22
+        quote: "রিক্রুটিং এজেন্ট নির্বাচিত কর্মী এবং তাহার নিয়োগকারীর মধ্যে একটি কর্মসংস্থান চুক্তি সম্পাদন করিবে"
+
+# The order the scheduler plays tactics in when the worker's reply calls for no reaction.
+order: [trust_me, lucrative_job, passport_for_processing, pay_in_parts, no_receipt, contract_later, licence_dodge, land_loan, free_visa]
