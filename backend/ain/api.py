@@ -586,7 +586,7 @@ async def rehearsal_finish(r: rehearsal.Runner = Depends(owned_rehearsal)) -> di
     return {"ok": True}
 
 
-@app.put("/api/rehearsals/{sid}/record", response_model=RehearsalSession)
+@app.post("/api/rehearsals/{sid}/record", response_model=RehearsalSession)
 async def rehearsal_record_put(body: PromiseContacts, r: rehearsal.Runner = Depends(owned_rehearsal)) -> RehearsalSession:
     if r.session.record is None:
         raise HTTPException(409, "Finish the rehearsal first.")

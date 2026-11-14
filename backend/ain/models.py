@@ -523,6 +523,7 @@ class CoachHint(BaseModel):
 class RehearsalTurn(BaseModel):
     n: int
     tactic_id: str
+    label: L10n | None = None  # the tactic's name, revealed to the worker after they answer
     dalal_line: str
     guardrail: str = ""  # why the model's own line was replaced by the tactic's example line
     worker_reply: str = ""  # redacted
@@ -554,6 +555,7 @@ class PromiseRow(BaseModel):
     promised: str  # the worker's words, redacted
     checks: list[Verification] = Field(default_factory=list)  # verified or partial only
     unverified: list[str] = Field(default_factory=list)  # citation ids whose check did not pass, so are not shown
+    note: L10n | None = None  # what Ain cannot show here and why (e.g. no cost ceiling: the order is not in the corpus)
 
 
 class ComplaintPath(BaseModel):

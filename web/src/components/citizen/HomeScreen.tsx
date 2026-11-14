@@ -155,6 +155,11 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           }}
         />
 
+        <Link href="/rehearsal" className={styles.policyBtn}>
+          <span>{T.rehearsal[lang]} →</span>
+          <span className={styles.uploadSub}>{T.rehearsalSub[lang]}</span>
+        </Link>
+
         <button
           type="button"
           className={styles.listenRow}

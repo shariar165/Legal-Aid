@@ -143,7 +143,10 @@ async def build(llm: LLM, setup: RehearsalSetup, contacts: PromiseContacts, crea
         dropped = [v.claim.citation_id for v in results if v.verdict == "dropped"]
         unverified += dropped
         rows.append(
-            PromiseRow(field=check["field"], label=L10n(**check["label"]), promised=_shown(_value(setup, check["field"])), checks=shown, unverified=dropped)
+            PromiseRow(
+                field=check["field"], label=L10n(**check["label"]), promised=_shown(_value(setup, check["field"])), checks=shown, unverified=dropped,
+                note=L10n(**check["note"]) if check.get("note") else None,
+            )
         )
     for extra in setup.promises.extra:
         if extra.strip():
@@ -195,7 +198,6 @@ def record_docx(s: RehearsalSession) -> bytes:
             d.add_paragraph(f"নোট: {real(k.notes)}")
 
     d.add_heading("যা প্রতিশ্রুতি দেওয়া হয়েছে, আর আইন কী বলে · What was promised, and what the law says", level=1)
-    note = cost_note()
     for row in r.rows:
         para = d.add_paragraph()
         para.add_run(f"{row.label.bn} ({row.label.en}): ").bold = True
@@ -208,8 +210,8 @@ def record_docx(s: RehearsalSession) -> bytes:
             q.add_run(f"[{label(sec).bn} · {label(sec).en}] ").italic = True
             q.add_run(f"“{v.claim.quote}” " if v.claim.quote else "")
             q.add_run(sec.url)
-        if row.field == "total_cost":
-            d.add_paragraph(f"{note.bn} {note.en}", style="List Bullet")
+        if row.note:
+            d.add_paragraph(f"{row.note.bn} {row.note.en}", style="List Bullet")
         if row.unverified:
             d.add_paragraph("এই বিষয়ে কিছু আইন যাচাই হয়নি, তাই দেখানো হলো না।", style="List Bullet")
 

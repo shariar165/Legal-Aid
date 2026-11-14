@@ -189,7 +189,7 @@ The request named s.29 as a complaint pathway. It is the right to return home an
   - `debrief`, `record_ready`, then `end`.
 - `POST /api/rehearsals/{id}/turns` takes `{reply, action}` and returns 202. The work streams on SSE.
 - `POST /api/rehearsals/{id}/finish` runs the debrief.
-- `PUT /api/rehearsals/{id}/record` saves the contact fields and edited promises.
+- `POST /api/rehearsals/{id}/record` saves the contact fields and edited promises.
 - `GET /api/rehearsals/{id}/record.docx` downloads the Promise Record.
 - `DELETE /api/rehearsals/{id}` deletes the session.
 

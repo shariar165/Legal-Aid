@@ -49,7 +49,7 @@ def test_full_rehearsal_flow_and_trace(client):
     assert s["mapping"] == {} and s["trace"] == []  # the browser never gets the placeholder mapping
     assert client.post(f"/api/rehearsals/{sid}/turns", json={"reply": "x"}).status_code == 409
 
-    put = client.put(f"/api/rehearsals/{sid}/record", json={"agent_name": "রহিম উদ্দিন", "agent_phone": "01712345678"})
+    put = client.post(f"/api/rehearsals/{sid}/record", json={"agent_name": "রহিম উদ্দিন", "agent_phone": "01712345678"})
     assert put.json()["record"]["contacts"]["agent_name"].startswith("[NAME_")
     assert client.get(f"/api/rehearsals/{sid}/record/print").json()["contacts"]["agent_name"] == "রহিম উদ্দিন"
     docx = client.get(f"/api/rehearsals/{sid}/record.docx")

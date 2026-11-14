@@ -47,6 +47,8 @@ export const STRINGS = {
     policyChosen: { bn: "কোম্পানির নীতিমালা:", en: "Company policy:" },
     policyRemove: { bn: "বাদ দিন", en: "Remove" },
     samplesTitle: { bn: "অথবা একটি নমুনা চুক্তি দিয়ে দেখুন", en: "Or try a sample contract" },
+    rehearsal: { bn: "চুক্তি নেই? টাকা দেওয়ার আগে মহড়া দিন", en: "No contract yet? Rehearse before you pay" },
+    rehearsalSub: { bn: "দালালের সঙ্গে কথা বলার অনুশীলন · আগে মহড়া, পরে টাকা", en: "Practise talking to the middleman, coached by three judges" },
     counselLink: { bn: "আইনজীবী / এনজিও মোড →", en: "Lawyer / NGO mode →" },
     saveLink: { bn: "অ্যাকাউন্ট খুলে ফলাফল সংরক্ষণ করুন", en: "Save my results in an account" },
     offline: {

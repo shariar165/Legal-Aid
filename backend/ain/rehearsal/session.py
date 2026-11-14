@@ -153,7 +153,7 @@ async def open_turn(r: Runner) -> None:
         return
     tactic = tactics.by_id()[nxt]
     line, reason = await dalal.line(r.llm(), tactic, r.s.setup, r.s.turns)
-    turn = RehearsalTurn(n=len(r.s.turns) + 1, tactic_id=tactic.id, dalal_line=line, guardrail=reason)
+    turn = RehearsalTurn(n=len(r.s.turns) + 1, tactic_id=tactic.id, label=tactic.label, dalal_line=line, guardrail=reason)
     r.s.turns.append(turn)
     if reason:
         r.say("guardrail", dalal.AGENT, f"Replaced the dalal's line: {reason}", turn=turn.n, reason=reason)
@@ -200,12 +200,13 @@ Return JSON: {{"note": "...", "citations": ["citation_id", ...]}}"""
 def _fake_note(items: list[RubricItem], language: str) -> dict:
     met = [i for i in items if i.status == "met"]
     missed = [i for i in items if i.status == "missed"]
+    asks = {i.id: i.ask for i in rubric.items()}
     if language == "en":
         good = f"Well done: {', '.join(i.label.en.lower() for i in met)}." if met else "You finished the rehearsal, and that is the first step."
-        fix = f" Next time: {', '.join(i.label.en.lower() for i in missed[:2])}." if missed else ""
+        fix = f" Next time, ask: \"{asks[missed[0].id].en}\"" if missed else ""
         return {"note": f"{good}{fix} Before you pay anything, ask every question on the list below and keep the written record.", "citations": []}
     good = f"ভালো করেছেন: {', '.join(i.label.bn for i in met)}।" if met else "মহড়া শেষ করেছেন, এটাই প্রথম ধাপ।"
-    fix = f" পরের বার খেয়াল রাখুন: {', '.join(i.label.bn for i in missed[:2])}।" if missed else ""
+    fix = f" পরের বার জিজ্ঞেস করুন: \"{asks[missed[0].id].bn}\"" if missed else ""
     return {"note": f"{good}{fix} টাকা দেওয়ার আগে নিচের প্রশ্নগুলো জিজ্ঞেস করুন আর লিখিত রেকর্ড রাখুন।", "citations": []}
 
 
