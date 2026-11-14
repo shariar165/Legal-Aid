@@ -185,6 +185,12 @@ unverified id, including from the prose. Output validation with Pydantic schemas
 "outside Ain's focus" label instead of a pretend review. Accounts: argon2id, hashed HttpOnly session tokens,
 Origin-checked CSRF, rate limits, owner-only access (404), Fernet encryption at rest, and user erasure.
 
+Rehearsal Council (`backend/ain/rehearsal/`) guardrails:
+- **The dalal.** An AI role-plays a recruiting middleman, but it may voice only the tactic a deterministic scheduler picks from `tactics.yaml`. Every tactic is sourced to a report that was opened and cited with a page. Code replaces any line that states law, insults, names a person, agency or company (PII patterns plus `companies.yaml`), or gives a figure the worker never mentioned.
+- **The coaches.** Each coach cites only a per-turn allowed list: the tactic's verbatim anchors plus in-force retrieved sections. Regal's one citation must pass existence, fidelity, currency and entailment, or it is stripped and the hint says there is no verified law.
+- **The debrief.** The readiness score comes from a rubric in code, and no model sees it. The Promise Record's law checks are gated claims, and a figure not in the section's own text is held back.
+- **Privacy and quota.** Contact fields are stored only as placeholders in the encrypted session. `rehearsal.live: false` keeps every call offline.
+
 ## Frontend AI / visual app builders
 
 **Tick / add:** Claude Design (add as "other") · Claude Code (add as "other").
