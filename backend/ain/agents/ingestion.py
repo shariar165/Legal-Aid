@@ -307,7 +307,38 @@ def extract_facts(text: str, clauses: list[Clause]) -> DocFacts:
         ba = re.findall(r"\(?(\d{2,3})\)?\s*days\s+(?:before|after)\s+(?:and\s+)?(?:\(?\w+\)?\s*)?", text, re.I)
         if ba and re.search(r"maternity", low):
             f.maternity_days = sum(int(x) for x in ba[:2])
+    f.contract_months = _contract_months(text)
+    hours = re.search(r"\(?(\d{1,2})\)?\s*hours?\s*(?:per|a|each)\s*day", text, re.I)
+    f.hours_per_day = int(hours.group(1)) if hours and 0 < int(hours.group(1)) <= 24 else None
+    f.ticket_paid_by = _who_pays_ticket(text)
+    f.passport_held_by = _passport_holder(text)
     return f
+
+
+def _contract_months(text: str) -> int | None:
+    """The contract term on paper: '(3) years' / '24 months' near 'period', 'term' or 'মেয়াদ'."""
+    m = re.search(r"(?:\bperiod\b|\bterm\b|\bduration\b|মেয়াদ).{0,60}?\(?(\d{1,3})\)?\s*(years?|months?|বছর|মাস)", text, re.I | re.S)
+    if not m:
+        return None
+    n = int(m.group(1))
+    return n * 12 if m.group(2).lower().startswith(("year", "বছর")) else n
+
+
+def _who_pays_ticket(text: str) -> str | None:
+    """Who pays the ticket out to the job (a return ticket is PB-RETURN-TICKET's, not this term)."""
+    for m in re.finditer(r"(worker|employee|employer|company)\s+shall\s+(?:bear|pay|provide|meet)([^.]{0,60}?)(?:air\s*)?ticket", text, re.I):
+        if "return" in m.group(2).lower():
+            continue
+        return "employer" if m.group(1).lower() in ("employer", "company") else "worker"
+    return None
+
+
+def _passport_holder(text: str) -> str | None:
+    if re.search(r"passport.{0,80}(surrender|custody|kept by the employer|retain(?:ed)? by the employer|deposit)|(surrender|deposit).{0,40}passport", text, re.I | re.S):
+        return "employer"
+    if re.search(r"(worker|employee)\s+shall\s+(?:retain|keep)[^.]{0,40}passport", text, re.I):
+        return "worker"
+    return None
 
 
 def build_document(data: bytes, filename: str, source_kind: str | None = None) -> tuple[Document, DocFacts, Extracted]:

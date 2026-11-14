@@ -10,15 +10,20 @@ Every step emits TraceEvents onto the job, which the API streams to the UI over 
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
 
 from ain import companies, config, countries, vault
 from ain.agents import adversary, calculator, critic, drafter, ingestion, policy_check, risk_analyst, router, verifier
+from ain.agents import ledger as ledger_mod  # `ledger` is the citation ledger inside _run
 from ain.agents.pii import redact
 from ain.llm import LLM
-from ain.models import AnalysisResult, Claim, OcrCheck, OutboundCall, PackDecision, Risk, Stats, TraceEvent, Verification
+from ain.models import (
+    AnalysisResult, Claim, FourLedgers, OcrCheck, OutboundCall, PackDecision, PrivacyReceipt, Promises, Redaction, Risk, RouteDecision, Stats,
+    TraceEvent, Verification,
+)
 from ain.retrieval import CorpusOverlay, get_corpus
 
 CONFIRM_TIMEOUT_S = 600.0
@@ -101,12 +106,13 @@ def new_job(name: str) -> Job:
 async def run_pipeline(
     job: Job, data: bytes, filename: str, source_kind: str | None = None, llm_mode: str | None = None,
     confirm_timeout: float = CONFIRM_TIMEOUT_S, llm: LLM | None = None, destination: str | None = None,
-    policy: tuple[bytes, str] | None = None,
+    policy: tuple[bytes, str] | None = None, promises: Promises | None = None,
 ) -> AnalysisResult:
     """`destination` is the country the user picked when the document does not name one clearly;
-    `policy` is the employer's own policy or handbook as (file bytes, file name), checked against the contract."""
+    `policy` is the employer's own policy or handbook as (file bytes, file name), checked against the contract;
+    `promises` is what the worker says they were told (Four Ledgers, only when `ledger.enabled` is on)."""
     try:
-        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm, destination, policy)
+        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm, destination, policy, promises)
     except Exception as e:  # surfaced to the UI; the trace keeps what happened before
         job.status = "error"
         job.error = f"{type(e).__name__}: {e}"
@@ -116,9 +122,11 @@ async def run_pipeline(
 
 async def _run(
     job: Job, data: bytes, filename: str, source_kind: str | None, llm_mode: str | None, confirm_timeout: float, llm: LLM | None,
-    destination: str | None, policy: tuple[bytes, str] | None,
+    destination: str | None, policy: tuple[bytes, str] | None, promises: Promises | None = None,
 ) -> AnalysisResult:
     t_start = time.time()
+    ledger_on = config.ledger_enabled()
+    promises = promises if ledger_on else None
 
     def on_call(call: OutboundCall) -> None:
         job.say("llm_call", call.agent, f"{call.provider}/{call.model}" + (" (cached)" if call.cached else ""), role=call.role, chars=call.chars, cached=call.cached)
@@ -160,6 +168,13 @@ async def _run(
         policy_doc = pdoc.model_copy(update={"text": pred.text, "clauses": [c.model_copy(update={"text": red_text(c.text)}) for c in pdoc.clauses]})
         policy_secs = policy_check.sections_from_clauses(policy_doc.clauses, policy[1], "uploaded by the user")
         job.say("agent_done", "PII Shield", f"Employer policy: {len(policy_doc.clauses)} clauses, {len(pred.redactions)} identifiers redacted")
+    # 2c. the worker's own note on what they were told: same shield, same placeholders; the raw note is not kept
+    if promises is not None and promises.note:
+        nred = redact(promises.note, mapping)
+        mapping = nred.mapping
+        _add_redactions(privacy, nred.redactions)
+        promises = promises.model_copy(update={"note": nred.text})
+        job.say("agent_done", "PII Shield", f"Promise note: {len(nred.redactions)} identifiers redacted")
     job.say("step", None, "redact", step="redact")
 
     # 3. routing -------------------------------------------------------------------
@@ -210,7 +225,7 @@ async def _run(
     # and quick (it waits only for a person confirming a blurry salary), and without them the Adversary raised a
     # deduction it could not see as a new risk
     wage = await wage_t
-    fact_risks, fact_claims = risk_analyst.run_fact_rules(facts, wage, doc.clauses, route, start=len(text_risks) + 1)
+    fact_risks, fact_claims = risk_analyst.run_fact_rules(facts, wage, doc.clauses, route, start=len(text_risks) + 1, promises=promises)
     for r in fact_risks:
         _risk_found(job, "Risk Analyst", r)
     job.say("agent_done", "Risk Analyst", f"{len(text_risks) + len(fact_risks)} playbook risks")
@@ -255,6 +270,9 @@ async def _run(
         Claim(id=f"P{i + 1}", risk_id="P", proposition=prop, citation_id=cid, quote=q, origin="drafter")
         for pack, items in PROCEDURAL.items() if pack in route.pack_ids for i, (cid, prop, q) in enumerate(items)
     ]
+    # Four Ledgers: the promise-gap rule's law is checked once even when no gap was found yet, so promises added later
+    # (POST /promises) reuse these gates instead of calling a model
+    standing = standing_claims(route) if ledger_on and not any(r.rule_id == ledger_mod.PROMISE_RULE for r in risks) else []
 
     # 5. verification ----------------------------------------------------------------
     job.say("agent_start", "Citation Verifier", f"Checking {len(claims) + len(proc_claims)} legal claims through 4 gates")
@@ -271,6 +289,7 @@ async def _run(
 
     ledger = await verifier.verify_all(llm, corpus, route, risks, claims, on_result=on_verified)
     proc_ledger = await verifier.verify_all(llm, corpus, route, [], proc_claims)
+    standing_ledger = await verifier.verify_all(llm, corpus, route, [], standing) if standing else []
     job.say("agent_done", "Citation Verifier", f"{sum(v.verdict == 'verified' for v in ledger)} verified · {sum(v.verdict == 'partial' for v in ledger)} partial · {sum(v.verdict == 'dropped' for v in ledger)} dropped")
 
     job.say("agent_start", "Critic", "Re-checking dropped claims and enforcing citation rules")
@@ -289,7 +308,12 @@ async def _run(
 
     privacy.outbound_calls = llm.calls
     privacy.pii_leaks_blocked = llm.blocked
-    full_ledger = ledger + proc_ledger
+    full_ledger = ledger + proc_ledger + standing_ledger
+    red_clauses = [c.model_copy(update={"text": red_text(c.text)}) for c in doc.clauses]
+    four = None
+    if ledger_on:
+        four = ledger_mod.build(facts, wage, red_clauses, risks, full_ledger, promises, memo_includes_promises=True)
+        job.say("agent_done", "Four Ledgers", f"{len(four.rows)} terms · {sum(len(r.mismatches) for r in four.rows)} mismatches", rows=len(four.rows))
     stats = Stats(
         clauses=len(doc.clauses),
         risks_found=len(risks),
@@ -305,7 +329,7 @@ async def _run(
         job_id=job.id,
         llm_mode=llm.mode,
         # only redacted text is ever stored or served
-        document=doc.model_copy(update={"text": red.text, "clauses": [c.model_copy(update={"text": red_text(c.text)}) for c in doc.clauses]}),
+        document=doc.model_copy(update={"text": red.text, "clauses": red_clauses}),
         policy=policy_doc,
         facts=facts,
         destination=countries.destination(facts.destination_country),
@@ -318,6 +342,7 @@ async def _run(
         privacy=privacy,
         trace=[],
         stats=stats,
+        four_ledgers=four,
     )
     job.result = result
     job.status = "done"
@@ -325,6 +350,66 @@ async def _run(
     result.trace = list(job.events)
     save_result(result)
     return result
+
+
+# ---------------------------------------------------------------- Four Ledgers
+
+
+def _add_redactions(privacy: PrivacyReceipt, redactions: list[Redaction]) -> None:
+    privacy.redactions += redactions
+    for r in redactions:
+        privacy.counts[r.kind] = privacy.counts.get(r.kind, 0) + 1
+
+
+def _promise_rule() -> risk_analyst.Rule:
+    return next(r for r in risk_analyst.load_rules() if r.id == ledger_mod.PROMISE_RULE)
+
+
+def standing_claims(route: RouteDecision) -> list[Claim]:
+    """The promise-gap rule's anchors as claims of their own (risk "L"), verified whether or not a gap was found."""
+    rule, packs = _promise_rule(), route.pack_ids
+    if not rule.active(packs):
+        return []
+    return [
+        Claim(id=f"L{i + 1}", risk_id="L", proposition=a["proposition"], citation_id=a["citation_id"], quote=a.get("quote"), origin="playbook")
+        for i, a in enumerate(rule.anchors_for(packs))
+    ]
+
+
+def recompute_ledger(result: AnalysisResult, promises: Promises) -> FourLedgers:
+    """POST /promises: rebuild the Four Ledgers from the saved result. No LLM object is created, so nothing leaves the
+    machine. A new promise-gap risk takes the gates its identical claim already passed in this analysis; with none to
+    reuse, no risk is raised and the mismatch shows with its law cell `not_verified`. The memo is not redrafted."""
+    if promises.note:  # placeholders continue after the result's own; the sentinels never match real text
+        seed = {r.placeholder: f"\x00{r.placeholder}" for r in result.privacy.redactions}
+        nred = redact(promises.note, seed)
+        _add_redactions(result.privacy, nred.redactions)
+        promises = promises.model_copy(update={"note": nred.text})
+    pool = list(result.ledger)  # reuse may draw on an earlier promise-gap risk's own claim
+    old = {r.id for r in result.risks if r.rule_id == ledger_mod.PROMISE_RULE}
+    result.risks = [r for r in result.risks if r.id not in old]
+    result.ledger = [v for v in result.ledger if v.claim.risk_id not in old]
+
+    rule, packs = _promise_rule(), result.route.pack_ids
+    finding = risk_analyst.run_fact_check("promise_gap", result.facts, result.wage, packs, promises) if rule.active(packs) else None
+    if finding and rule.anchors_for(packs):
+        n = 1 + max((int(r.id[1:]) for r in result.risks if r.id[1:].isdigit()), default=0)
+        hint = re.compile(risk_analyst.FACT_CLAUSE_HINTS["promise_gap"], re.I)
+        ids = [c.id for c in result.document.clauses if hint.search(c.text)][:2]
+        risk, claims = risk_analyst._risk_from_rule(rule, n, finding, ids, packs, result.wage)
+        passed = [v for c in claims if (v := verifier.reuse(c, pool)) is not None and v.verdict != "dropped"]
+        if passed:
+            risk.claim_ids = [v.claim.id for v in passed]
+            result.risks.append(risk)
+            result.ledger.extend(passed)
+
+    st = result.stats
+    st.risks_found, st.risks_confirmed = len(result.risks), sum(r.status != "dropped" for r in result.risks)
+    st.claims = len(result.ledger)
+    st.verified, st.partial, st.dropped = (sum(v.verdict == k for v in result.ledger) for k in ("verified", "partial", "dropped"))
+    result.four_ledgers = ledger_mod.build(result.facts, result.wage, result.document.clauses, result.risks, result.ledger, promises, memo_includes_promises=False)
+    save_result(result)
+    return result.four_ledgers
 
 
 def _run_path(job_id: str):

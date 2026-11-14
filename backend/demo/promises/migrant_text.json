@@ -1,0 +1,15 @@
+{
+  "_about": "Fictional promises for the migrant_text sample (migrant_my_contract.txt), used only when ledger.enabled is on. The agent, the phone number and the exchange rate are invented: the rate stands for one the user would type, never a rate Ain looks up.",
+  "salary_amount": 1800,
+  "salary_currency": "RM",
+  "no_deductions": true,
+  "recruitment_cost_paid": 450000,
+  "recruitment_cost_currency": "BDT",
+  "hours_per_day": 8,
+  "ticket_paid_by": "employer",
+  "passport_kept_by": "worker",
+  "contract_months": 36,
+  "said_on": "2026-08-01",
+  "note": "The agency's man Mr Rahim Talukder told me this at the Naya Paltan office and again on the phone from 01812345678.",
+  "exchange_rate": {"currency": "BDT", "per": "RM", "value": 27.5}
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -79,6 +80,11 @@ class DocFacts(BaseModel):
     payment_terms_days: int | None = None
     notice_days: int | None = None
     maternity_days: int | None = None
+    # paper terms the Four Ledgers compare with what the worker was told (regex only, see ingestion.extract_facts)
+    contract_months: int | None = None
+    hours_per_day: int | None = None
+    ticket_paid_by: Literal["worker", "employer"] | None = None
+    passport_held_by: Literal["worker", "employer"] | None = None
 
 
 class OcrCheck(BaseModel):
@@ -248,6 +254,120 @@ class WageCalc(BaseModel):
     cap_citation: str | None = None
 
 
+# ---------------------------------------------------------------- four ledgers (told · paper · paid · law)
+
+Party = Literal["worker", "employer", "agency"]
+
+
+class ExchangeRate(BaseModel):
+    """1 `per` = `value` `currency`, e.g. 1 RM = 27.5 BDT. Only ever typed by the user: Ain has no rate of its own."""
+
+    currency: str = Field(min_length=1, max_length=8)
+    per: str = Field(min_length=1, max_length=8)
+    value: float = Field(gt=0)
+    source: Literal["user-entered"] = "user-entered"
+
+
+class Promises(BaseModel):
+    """What the worker was told (কথা), as structured fields typed by the user. No LLM reads them in v1."""
+
+    salary_amount: float | None = Field(None, gt=0)
+    salary_currency: str | None = Field(None, max_length=8)
+    no_deductions: bool | None = None
+    recruitment_cost_paid: float | None = Field(None, ge=0)
+    recruitment_cost_currency: str | None = Field(None, max_length=8)
+    hours_per_day: int | None = Field(None, gt=0, le=24)
+    ticket_paid_by: Party | None = None
+    passport_kept_by: Party | None = None
+    contract_months: int | None = Field(None, gt=0, le=240)
+    said_on: date | None = None
+    note: str = Field("", max_length=1000)  # stored only after the PII Shield has redacted it
+    exchange_rate: ExchangeRate | None = None
+
+
+class LedgerCell(BaseModel):
+    value: str
+    amount: float | None = None
+    currency: str | None = None
+    clause_id: str | None = None
+    source: Literal["worker", "contract", "payslip", "law"]
+
+
+class LawCell(BaseModel):
+    """Filled only from claims that passed the 4 gates; a risk whose claims did not pass leaves it `not_verified`."""
+
+    status: Literal["verified", "partial", "not_verified", "none"] = "none"
+    citation_ids: list[str] = Field(default_factory=list)
+    risk_id: str | None = None
+    proposition: str = ""
+
+
+MismatchType = Literal["said_vs_paper", "paper_vs_law", "paid_vs_paper"]  # paid_vs_paper: reserved for the payslip spec
+
+
+class Mismatch(BaseModel):
+    type: MismatchType
+    detail: L10n
+    risk_id: str | None = None
+
+
+class LedgerRow(BaseModel):
+    term: str  # salary | deductions | recruitment_cost | hours_per_day | ticket | passport | contract_months
+    said: LedgerCell | None = None
+    paper: LedgerCell | None = None
+    paid: LedgerCell | None = None  # always None in v1 (no payslip yet)
+    law: LawCell = Field(default_factory=LawCell)
+    mismatches: list[Mismatch] = Field(default_factory=list)
+    severity: Severity | None = None
+    risk_id: str | None = None
+
+
+class ClaimLine(BaseModel):
+    label: L10n
+    amount: float
+    currency: str
+    citation_id: str
+    risk_id: str
+    basis: str
+
+
+class ClaimValue(BaseModel):
+    """পাওনা হিসাব: arithmetic under verified law only."""
+
+    lines: list[ClaimLine] = Field(default_factory=list)
+    total: float = 0.0
+    currency: str | None = None
+    label: L10n
+
+
+class PromiseGap(BaseModel):
+    """What was said minus what the paper says. The worker's account: never part of the claim total."""
+
+    monthly: float
+    months: int
+    total: float
+    currency: str
+    label: L10n
+
+
+class BreakEven(BaseModel):
+    months: float | None = None
+    cost: float | None = None  # in `currency`, after the user's rate if one was needed
+    monthly_net: float | None = None
+    currency: str | None = None
+    rate: ExchangeRate | None = None
+    note: str = ""
+
+
+class FourLedgers(BaseModel):
+    promises: Promises | None = None
+    rows: list[LedgerRow] = Field(default_factory=list)
+    claim_value: ClaimValue
+    promise_gap: PromiseGap | None = None
+    break_even: BreakEven | None = None
+    memo_includes_promises: bool = False
+
+
 # ---------------------------------------------------------------- outputs
 
 
@@ -352,6 +472,7 @@ class AnalysisResult(BaseModel):
     trace: list[TraceEvent]
     stats: Stats
     ablation: AblationResult | None = None
+    four_ledgers: FourLedgers | None = None  # behind `ledger.enabled`; `ledger` above is the citation ledger
 
 
 # ---------------------------------------------------------------- council chat

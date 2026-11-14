@@ -268,6 +268,28 @@
   action: {en: "Ask for the employer-paid ticket home to be written into the contract.", bn: "ফেরার টিকিট মালিক দেবে, এটা চুক্তিতে লিখে নিন।"}
   mitigation: "The Employer shall bear the cost of the Worker's return journey to Bangladesh at the end of this Contract or on any earlier termination."
 
+- id: PB-PROMISE-GAP
+  category: deception
+  # medium, not high: the gap rests on what the worker reports, and the bench (high/critical only) would need model
+  # calls when promises are added later (docs/specs/2026-11-14-19-four-ledgers.md, decision 2)
+  severity: medium
+  packs: [bd_migration]
+  flag: ledger.enabled  # off: the rule is in no prompt (the Adversary's rule list included), so cache keys stay as they were
+  title: {en: "The contract gives less pay or fewer benefits than the worker was told", bn: "যে বেতন বা সুবিধার কথা বলা হয়েছিল, চুক্তিতে তার চেয়ে কম"}
+  trigger:
+    # Four Ledgers only: what the worker says they were told (structured promises) against the paper. Never fires
+    # without promises, and promises are accepted only when `ledger.enabled` is on.
+    fact: promise_gap
+  question: Does the contract give the worker less pay, more deductions or fewer travel benefits than the worker says they were told before signing?
+  anchors:
+    - citation_id: BD-OEMA-2013-s31
+      proposition: Under the Overseas Employment and Migrants Act 2013 s.31(ঘ), fraudulently giving false assurances of higher wages, allowances and benefits to make a person migrate, or to lure them into a contract for migration, is an offence punishable with up to 5 years' imprisonment and a fine of not less than Tk 1 lakh.
+      quote: প্রতারণামূলকভাবে অধিক বেতন-ভাতা ও সুযোগ সুবিধার মিথ্যা আশ্বাস প্রদান করিয়া কোন ব্যক্তিকে অভিবাসন করাইলে
+  why_non_obvious: The worker signs the paper, so the paper looks like the whole deal. Bangladesh law makes a false promise of higher pay or benefits to induce migration an offence in itself, so the gap between what was said and what was signed is evidence, not a misunderstanding.
+  citizen_line: {en: "The paper gives you less pay or fewer benefits than you were told.", bn: "আপনাকে যে বেতন বা সুবিধার কথা বলা হয়েছিল, চুক্তির কাগজে তার চেয়ে কম লেখা আছে।"}
+  action: {en: "Before signing, ask for what you were told to be written into the contract. Write down who told you what, and when.", bn: "সই করার আগে যা বলা হয়েছিল তা চুক্তিতে লিখে দিতে বলুন। কে, কবে, কী বলেছিল তা লিখে রাখুন।"}
+  mitigation: "The wages, deductions and travel terms in this Contract are the complete terms offered to the Worker. Any more favourable term promised to the Worker by the Employer or the Recruiting Agency before signing forms part of this Contract."
+
 - id: PB-NO-FORUM
   category: access_to_justice
   severity: high

@@ -18,7 +18,8 @@ import yaml
 
 from ain import config, countries
 from ain.llm import LLM, MalformedAnswer, str_items
-from ain.models import Claim, Clause, DocFacts, L10n, Risk, RouteDecision, WageCalc
+from ain.agents import ledger
+from ain.models import Claim, Clause, DocFacts, L10n, Promises, Risk, RouteDecision, WageCalc
 from ain.naming import EN_TO_BN_DIGITS
 
 log = logging.getLogger(__name__)
@@ -46,8 +47,11 @@ class Rule:
     anchors: list[dict] = field(default_factory=list)
     anchors_by_pack: dict[str, list[dict]] = field(default_factory=dict)
     pack_anchors: dict[str, list[dict]] = field(default_factory=dict)  # routed pack (a destination country, standards) -> extra anchors
+    flag: str | None = None  # a config.yaml flag the rule needs; while it is off the rule is not in any prompt either
 
     def active(self, packs: set[str]) -> bool:
+        if self.flag and not RULE_FLAGS[self.flag]():
+            return False
         return bool(set(self.packs) & packs) and not set(self.exclude_packs) & packs
 
     def anchors_for(self, packs: set[str]) -> list[dict]:
@@ -60,6 +64,10 @@ class Rule:
                     break
         # the host country's law applies on top of Bangladesh law and ILO standards
         return base + [a for pack, group in self.pack_anchors.items() if pack in packs for a in group]
+
+
+# read at call time, so the Adversary's rule list (and its cache key) stays as it was while a flag is off
+RULE_FLAGS = {"ledger.enabled": lambda: config.ledger_enabled()}
 
 
 @lru_cache
@@ -111,9 +119,16 @@ def _over_cap(facts: DocFacts, wage: WageCalc | None) -> str | None:
     return None
 
 
-def run_fact_check(name: str, facts: DocFacts, wage: WageCalc | None, packs: set[str]) -> str | None:
+def _promise_gap(facts: DocFacts, wage: WageCalc | None, promises: Promises | None) -> str | None:
+    gaps = ledger.pay_benefit_gaps(facts, wage, promises)
+    return " ".join(gaps) + " (What the worker was told comes from the worker's own account.)" if gaps else None
+
+
+def run_fact_check(name: str, facts: DocFacts, wage: WageCalc | None, packs: set[str], promises: Promises | None = None) -> str | None:
     if name == "maternity_short":
         return _maternity_short(facts, wage, packs)
+    if name == "promise_gap":
+        return _promise_gap(facts, wage, promises)
     return {"notice_short": _notice_short, "payment_terms_long": _payment_long, "below_min_wage": _below_min, "deduction_over_cap": _over_cap}[name](facts, wage)
 
 
@@ -123,6 +138,7 @@ FACT_CLAUSE_HINTS = {
     "payment_terms_long": r"payment|days after",
     "below_min_wage": r"salary|wage|বেতন",
     "deduction_over_cap": r"deduct",
+    "promise_gap": r"salary|wage|deduct|ticket|বেতন",
 }
 
 
@@ -259,7 +275,9 @@ async def run_text_rules(llm: LLM, clauses: list[Clause], route: RouteDecision, 
     return risks, claims
 
 
-def run_fact_rules(facts: DocFacts, wage: WageCalc | None, clauses: list[Clause], route: RouteDecision, start: int) -> tuple[list[Risk], list[Claim]]:
+def run_fact_rules(
+    facts: DocFacts, wage: WageCalc | None, clauses: list[Clause], route: RouteDecision, start: int, promises: Promises | None = None
+) -> tuple[list[Risk], list[Claim]]:
     packs = route.pack_ids
     risks: list[Risk] = []
     claims: list[Claim] = []
@@ -268,7 +286,7 @@ def run_fact_rules(facts: DocFacts, wage: WageCalc | None, clauses: list[Clause]
         name = rule.trigger.get("fact")
         if not name or not rule.active(packs) or not rule.anchors_for(packs):
             continue
-        finding = run_fact_check(name, facts, wage, packs)
+        finding = run_fact_check(name, facts, wage, packs, promises)
         if not finding:
             continue
         hint = re.compile(FACT_CLAUSE_HINTS[name], re.I)

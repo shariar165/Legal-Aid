@@ -13,7 +13,7 @@ import re
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 from ain import auth, automation, config, countries, mcp_server, seat_health
@@ -32,12 +32,14 @@ from ain.models import (
     CouncilMember,
     Credentials,
     Destination,
+    FourLedgers,
     JobSummary,
     Me,
+    Promises,
     Risk,
     Section,
 )
-from ain.orchestrator import JOBS, delete_result, load_result, new_job, run_pipeline, save_result
+from ain.orchestrator import JOBS, delete_result, load_result, new_job, recompute_ledger, run_pipeline, save_result
 from ain.retrieval import get_corpus
 
 MAX_BYTES = 15 * 1024 * 1024
@@ -54,6 +56,7 @@ SAMPLES = [
     {
         "id": "migrant_text",
         "file": "migrant_my_contract.txt",
+        "promises_file": "migrant_text.json",  # fictional; loaded only when ledger.enabled is on
         "kind": "text",
         "title": {"bn": "মালয়েশিয়ার চাকরির চুক্তি (লেখা)", "en": "Malaysia job contract (text)"},
         "subtitle": {"bn": "প্রবাসী কর্মী · ডিজিটাল কপি", "en": "Migrant worker · digital copy"},
@@ -291,7 +294,7 @@ async def corpus_freshness(request: Request, force: bool = False) -> dict:
 @app.get("/api/samples")
 def samples() -> list[dict]:
     return [
-        {**{k: v for k, v in s.items() if k not in ("file", "policy_file")}, "with_policy": "policy_file" in s}
+        {**{k: v for k, v in s.items() if k not in ("file", "policy_file", "promises_file")}, "with_policy": "policy_file" in s}
         for s in SAMPLES
         if (config.DEMO_DIR / "docs" / s["file"]).exists()
     ]
@@ -321,9 +324,11 @@ async def analyze(
     llm_mode: str | None = Form(None),
     destination_country: str | None = Form(None),
     policy: UploadFile | None = File(None),  # the employer's own policy or handbook, checked against the contract
+    promises: str | None = Form(None),  # Four Ledgers: what the worker was told, as JSON (see models.Promises)
     owner: Principal = Depends(require_principal),
 ) -> dict:
     policy_doc = None
+    told = _parse_promises(promises) if promises else None
     if file is not None:
         name, data = await _read_upload(file)
         kind = None
@@ -336,6 +341,8 @@ async def analyze(
         kind = "sample" if sample["kind"] == "text" else None
         if "policy_file" in sample:
             policy_doc = ((config.DEMO_DIR / "docs" / sample["policy_file"]).read_bytes(), sample["policy_file"])
+        if told is None and "promises_file" in sample and config.ledger_enabled():
+            told = Promises.model_validate_json((config.DEMO_DIR / "promises" / sample["promises_file"]).read_text(encoding="utf-8"))
     else:
         raise HTTPException(400, "Send a file or a sample_id.")
     if llm_mode and llm_mode not in ("live", "replay", "fake"):
@@ -349,12 +356,21 @@ async def analyze(
     job = new_job(name)
     auth.record_job(owner.user_id, job.id, name)
     async def run_and_notify():
-        await automation.notify_job(await run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc))
+        await automation.notify_job(await run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc, promises=told))
 
     task = asyncio.create_task(run_and_notify())
     _tasks.add(task)
     task.add_done_callback(lambda t: (_tasks.discard(t), t.exception() if not t.cancelled() else None))
     return {"job_id": job.id, "name": name}
+
+
+def _parse_promises(raw: str) -> Promises:
+    if not config.ledger_enabled():
+        raise HTTPException(400, "Promises need the Four Ledgers feature, which is off (ledger.enabled in config.yaml).")
+    try:
+        return Promises.model_validate_json(raw)
+    except ValidationError as e:
+        raise HTTPException(422, f"Invalid promises: {e.errors(include_url=False)}") from None
 
 
 @app.get("/api/jobs/{job_id}", dependencies=[Depends(owned_job)])
@@ -419,6 +435,14 @@ def _result_or_409(job_id: str) -> AnalysisResult:
 @app.get("/api/jobs/{job_id}/result", response_model=AnalysisResult, dependencies=[Depends(owned_job)])
 def result(job_id: str) -> AnalysisResult:
     return _result_or_409(job_id)
+
+
+@app.post("/api/jobs/{job_id}/promises", response_model=FourLedgers, dependencies=[Depends(owned_job)])
+def update_promises(job_id: str, body: Promises) -> FourLedgers:
+    """Add or change what the worker was told and recompute the Four Ledgers from the saved result: no model call."""
+    if not config.ledger_enabled():
+        raise HTTPException(404, "Not Found")
+    return recompute_ledger(_result_or_409(job_id), body)
 
 
 @app.get("/api/jobs/{job_id}/memo.docx", dependencies=[Depends(owned_job)])
