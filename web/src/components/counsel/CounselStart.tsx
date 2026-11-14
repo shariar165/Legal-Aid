@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, type Destination, type Health, type Sample } from "@/lib/api";
 import { AccountMenu } from "./Account";
-import { Icon, type IconName } from "./Icons";
+import { Icon, type IconName } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
 const TRUST: { icon: IconName; text: string }[] = [

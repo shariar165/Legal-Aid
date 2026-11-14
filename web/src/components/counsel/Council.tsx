@@ -19,7 +19,7 @@ import {
   type Severity,
 } from "@/lib/api";
 import { citeLabel, SEVERITY_LABEL } from "./format";
-import { Icon } from "./Icons";
+import { Icon } from "@/components/shared/Icons";
 import { PixelSticker } from "./PixelSticker";
 import styles from "./counsel.module.css";
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { STEPS } from "@/lib/citizen/analysis";
 import { formatNumber, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useAnalysis } from "@/lib/useAnalysis";
+import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
 
@@ -106,7 +107,7 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
             return (
               <li key={step.id} className={styles.step} data-state={state}>
                 <span className={styles.stepDot} aria-hidden="true">
-                  {state === "done" ? "✓" : state === "run" ? "•" : ""}
+                  {state === "done" ? <Icon name="check" size={16} strokeWidth={3} /> : state === "run" ? <span className={styles.runDot} /> : null}
                 </span>
                 <span>{state === "wait" ? label.replace(/…$/, "") : label}</span>
               </li>
@@ -124,6 +125,7 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
         {ocrCheck && (
           <section className={styles.ocrCard} data-confirmed={ocr === "confirmed"} aria-labelledby="ocr-title">
             <h2 id="ocr-title" className={styles.ocrTitle}>
+              <Icon name="alert" size={20} strokeWidth={2.25} />
               {T.ocrTitle[lang]}
             </h2>
             <p className={styles.ocrBody}>
@@ -166,7 +168,14 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
                     disabled={sending || ocr === "confirmed"}
                     onClick={() => void send(shown)}
                   >
-                    {ocr === "confirmed" ? T.ocrConfirmed[lang] : T.ocrYes[lang]}
+                    {ocr === "confirmed" ? (
+                      <span className={styles.withIcon}>
+                        <Icon name="check" size={18} strokeWidth={2.5} />
+                        {T.ocrConfirmed[lang]}
+                      </span>
+                    ) : (
+                      T.ocrYes[lang]
+                    )}
                   </button>
                   <button
                     type="button"
@@ -188,7 +197,10 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
         <div className={styles.nextArea}>
           {ocrCheck && ocr !== "confirmed" && <p className={styles.hint}>{T.ocrNeeded[lang]}</p>}
           <button type="button" className={styles.btnDark} disabled={!canContinue} onClick={onResult}>
-            {T.seeResult[lang]}
+            <span className={styles.withIcon}>
+              {T.seeResult[lang]}
+              <Icon name="arrowRight" size={20} strokeWidth={2.25} />
+            </span>
           </button>
         </div>
       </div>

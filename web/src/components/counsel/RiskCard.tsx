@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Clause, MemoIssue, Risk, Verification } from "@/lib/api";
 import { benchOutcome, CouncilFaces, MemberVotes } from "./Council";
 import { citeLabel, SEVERITY_LABEL } from "./format";
-import { Icon } from "./Icons";
+import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
 interface Props {

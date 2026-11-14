@@ -1,4 +1,5 @@
-/* A small line-icon set for Counsel mode (24px grid, currentColor, decorative by default). */
+/* The shared line-icon set for both modes (24px grid, currentColor, decorative by default). Inline SVG renders the
+   same on every phone, unlike unicode symbols or emoji. */
 
 const PATHS = {
   check: <path d="M20 6 9 17l-5-5" />,
@@ -124,12 +125,32 @@ const PATHS = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  play: <path d="M8 5.5v13l10.5-6.5Z" />,
+  pause: <path d="M9 5v14M15 5v14" />,
+  pin: (
+    <>
+      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </>
+  ),
   cornerDownRight: <path d="M4 4v7a4 4 0 0 0 4 4h12m0 0-4-4m4 4-4 4" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name, size = 16, label, className }: { name: IconName; size?: number; label?: string; className?: string }) {
+export function Icon({
+  name,
+  size = 16,
+  label,
+  className,
+  strokeWidth = 1.75,
+}: {
+  name: IconName;
+  size?: number;
+  label?: string;
+  className?: string;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       className={className}
@@ -138,7 +159,7 @@ export function Icon({ name, size = 16, label, className }: { name: IconName; si
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       role={label ? "img" : undefined}

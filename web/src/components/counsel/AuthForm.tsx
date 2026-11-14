@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { safeNext, useSession } from "@/lib/useSession";
-import { Icon } from "./Icons";
+import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
 const COPY = {

@@ -6,6 +6,7 @@ import { api, type Destination, type Sample } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import { SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
+import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
 
@@ -94,7 +95,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
         )}
 
         <button type="button" className={styles.cameraBtn} onClick={() => cameraInput.current?.click()}>
-          <span className={styles.cameraIcon} aria-hidden="true" />
+          <Icon name="camera" size={64} strokeWidth={1.75} className={styles.cameraIcon} />
           <span className={styles.cameraLabel}>{T.camera[lang]}</span>
           <span className={styles.cameraSub} lang={lang === "bn" ? "en" : "bn"}>
             {T.cameraSub[lang]}
@@ -138,7 +139,10 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           </p>
         ) : (
           <button type="button" className={styles.policyBtn} onClick={() => policyInput.current?.click()}>
-            <span>+ {T.policyAdd[lang]}</span>
+            <span className={styles.withIcon}>
+              <Icon name="plus" size={18} strokeWidth={2.25} />
+              {T.policyAdd[lang]}
+            </span>
             <span className={styles.uploadSub}>{T.policySub[lang]}</span>
           </button>
         )}
@@ -162,7 +166,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           onClick={() => speech.toggle(HOW_TO_ID, T.howToScript[lang], SPEECH_LANG[lang])}
         >
           <span className={styles.listenIcon} aria-hidden="true">
-            {howToPlaying ? <PauseGlyph /> : <PlayGlyph />}
+            <Icon name={howToPlaying ? "pause" : "play"} size={22} strokeWidth={2.5} />
           </span>
           <span>{howToPlaying ? `${T.howToStop[lang]} · ${T.howTo[lang]}` : T.howTo[lang]}</span>
           {howToPlaying && <span className={styles.listenProgress} style={{ width: `${speech.pct}%` }} />}
@@ -183,7 +187,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
                 <li key={smp.id}>
                   <button type="button" className={styles.sampleBtn} onClick={() => onSample(smp.id)}>
                     <span className={styles.sampleIcon} data-kind={smp.kind} aria-hidden="true">
-                      {smp.kind === "image" ? <PhotoGlyph /> : <DocGlyph />}
+                      <Icon name={smp.kind === "image" ? "camera" : "file"} size={24} strokeWidth={1.8} />
                     </span>
                     <span className={styles.sampleText}>
                       <span className={styles.sampleName}>{smp.title[lang]}</span>
@@ -203,6 +207,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           <br />
           <Link href="/counsel" className={styles.counselLink}>
             {T.counselLink[lang]}
+            <Icon name="arrowRight" size={16} strokeWidth={2} />
           </Link>
           {me && me.kind !== "account" && (
             <>
@@ -215,43 +220,5 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
         </p>
       </div>
     </div>
-  );
-}
-
-/* Small line glyphs (inline SVG renders the same on every phone, unlike emoji). */
-const GLYPH = { width: 24, height: 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" } as const;
-
-function PhotoGlyph() {
-  return (
-    <svg {...GLYPH}>
-      <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
-      <circle cx="12" cy="13" r="3.5" />
-    </svg>
-  );
-}
-
-function DocGlyph() {
-  return (
-    <svg {...GLYPH}>
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  );
-}
-
-function PlayGlyph() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
-    </svg>
-  );
-}
-
-function PauseGlyph() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-      <rect x="6" y="5" width="4" height="14" rx="1" />
-      <rect x="14" y="5" width="4" height="14" rx="1" />
-    </svg>
   );
 }

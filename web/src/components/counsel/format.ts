@@ -1,5 +1,5 @@
 import type { AblationRow, GateStatus, Section, Severity, Verdict } from "@/lib/api";
-import type { IconName } from "./Icons";
+import type { IconName } from "@/components/shared/Icons";
 
 export const SEVERITY_LABEL: Record<Severity, string> = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
 export const SEVERITY_RANK: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3 };

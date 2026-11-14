@@ -5,58 +5,25 @@
 /* ================================================================ tokens */
 
 .page {
-  --c-sans: var(--font-inter), var(--font-hind-siliguri), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --c-serif: var(--font-source-serif), var(--font-noto-serif-bengali), Georgia, serif;
-  --c-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  /* aliases of the shared tokens in app/globals.css (spec 20): the names stay, so the rules below are unchanged */
+  --c-sans: var(--sans);
+  --c-serif: var(--serif);
+  --c-mono: var(--mono);
 
-  --c-bg: #f6f7f5;
-  --c-card: #ffffff;
-  --c-subtle: #f2f4f1;
-  --c-ink: #121a16;
-  --c-ink-2: #323c36;
-  --c-muted: #59635d;
-  --c-line: #e2e6e1;
-  --c-line-strong: #c9d0ca;
+  --c-bg: var(--bg);
+  --c-card: var(--card);
+  --c-subtle: var(--subtle);
+  --c-ink: var(--ink);
+  --c-ink-2: var(--ink-2);
+  --c-muted: var(--muted);
+  --c-line: var(--line);
+  --c-line-strong: var(--line-strong);
 
-  --c-accent: #0f4c3a;
-  --c-accent-hover: #0a3a2c;
-  --c-accent-tint: #e9f2ed;
-  --c-accent-ring: rgba(15, 76, 58, 0.22);
+  --c-accent: var(--accent);
+  --c-accent-hover: var(--accent-hover);
+  --c-accent-tint: var(--accent-tint);
+  --c-accent-ring: var(--accent-ring);
 
-  --ok: #067647;
-  --ok-tint: #e8f5ee;
-  --warn: #a15c07;
-  --warn-ink: #7a4500;
-  --warn-tint: #fef5e1;
-  --bad: #b42318;
-  --bad-ink: #912018;
-  --bad-tint: #fdeeec;
-
-  --sev-critical: #b42318;
-  --sev-critical-tint: #fdeeec;
-  --sev-critical-ink: #912018;
-  --sev-high: #c4410c;
-  --sev-high-tint: #fff1e8;
-  --sev-high-ink: #93370d;
-  --sev-medium: #b7791f;
-  --sev-medium-tint: #fdf6e3;
-  --sev-medium-ink: #7a4500;
-  --sev-low: #4b7a65;
-  --sev-low-tint: #ecf4f0;
-  --sev-low-ink: #2c5242;
-
-  --p-happy: #9a6200;
-  --p-happy-tint: #fdf3dc;
-  --p-proud: #4338ca;
-  --p-proud-tint: #eef0fd;
-  --p-gloomy: #475569;
-  --p-gloomy-tint: #eef1f5;
-
-  --r-sm: 6px;
-  --r: 10px;
-  --r-lg: 14px;
-  --shadow-1: 0 1px 2px rgba(16, 24, 20, 0.05);
-  --shadow-2: 0 1px 2px rgba(16, 24, 20, 0.04), 0 10px 28px -14px rgba(16, 24, 20, 0.2);
   --header-h: 108px;
 
   min-height: 100dvh;
@@ -65,7 +32,7 @@
   background: var(--c-bg);
   color: var(--c-ink);
   font-family: var(--c-sans);
-  font-size: 15px;
+  font-size: var(--fs-16);
   line-height: 1.55;
   font-feature-settings: "cv11", "ss01";
 }

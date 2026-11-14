@@ -1,37 +1,132 @@
+/* The one token source for Citizen and Counsel (spec 20). Modules read these; they do not define colours, sizes,
+   radii or shadows of their own. The docs page keeps its own list for now. */
+
 :root {
-  --font-sans: var(--font-hind-siliguri), system-ui, sans-serif;
-  --font-serif: var(--font-noto-serif-bengali), serif;
+  /* faces: the Latin face first, the Bengali face for Bangla glyphs */
+  --sans: var(--font-inter), var(--font-hind-siliguri), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: var(--font-source-serif), var(--font-noto-serif-bengali), Georgia, serif;
+  --serif-bn: var(--font-noto-serif-bengali), var(--font-source-serif), Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
-  --backdrop: #e9e5da;
-  --surface: #f5f2ea;
-  --card: #fffdf8;
-  --ink: #17211c;
-  --ink-2: #2c3631;
-  --muted: #4a544e;
-  --muted-2: #5a625d;
-  --line: #dcd5c6;
-  --line-soft: #eee9dd;
-  --track: #e3ddcf;
-  --details-bg: #f1ede3;
-  --wait-border: #b5ae9f;
+  /* type scale: the only font sizes */
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-28: 28px;
+  --fs-40: 40px;
 
-  --green: #0f4c3a;
-  --green-dark: #0a3328;
-  --green-tint: #e4eee8;
+  /* ground and ink */
+  --bg: #f1f3ef;
+  --card: #ffffff;
+  --subtle: #f2f4f1;
+  --paper: #fffdf8;
+  --paper-line: #e7e1d2;
+  --ink: #121a16;
+  --ink-2: #323c36;
+  --muted: #59635d;
+  --line: #e2e6e1;
+  --line-strong: #c9d0ca;
+  --highlight: #ffe98a;
+
+  /* brand */
+  --accent: #0f4c3a;
+  --accent-hover: #0a3a2c;
+  --accent-tint: #e9f2ed;
+  --accent-ring: rgba(15, 76, 58, 0.22);
+  --deep: #0b3a2c;
+  --deep-line: #3d6b5c;
+  --on-deep: #ffffff;
+  --on-deep-muted: #cfe3d9;
+  --gold: #f5c443;
+  --gold-ink: #2b1d18;
+  --focus: #1d6fd6;
+
+  /* status */
+  --ok: #067647;
+  --ok-ink: #05603a;
+  --ok-tint: #e8f5ee;
+  --warn: #a15c07;
+  --warn-ink: #7a4500;
+  --warn-tint: #fef5e1;
+  --bad: #b42318;
+  --bad-ink: #912018;
+  --bad-tint: #fdeeec;
+
+  /* severity */
+  --sev-critical: #b42318;
+  --sev-critical-tint: #fdeeec;
+  --sev-critical-ink: #912018;
+  --sev-high: #c4410c;
+  --sev-high-tint: #fff1e8;
+  --sev-high-ink: #93370d;
+  --sev-medium: #b7791f;
+  --sev-medium-tint: #fdf6e3;
+  --sev-medium-ink: #7a4500;
+  --sev-low: #4b7a65;
+  --sev-low-tint: #ecf4f0;
+  --sev-low-ink: #2c5242;
+
+  /* council members */
+  --p-happy: #9a6200;
+  --p-happy-tint: #fdf3dc;
+  --p-happy-ink: #7a4500;
+  --p-proud: #4338ca;
+  --p-proud-tint: #eef0fd;
+  --p-proud-ink: #3730a3;
+  --p-gloomy: #475569;
+  --p-gloomy-tint: #eef1f5;
+  --p-gloomy-ink: #334155;
+
+  /* Four Ledgers: said amber, paper slate, paid green, law indigo (the member tints, reused) */
+  --lg-said: var(--p-happy);
+  --lg-said-tint: var(--p-happy-tint);
+  --lg-said-ink: var(--p-happy-ink);
+  --lg-said-bar: var(--gold);
+  --lg-paper: var(--p-gloomy);
+  --lg-paper-tint: var(--p-gloomy-tint);
+  --lg-paper-ink: var(--p-gloomy-ink);
+  --lg-paid: var(--ok);
+  --lg-paid-tint: var(--accent-tint);
+  --lg-paid-ink: var(--accent-hover);
+  --lg-paid-bar: #8fd9b6;
+  --lg-law: var(--p-proud);
+  --lg-law-tint: var(--p-proud-tint);
+  --lg-law-ink: var(--p-proud-ink);
+
+  /* shape */
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(18, 26, 22, 0.06);
+  --shadow-2: 0 1px 2px rgba(18, 26, 22, 0.06), 0 4px 12px rgba(18, 26, 22, 0.05);
+  --shadow-3: 0 1px 2px rgba(18, 26, 22, 0.06), 0 18px 44px rgba(18, 26, 22, 0.1);
+
+  /* Citizen's earlier names, kept as aliases until spec 20 phase 2 moves citizen.module.css to the names above */
+  --font-sans: var(--sans);
+  --font-serif: var(--serif-bn);
+  --backdrop: var(--line);
+  --surface: var(--bg);
+  --muted-2: var(--muted);
+  --line-soft: var(--subtle);
+  --track: var(--line-strong);
+  --details-bg: var(--subtle);
+  --wait-border: var(--line-strong);
+  --green: var(--accent);
+  --green-dark: var(--accent-hover);
+  --green-tint: var(--accent-tint);
   --green-sub: #d3e2da;
-  --ok-ink: #0f5132;
-  --ok-tint: #e2eee6;
-
-  --red: #b42318;
-  --red-ink: #9b1c13;
-  --red-tint: #fce8e4;
-
-  --amber: #9a6700;
-  --amber-ink: #6e4a00;
-  --amber-2: #7a4f00;
+  --red: var(--bad);
+  --red-ink: var(--bad-ink);
+  --red-tint: var(--bad-tint);
+  --amber: var(--warn);
+  --amber-ink: var(--warn-ink);
+  --amber-2: var(--warn-ink);
   --amber-btn: #8a5a00;
-  --amber-tint: #fbf0d2;
-  --ocr-hl: #fff4c9;
+  --amber-tint: var(--warn-tint);
+  --ocr-hl: var(--highlight);
 }
 
 *,
@@ -46,27 +141,29 @@ body {
   padding: 0;
   background: var(--backdrop);
   color: var(--ink);
-  font-family: var(--font-sans);
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font-family: inherit;
 }
 
 a {
-  color: var(--green);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 a:hover {
-  color: var(--green-dark);
+  color: var(--accent-hover);
 }
 
 :focus-visible {
-  outline: 3px solid #1d6fd6;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 

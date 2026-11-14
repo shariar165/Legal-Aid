@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ain Copilot Case Desk: visual reference</title>
+<!-- Static visual reference for the Counsel "Case Desk". First row is shown selected.
+     The "কথা" and "টাকা" values, gate results, votes and counts are SAMPLE data.
+     Build the real screen with CSS modules and live data; do not copy these inline styles. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@500;600;700&family=Source+Serif+4:wght@500;600;700&display=swap">
+<style>
+body{margin:0}
+a{color:#0f4c3a}a:hover{color:#0a3a2c}
+button{font:inherit;color:inherit}
+button:focus-visible,a:focus-visible{outline:3px solid #1d6fd6;outline-offset:2px}
+</style>
+</head>
+<body>
+<div style="background: #f1f3ef; color: #121a16; font-family: Inter, 'Hind Siliguri', system-ui, sans-serif; font-size: 14px; line-height: 1.5">
+
+<header style="background: #0b3a2c; color: #ffffff; padding: 12px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #f5c443; color: #2b1d18; display: flex; align-items: center; justify-content: center; font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 19px">আ</span>
+<span style="font-weight: 700; font-size: 16px">Ain Copilot <span style="font-weight: 500; color: #cfe3d9">Counsel</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #3d6b5c; border-radius: 999px; font-size: 13px">
+<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cfe3d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+<span lang="en">migrant_my_contract.txt</span>
+<span style="padding: 1px 8px; border-radius: 999px; background: #f5c443; color: #2b1d18; font-weight: 700; font-size: 12px">নমুনা কেস</span>
+</div>
+<div style="margin-left: auto; display: flex; align-items: center; gap: 10px">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #3d6b5c; background: transparent; color: #ffffff; font-weight: 600; cursor: pointer">Memo ডাউনলোড</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid #f5c443; background: #f5c443; color: #2b1d18; font-weight: 700; cursor: pointer">অভিযোগের ফাইল তৈরি</button>
+</div>
+</header>
+
+<section aria-label="চার খাতার সারাংশ" style="background-color: #0f4c3a; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, transparent 1px, transparent 34px); color: #ffffff; padding: 36px 28px 40px; display: flex; flex-wrap: wrap; align-items: center; gap: 32px 48px">
+
+<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 13px; font-weight: 600; letter-spacing: 0.04em; color: #cfe3d9">মালয়েশিয়া · Machine Operator · ৩ বছরের চুক্তি</span>
+<h1 style="margin: 0; font-family: 'Noto Serif Bengali', 'Source Serif 4', serif; font-weight: 700; font-size: 40px; line-height: 1.3; text-wrap: balance">কথা থেকে হাতে আসতে মাসে <span style="color: #f5c443">RM 1,320</span> হারিয়ে গেছে</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<span style="padding: 6px 14px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 13px"><b style="font-family: 'Source Serif 4', serif; font-size: 16px">৭</b> শর্ত মেলানো</span>
+<span style="padding: 6px 14px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 13px"><b style="font-family: 'Source Serif 4', serif; font-size: 16px">১২</b> অমিল</span>
+<span style="padding: 6px 14px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 13px"><b style="font-family: 'Source Serif 4', serif; font-size: 16px">৫ / ১১</b> ILO indicator</span>
+</div>
+</div>
+
+<div style="flex: 2 1 560px; min-width: 0; display: flex; gap: 18px; padding-top: 34px">
+<div style="flex: 0 0 132px; display: flex; flex-direction: column; gap: 14px">
+<div style="height: 48px; display: flex; flex-direction: column; justify-content: center"><span style="font-weight: 700; font-size: 16px">কথা</span><span style="font-size: 12px; color: #cfe3d9">দালাল যা বলেছে</span></div>
+<div style="height: 48px; display: flex; flex-direction: column; justify-content: center"><span style="font-weight: 700; font-size: 16px">কাগজ</span><span style="font-size: 12px; color: #cfe3d9">চুক্তিতে লেখা</span></div>
+<div style="height: 48px; display: flex; flex-direction: column; justify-content: center"><span style="font-weight: 700; font-size: 16px">টাকা</span><span style="font-size: 12px; color: #cfe3d9">payslip-এ হাতে</span></div>
+</div>
+<div style="flex: 1 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; gap: 14px">
+<div style="height: 48px; width: 100%; box-sizing: border-box; border-radius: 10px; background: #f5c443; color: #2b1d18; display: flex; align-items: center; padding: 0 16px; font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 24px">RM 1,800</div>
+<div style="height: 48px; display: flex; align-items: center; gap: 12px">
+<div style="height: 48px; width: 66.7%; box-sizing: border-box; border-radius: 10px; background: #ffffff; color: #121a16; display: flex; align-items: center; padding: 0 16px; font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 24px">RM 1,200</div>
+<span style="padding: 3px 10px; border-radius: 999px; background: #fdeeec; color: #912018; font-weight: 700; font-size: 13px; white-space: nowrap">− RM 600</span>
+</div>
+<div style="height: 48px; display: flex; align-items: center; gap: 12px">
+<div style="height: 48px; width: 26.7%; min-width: 118px; box-sizing: border-box; border-radius: 10px; background: #8fd9b6; color: #0b2e23; display: flex; align-items: center; padding: 0 16px; font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 24px">RM 480</div>
+<span style="padding: 3px 10px; border-radius: 999px; background: #fdeeec; color: #912018; font-weight: 700; font-size: 13px; white-space: nowrap">− RM 720</span>
+</div>
+<div aria-hidden="true" style="position: absolute; top: -8px; bottom: -8px; left: 94.4%; border-left: 2px dashed #ffffff"></div>
+<span style="position: absolute; top: -36px; right: 0; padding: 3px 10px; border-radius: 999px; background: #eef0fd; color: #3730a3; font-weight: 700; font-size: 12px; white-space: nowrap">আইন · ন্যূনতম RM 1,700</span>
+</div>
+</div>
+</section>
+
+<main style="padding: 28px 28px 40px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px">
+
+<section aria-label="কাগজপত্র" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" aria-pressed="true" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #0f4c3a; background: #0f4c3a; color: #ffffff; font-weight: 600; cursor: pointer">চুক্তি</button>
+<button type="button" aria-pressed="false" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #c9d0ca; background: #ffffff; font-weight: 500; cursor: pointer">Payslip</button>
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px dashed #59635d; background: transparent; font-weight: 500; cursor: pointer">+ কাগজ</button>
+</div>
+<div lang="en" style="background: #fffdf8; border: 1px solid #e7e1d2; border-radius: 6px; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 14px 32px rgba(18,26,22,0.09); padding: 28px 22px; display: flex; flex-direction: column; gap: 6px; font-family: 'Source Serif 4', Georgia, serif; font-size: 13.5px; line-height: 1.6">
+<p style="margin: 0 0 10px; padding-bottom: 10px; border-bottom: 2px solid #121a16; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-align: center">EMPLOYMENT CONTRACT FOR FOREIGN WORKER</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px"><b>1. Position and Term.</b> The Worker is employed as a Machine Operator at the Employer's factory in Shah Alam, Selangor, Malaysia for a period of three (3) years.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: #ffe98a"><b>2. Salary.</b> The Employer shall pay the Worker a basic salary of RM 1,200 per month, payable on the 10th day of the following month.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: transparent"><b>3. Deductions.</b> (a) recovery of recruitment, visa processing and agency costs of RM 3,000, at RM 250 per month for 12 months; (b) accommodation charge of RM 200 per month; (c) transport to the factory, RM 100 per month; (d) medical and insurance contribution of RM 100 per month.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: transparent"><b>4. Passport.</b> Upon arrival in Malaysia the Worker shall surrender his passport to the Employer, and the passport shall be kept in the Employer's custody for safekeeping throughout the term of this Contract.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: transparent"><b>5. Working Hours.</b> Normal working hours are twelve (12) hours per day, six (6) days per week. Overtime is payable at the Employer's discretion.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: transparent"><b>6. Travel.</b> The Worker shall bear the cost of his own air ticket to Malaysia.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px"><b>7. Termination.</b> The Employer may terminate this Contract at any time without notice if the Worker is found unsuitable.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px; background: transparent"><b>8. Complaints and Disputes.</b> The Worker shall not file any complaint or case with BMET, the Bangladesh High Commission or any court in Bangladesh in respect of this Contract.</p>
+<p style="margin: 0; padding: 6px 8px; border-radius: 4px"><b>9. Governing Law.</b> This Contract is governed by the laws of Malaysia.</p>
+</div>
+</section>
+
+<section aria-label="চার খাতা" style="flex: 2 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; min-height: 44px">
+<h2 style="margin: 0; font-family: 'Noto Serif Bengali', 'Source Serif 4', serif; font-weight: 700; font-size: 28px">চার খাতা</h2>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #59635d"><span aria-hidden="true" style="width: 22px; height: 22px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center">≠</span>অমিল</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #59635d"><span aria-hidden="true" style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 999px; border: 2px solid #59635d; color: #59635d; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center">=</span>মিল</span>
+</div>
+
+<div style="overflow-x: auto; padding: 2px 2px 8px">
+<div style="min-width: 580px; display: flex; flex-direction: column; gap: 12px">
+
+<button type="button" aria-pressed="true" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #0f4c3a; background: #f4faf6; box-shadow: 0 2px 4px rgba(15,76,58,0.10), 0 16px 36px rgba(15,76,58,0.18)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">মূল বেতন</span><span style="padding: 1px 10px; border-radius: 999px; background: #fff1e8; color: #93370d; font-weight: 700; font-size: 12px">High</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">৩ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #fdf3dc"><span style="font-size: 11px; font-weight: 700; color: #7a4500">কথা</span><span style="font-weight: 600">RM 1,800</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">RM 1,200</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #e9f2ed"><span style="font-size: 11px; font-weight: 700; color: #0a3a2c">টাকা</span><span style="font-weight: 600">RM 480 হাতে</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">কমপক্ষে RM 1,700</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">মাসিক কর্তন</span><span style="padding: 1px 10px; border-radius: 999px; background: #fff1e8; color: #93370d; font-weight: 700; font-size: 12px">High</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">৩ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #fdf3dc"><span style="font-size: 11px; font-weight: 700; color: #7a4500">কথা</span><span style="font-weight: 600">কর্তন নেই</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">RM 650 / মাস</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #e9f2ed"><span style="font-size: 11px; font-weight: 700; color: #0a3a2c">টাকা</span><span style="font-weight: 600">RM 720 কাটা</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">শুধু অনুমোদিত কর্তন</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">নিয়োগের খরচ</span><span style="padding: 1px 10px; border-radius: 999px; background: #fff1e8; color: #93370d; font-weight: 700; font-size: 12px">High</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">২ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #fdf3dc"><span style="font-size: 11px; font-weight: 700; color: #7a4500">কথা</span><span style="font-weight: 600">আর টাকা লাগবে না</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">RM 3,000 বেতন থেকে</span></span>
+<span style="flex: 0 0 28px; height: 28px; box-sizing: border-box; align-self: center; border-radius: 999px; border: 2px solid #59635d; color: #59635d; font-weight: 700; display: flex; align-items: center; justify-content: center">=</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #e9f2ed"><span style="font-size: 11px; font-weight: 700; color: #0a3a2c">টাকা</span><span style="font-weight: 600">RM 250 কাটা</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">কর্মীর কাছ থেকে fee নয়</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">পাসপোর্ট</span><span style="padding: 1px 10px; border-radius: 999px; background: #fdeeec; color: #912018; font-weight: 700; font-size: 12px">Critical</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">১ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">কথা</span><span style="color: #59635d">বলা হয়নি</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">মালিকের কাছে থাকবে</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">টাকা</span><span style="color: #59635d">প্রযোজ্য নয়</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">আটকে রাখা অপরাধ</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">কাজের সময়</span><span style="padding: 1px 10px; border-radius: 999px; background: #e2e6e1; color: #121a16; font-weight: 700; font-size: 12px">যাচাই হয়নি</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">১ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #fdf3dc"><span style="font-size: 11px; font-weight: 700; color: #7a4500">কথা</span><span style="font-weight: 600">দিনে ৮ ঘণ্টা</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">১২ ঘণ্টা, ৬ দিন</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">টাকা</span><span style="color: #59635d">প্রযোজ্য নয়</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; border-radius: 10px; border: 1px dashed #59635d"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="color: #59635d">ধারা corpus-এ নেই</span></span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">যাওয়ার টিকিট</span><span style="padding: 1px 10px; border-radius: 999px; background: #fdf6e3; color: #7a4500; font-weight: 700; font-size: 12px">Medium</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">১ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #fdf3dc"><span style="font-size: 11px; font-weight: 700; color: #7a4500">কথা</span><span style="font-weight: 600">কোম্পানি দেবে</span></span>
+<span style="flex: 0 0 28px; height: 28px; align-self: center; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">কর্মী দেবে</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">টাকা</span><span style="color: #59635d">প্রযোজ্য নয়</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">মিথ্যা আশ্বাস অপরাধ</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+<button type="button" aria-pressed="false" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; text-align: left; border-radius: 16px; cursor: pointer; border: 2px solid #ffffff; background: #ffffff; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 4px 12px rgba(18,26,22,0.05)">
+<span style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'Noto Serif Bengali', serif; font-weight: 700; font-size: 17px">অভিযোগের অধিকার</span><span style="padding: 1px 10px; border-radius: 999px; background: #fff1e8; color: #93370d; font-weight: 700; font-size: 12px">High</span><span style="margin-left: auto; font-size: 13px; font-weight: 600; color: #912018">১ অমিল</span></span>
+<span style="display: flex; align-items: stretch; gap: 6px">
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">কথা</span><span style="color: #59635d">বলা হয়নি</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #eef1f5"><span style="font-size: 11px; font-weight: 700; color: #334155">কাগজ</span><span style="font-weight: 600">BMET-এ অভিযোগ নিষেধ</span></span>
+<span aria-hidden="true" style="flex: 0 0 28px; height: 2px; align-self: center; background: #c9d0ca"></span>
+<span style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 7px 9px; border-radius: 10px; border: 1px dashed #c9d0ca"><span style="font-size: 11px; font-weight: 700; color: #59635d">টাকা</span><span style="color: #59635d">প্রযোজ্য নয়</span></span>
+<span aria-hidden="true" style="flex: 0 0 1px; margin: 0 6px; background: #c9d0ca"></span>
+<span style="flex: 1.5 1 0; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: #eef0fd"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 700; color: #3730a3">আইন</span><span style="font-weight: 600">মামলা করার অধিকার</span></span><span style="flex-shrink: 0; padding: 1px 9px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 12px">ভঙ্গ</span></span>
+</span>
+</button>
+
+</div>
+</div>
+</section>
+
+<aside aria-label="নির্বাচিত শর্তের প্রমাণ" style="flex: 1 1 380px; min-width: 0; background: #ffffff; border-radius: 20px; box-shadow: 0 1px 2px rgba(18,26,22,0.06), 0 18px 44px rgba(18,26,22,0.10); overflow: hidden; display: flex; flex-direction: column">
+
+<div style="background: #0f4c3a; color: #ffffff; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #cfe3d9">প্রমাণের ফাইল</span>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<h2 style="margin: 0; font-family: 'Noto Serif Bengali', 'Source Serif 4', serif; font-weight: 700; font-size: 26px; line-height: 1.3">মূল বেতন</h2>
+<span style="padding: 2px 11px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #fff1e8; color: #93370d">High</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+
+<span style="padding: 2px 10px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 12px; font-weight: 600">কথা ≠ কাগজ</span>
+
+<span style="padding: 2px 10px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 12px; font-weight: 600">কাগজ ≠ আইন</span>
+
+<span style="padding: 2px 10px; border-radius: 999px; border: 1px solid #3d6b5c; font-size: 12px; font-weight: 600">টাকা ≠ কাগজ</span>
+
+</div>
+</div>
+
+<div style="padding: 22px; display: flex; flex-direction: column; gap: 22px">
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="padding: 14px 16px; border-radius: 12px; background: #eef1f5; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 700; color: #334155">চুক্তি বলছে · Clause 2</span>
+<span lang="en" style="font-family: 'Source Serif 4', Georgia, serif; font-size: 14px; line-height: 1.6">The Employer shall pay the Worker a basic salary of RM 1,200 (Ringgit Malaysia One Thousand Two Hundred) per month, payable on the 10th day of the following month.</span>
+</div>
+
+<div aria-hidden="true" style="display: flex; align-items: center; gap: 10px">
+<span style="flex: 1 1 0; height: 2px; background: #e2e6e1"></span>
+<span style="width: 34px; height: 34px; border-radius: 999px; background: #b42318; color: #ffffff; font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center">≠</span>
+<span style="flex: 1 1 0; height: 2px; background: #e2e6e1"></span>
+</div>
+<div style="padding: 14px 16px; border-radius: 12px; background: #eef0fd; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 700; color: #3730a3">আইন বলছে · হুবহু উদ্ধৃতি</span>
+<span style="font-family: 'Source Serif 4', 'Noto Serif Bengali', serif; font-size: 14px; line-height: 1.65; color: #1e1b4b">Minimum Wages Rate: Monthly: RM1,700</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #3730a3">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+Minimum Wages Order 2024 (Malaysia) · para 3
+</span>
+</div>
+<span style="font-size: 13px; font-weight: 500">চুক্তির বেতন আইনের ন্যূনতমের চেয়ে মাসে RM 500 কম।</span>
+
+
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 700; color: #59635d">৪টি gate</span>
+<div style="position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0">
+<span aria-hidden="true" style="position: absolute; top: 17px; left: 12.5%; right: 12.5%; height: 3px; border-radius: 2px; background: #067647"></span>
+
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+<span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 999px; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; background: #067647; color: #ffffff; font-weight: 700">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+
+</span>
+<span style="font-size: 11px; font-weight: 700">G1 অস্তিত্ব</span>
+<span style="font-size: 12px; color: #59635d">পাস</span>
+</div>
+
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+<span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 999px; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; background: #067647; color: #ffffff; font-weight: 700">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+
+</span>
+<span style="font-size: 11px; font-weight: 700">G2 উদ্ধৃতি</span>
+<span style="font-size: 12px; color: #59635d">পাস</span>
+</div>
+
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+<span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 999px; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; background: #067647; color: #ffffff; font-weight: 700">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+
+</span>
+<span style="font-size: 11px; font-weight: 700">G3 সমর্থন</span>
+<span style="font-size: 12px; color: #59635d">Bench ৩–০</span>
+</div>
+
+<div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+<span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 999px; display: flex; align-items: center; justify-content: center; border: 3px solid #ffffff; background: #067647; color: #ffffff; font-weight: 700">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+
+</span>
+<span style="font-size: 11px; font-weight: 700">G4 চালু</span>
+<span style="font-size: 12px; color: #59635d">পাস</span>
+</div>
+
+</div>
+</div>
+
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 700; color: #59635d">কাউন্সিলের ভোট</span>
+<div style="position: relative; height: 84px">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+<span style="padding: 5px 0; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 700; background: #ecf4f0; color: #2c5242">Low</span>
+<span style="padding: 5px 0; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 700; background: #fdf6e3; color: #7a4500">Medium</span>
+<span style="padding: 5px 0; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 700; background: #fff1e8; color: #93370d">High</span>
+<span style="padding: 5px 0; border-radius: 8px; text-align: center; font-size: 11px; font-weight: 700; background: #fdeeec; color: #912018">Critical</span>
+</div>
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOSAyNiIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cGF0aCBmaWxsPSIjRkZGRkZGIiBkPSJNMjQgMGgxdjFoLTF6TTMgMWgzdjFoLTN6TTIyIDFoNXYxaC01ek0xIDJoN3YxaC03ek0xNiAyaDh2MWgtOHpNMjUgMmgydjFoLTJ6TTEgM2gydjFoLTJ6TTQgM2gxdjFoLTF6TTYgM2gzdjFoLTN6TTEyIDNoMTF2MWgtMTF6TTI0IDNoMXYxaC0xek0yNiAzaDJ2MWgtMnpNMCA0aDJ2MWgtMnpNNyA0aDl2MWgtOXpNMTkgNGg1djFoLTV6TTI1IDRoMnYxaC0yek0xIDVoMnYxaC0yek02IDVoNnYxaC02ek0xNCA1aDF2MWgtMXpNMjAgNWg3djFoLTd6TTEgNmgzdjFoLTN6TTUgNmg2djFoLTZ6TTE5IDZoOHYxaC04ek0yIDdoMTB2MWgtMTB6TTE0IDdoMXYxaC0xek0xNiA3aDEydjFoLTEyek0zIDhoOHYxaC04ek0xOSA4aDl2MWgtOXpNNCA5aDV2MWgtNXpNMjEgOWg1djFoLTV6TTI3IDloMnYxaC0yek01IDEwaDN2MWgtM3pNMjIgMTBoNnYxaC02ek01IDExaDJ2MWgtMnpNMjMgMTFoNXYxaC01ek01IDEyaDJ2MWgtMnpNMjMgMTJoNHYxaC00ek00IDEzaDJ2MWgtMnpNMjQgMTNoMnYxaC0yek00IDE0aDJ2MWgtMnpNMjQgMTRoMnYxaC0yek00IDE1aDJ2MWgtMnpNMjQgMTVoMnYxaC0yek00IDE2aDJ2MWgtMnpNMjQgMTZoMnYxaC0yek00IDE3aDJ2MWgtMnpNMjQgMTdoMnYxaC0yek00IDE4aDJ2MWgtMnpNMjQgMThoMnYxaC0yek00IDE5aDJ2MWgtMnpNMjQgMTloMnYxaC0yek01IDIwaDJ2MWgtMnpNMjMgMjBoMnYxaC0yek01IDIxaDN2MWgtM3pNMjIgMjFoM3YxaC0zek02IDIyaDN2MWgtM3pNMjEgMjJoM3YxaC0zek03IDIzaDJ2MWgtMnpNMTQgMjNoMnYxaC0yek0yMSAyM2gydjFoLTJ6TTggMjRoMTR2MWgtMTR6TTkgMjVoMTJ2MWgtMTJ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI0Y1QzQ0MyIgZD0iTTI0IDJoMXYxaC0xek0yMyAzaDF2MWgtMXpNMjUgM2gxdjFoLTF6TTI0IDRoMXYxaC0xek0yNiA5aDF2MWgtMXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjRUU0RjZBIiBkPSJNMyAzaDF2MWgtMXpNNSAzaDF2MWgtMXpNMiA0aDV2MWgtNXpNMyA1aDN2MWgtM3pNNCA2aDF2MWgtMXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjMkIxRDE4IiBkPSJNMTYgNGgzdjFoLTN6TTEyIDVoMnYxaC0yek0xOSA1aDF2MWgtMXpNMTEgNmgxdjFoLTF6TTE2IDZoM3YxaC0zek0xMiA3aDJ2MWgtMnpNMTEgOGg4djFoLTh6TTkgOWgydjFoLTJ6TTE5IDloMnYxaC0yek04IDEwaDF2MWgtMXpNMjEgMTBoMXYxaC0xek03IDExaDF2MWgtMXpNMjIgMTFoMXYxaC0xek03IDEyaDF2MWgtMXpNMjIgMTJoMXYxaC0xek02IDEzaDF2MWgtMXpNMTEgMTNoMXYxaC0xek0xOCAxM2gxdjFoLTF6TTIzIDEzaDF2MWgtMXpNNiAxNGgxdjFoLTF6TTEwIDE0aDF2MWgtMXpNMTIgMTRoMXYxaC0xek0xNyAxNGgxdjFoLTF6TTE5IDE0aDF2MWgtMXpNMjMgMTRoMXYxaC0xek02IDE1aDF2MWgtMXpNMTMgMTVoNHYxaC00ek0yMyAxNWgxdjFoLTF6TTYgMTZoMXYxaC0xek0xMyAxNmgxdjFoLTF6TTE2IDE2aDF2MWgtMXpNMjMgMTZoMXYxaC0xek02IDE3aDF2MWgtMXpNMTQgMTdoMnYxaC0yek0yMyAxN2gxdjFoLTF6TTYgMThoMXYxaC0xek0yMyAxOGgxdjFoLTF6TTYgMTloMXYxaC0xek0yMyAxOWgxdjFoLTF6TTcgMjBoMXYxaC0xek0yMiAyMGgxdjFoLTF6TTggMjFoMXYxaC0xek0yMSAyMWgxdjFoLTF6TTkgMjJoMXYxaC0xek0xMyAyMmg0djFoLTR6TTIwIDIyaDF2MWgtMXpNOSAyM2g1djFoLTV6TTE2IDIzaDV2MWgtNXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjNEY3RDM2IiBkPSJNMTUgNWgxdjFoLTF6TTE1IDZoMXYxaC0xek0xNSA3aDF2MWgtMXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjODZCODVDIiBkPSJNMTYgNWgzdjFoLTN6TTEyIDZoM3YxaC0zeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNFOUI1NDQiIGQ9Ik0xMSA5aDh2MWgtOHpNOSAxMGgxdjFoLTF6TTEyIDEwaDl2MWgtOXpNOCAxMWgxdjFoLTF6TTEwIDExaDEydjFoLTEyek05IDEyaDEzdjFoLTEzek03IDEzaDR2MWgtNHpNMTIgMTNoNnYxaC02ek0xOSAxM2g0djFoLTR6TTcgMTRoM3YxaC0zek0xMSAxNGgxdjFoLTF6TTEzIDE0aDR2MWgtNHpNMTggMTRoMXYxaC0xek0yMCAxNGgydjFoLTJ6TTcgMTVoMnYxaC0yek0xMSAxNWgydjFoLTJ6TTE3IDE1aDJ2MWgtMnpNMjEgMTVoMXYxaC0xek03IDE2aDZ2MWgtNnpNMTcgMTZoNXYxaC01ek03IDE3aDd2MWgtN3pNMTYgMTdoNnYxaC02ek03IDE4aDE1djFoLTE1ek03IDE5aDE1djFoLTE1ek04IDIwaDEydjFoLTEyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmMmQzOGYiIGQ9Ik0xMCAxMGgydjFoLTJ6TTkgMTFoMXYxaC0xek04IDEyaDF2MWgtMXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjYmE4ZjM5IiBkPSJNMjIgMTRoMXYxaC0xek0yMiAxNWgxdjFoLTF6TTIyIDE2aDF2MWgtMXpNMjIgMTdoMXYxaC0xek0yMiAxOGgxdjFoLTF6TTIyIDE5aDF2MWgtMXpNMjAgMjBoMnYxaC0yek05IDIxaDEydjFoLTEyek0xMCAyMmgzdjFoLTN6TTE3IDIyaDN2MWgtM3oiPjwvcGF0aD48cGF0aCBmaWxsPSIjRkY5RUE2IiBkPSJNOSAxNWgydjFoLTJ6TTE5IDE1aDJ2MWgtMnoiPjwvcGF0aD48cGF0aCBmaWxsPSIjOUUyQjMzIiBkPSJNMTQgMTZoMnYxaC0yeiI+PC9wYXRoPjwvc3ZnPg==" alt="Remedies · Sunny" style="position: absolute; top: 10px; height: 36px; width: auto; left: calc(62.5% - 58px)">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOCAyNiIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cGF0aCBmaWxsPSIjRkZGRkZGIiBkPSJNMjQgMGgxdjFoLTF6TTIyIDFoNXYxaC01ek0xNiAyaDh2MWgtOHpNMjUgMmgydjFoLTJ6TTEyIDNoMTF2MWgtMTF6TTI0IDNoMXYxaC0xek0yNiAzaDJ2MWgtMnpNMTAgNGg2djFoLTZ6TTE5IDRoNXYxaC01ek0yNSA0aDJ2MWgtMnpNMyA1aDF2MWgtMXpNOSA1aDN2MWgtM3pNMTQgNWgxdjFoLTF6TTIwIDVoN3YxaC03ek0xIDZoMTB2MWgtMTB6TTE5IDZoN3YxaC03ek0xIDdoMnYxaC0yek00IDdoOHYxaC04ek0xNCA3aDF2MWgtMXpNMTYgN2g5djFoLTl6TTAgOGgydjFoLTJ6TTMgOGgxdjFoLTF6TTUgOGg2djFoLTZ6TTE5IDhoNXYxaC01ek0xIDloMnYxaC0yek00IDloNXYxaC01ek0yMSA5aDN2MWgtM3pNMSAxMGg3djFoLTd6TTIyIDEwaDJ2MWgtMnpNMiAxMWg1djFoLTV6TTIzIDExaDJ2MWgtMnpNMyAxMmg0djFoLTR6TTIzIDEyaDJ2MWgtMnpNNCAxM2gydjFoLTJ6TTI0IDEzaDJ2MWgtMnpNNCAxNGgydjFoLTJ6TTEwIDE0aDF2MWgtMXpNMTcgMTRoMXYxaC0xek0yNCAxNGgydjFoLTJ6TTQgMTVoMnYxaC0yek0yNCAxNWgydjFoLTJ6TTQgMTZoMnYxaC0yek0yNCAxNmgydjFoLTJ6TTQgMTdoMnYxaC0yek0yNCAxN2gydjFoLTJ6TTQgMThoMnYxaC0yek0yNCAxOGgydjFoLTJ6TTQgMTloMnYxaC0yek0xNCAxOWgxdjFoLTF6TTI0IDE5aDJ2MWgtMnpNNSAyMGgydjFoLTJ6TTIzIDIwaDJ2MWgtMnpNNSAyMWgzdjFoLTN6TTIyIDIxaDN2MWgtM3pNNiAyMmgzdjFoLTN6TTIxIDIyaDN2MWgtM3pNNyAyM2gydjFoLTJ6TTE0IDIzaDJ2MWgtMnpNMjEgMjNoMnYxaC0yek04IDI0aDE0djFoLTE0ek05IDI1aDEydjFoLTEyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNGNUM0NDMiIGQ9Ik0yNCAyaDF2MWgtMXpNMjMgM2gxdjFoLTF6TTI1IDNoMXYxaC0xek0yNCA0aDF2MWgtMXpNMyA3aDF2MWgtMXpNMiA4aDF2MWgtMXpNNCA4aDF2MWgtMXpNMyA5aDF2MWgtMXpNMTQgMThoMnYxaC0yek0xMyAxOWgxdjFoLTF6TTE1IDE5aDJ2MWgtMnoiPjwvcGF0aD48cGF0aCBmaWxsPSIjMkIxRDE4IiBkPSJNMTYgNGgzdjFoLTN6TTEyIDVoMnYxaC0yek0xOSA1aDF2MWgtMXpNMTEgNmgxdjFoLTF6TTE2IDZoM3YxaC0zek0xMiA3aDJ2MWgtMnpNMTEgOGg4djFoLTh6TTkgOWgydjFoLTJ6TTE5IDloMnYxaC0yek04IDEwaDF2MWgtMXpNMjEgMTBoMXYxaC0xek03IDExaDF2MWgtMXpNMjIgMTFoMXYxaC0xek03IDEyaDF2MWgtMXpNMjIgMTJoMXYxaC0xek02IDEzaDE4djFoLTE4ek02IDE0aDF2MWgtMXpNOSAxNGgxdjFoLTF6TTExIDE0aDN2MWgtM3pNMTYgMTRoMXYxaC0xek0xOCAxNGgzdjFoLTN6TTIzIDE0aDF2MWgtMXpNNiAxNWgxdjFoLTF6TTEwIDE1aDN2MWgtM3pNMTcgMTVoM3YxaC0zek0yMyAxNWgxdjFoLTF6TTYgMTZoMXYxaC0xek0xNiAxNmgxdjFoLTF6TTIzIDE2aDF2MWgtMXpNNiAxN2gxdjFoLTF6TTEzIDE3aDN2MWgtM3pNMjMgMTdoMXYxaC0xek02IDE4aDF2MWgtMXpNMjMgMThoMXYxaC0xek02IDE5aDF2MWgtMXpNMjMgMTloMXYxaC0xek03IDIwaDF2MWgtMXpNMjIgMjBoMXYxaC0xek04IDIxaDF2MWgtMXpNMjEgMjFoMXYxaC0xek05IDIyaDF2MWgtMXpNMTMgMjJoNHYxaC00ek0yMCAyMmgxdjFoLTF6TTkgMjNoNXYxaC01ek0xNiAyM2g1djFoLTV6Ij48L3BhdGg+PHBhdGggZmlsbD0iIzRGN0QzNiIgZD0iTTE1IDVoMXYxaC0xek0xNSA2aDF2MWgtMXpNMTUgN2gxdjFoLTF6Ij48L3BhdGg+PHBhdGggZmlsbD0iIzg2Qjg1QyIgZD0iTTE2IDVoM3YxaC0zek0xMiA2aDN2MWgtM3oiPjwvcGF0aD48cGF0aCBmaWxsPSIjOEY4MkUzIiBkPSJNMTEgOWg4djFoLTh6TTkgMTBoMXYxaC0xek0xMiAxMGg5djFoLTl6TTggMTFoMXYxaC0xek0xMCAxMWgxMnYxaC0xMnpNOSAxMmgxM3YxaC0xM3pNNyAxNGgydjFoLTJ6TTE0IDE0aDJ2MWgtMnpNMjEgMTRoMXYxaC0xek03IDE1aDN2MWgtM3pNMTMgMTVoNHYxaC00ek0yMCAxNWgydjFoLTJ6TTcgMTZoOXYxaC05ek0xNyAxNmg1djFoLTV6TTcgMTdoNnYxaC02ek0xNiAxN2g2djFoLTZ6TTcgMThoN3YxaC03ek0xNiAxOGg2djFoLTZ6TTcgMTloNnYxaC02ek0xNyAxOWg1djFoLTV6TTggMjBoNnYxaC02ek0xNiAyMGg0djFoLTR6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2JjYjRlZSIgZD0iTTEwIDEwaDJ2MWgtMnpNOSAxMWgxdjFoLTF6TTggMTJoMXYxaC0xeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiM3NjY5YjAiIGQ9Ik0yMiAxNGgxdjFoLTF6TTIyIDE1aDF2MWgtMXpNMjIgMTZoMXYxaC0xek0yMiAxN2gxdjFoLTF6TTIyIDE4aDF2MWgtMXpNMjIgMTloMXYxaC0xek0yMCAyMGgydjFoLTJ6TTkgMjFoMTJ2MWgtMTJ6TTEwIDIyaDN2MWgtM3pNMTcgMjJoM3YxaC0zeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNDOThBMUEiIGQ9Ik0xNCAyMGgydjFoLTJ6Ij48L3BhdGg+PC9zdmc+" alt="Text · Regal" style="position: absolute; top: 10px; height: 36px; width: auto; left: calc(62.5% - 19px)">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMiAzMyIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cGF0aCBmaWxsPSIjRkZGRkZGIiBkPSJNOSAwaDN2MWgtM3pNNyAxaDh2MWgtOHpNNSAyaDR2MWgtNHpNMTIgMmg1djFoLTV6TTQgM2gzdjFoLTN6TTE1IDNoM3YxaC0zek00IDRoMnYxaC0yek0xNiA0aDJ2MWgtMnpNMyA1aDJ2MWgtMnpNMTcgNWgydjFoLTJ6TTMgNmgydjFoLTJ6TTE3IDZoMnYxaC0yek00IDdoMnYxaC0yek0xNiA3aDJ2MWgtMnpNNCA4aDR2MWgtNHpNOSA4aDV2MWgtNXpNMTUgOGgzdjFoLTN6TTUgOWgzdjFoLTN6TTkgOWgydjFoLTJ6TTEyIDloMnYxaC0yek0xNSA5aDJ2MWgtMnpNNiAxMGg1djFoLTV6TTEyIDEwaDV2MWgtNXpNNiAxMWgxMXYxaC0xMXpNNiAxMmg1djFoLTV6TTE0IDEyaDR2MWgtNHpNNSAxM2g2djFoLTZ6TTEyIDEzaDF2MWgtMXpNMTYgMTNoMnYxaC0yek00IDE0aDd2MWgtN3pNMTIgMTRoMXYxaC0xek0xNyAxNGgydjFoLTJ6TTMgMTVoNHYxaC00ek0xNSAxNWg0djFoLTR6TTIgMTZoM3YxaC0zek0xNyAxNmgzdjFoLTN6TTIgMTdoMnYxaC0yek0xOCAxN2gydjFoLTJ6TTEgMThoMnYxaC0yek0xOSAxOGgydjFoLTJ6TTEgMTloMnYxaC0yek0xOSAxOWgydjFoLTJ6TTAgMjBoMnYxaC0yek0yMCAyMGgydjFoLTJ6TTAgMjFoMnYxaC0yek04IDIxaDF2MWgtMXpNMTQgMjFoMXYxaC0xek0yMCAyMWgydjFoLTJ6TTAgMjJoMnYxaC0yek0yMCAyMmgydjFoLTJ6TTAgMjNoMnYxaC0yek0yMCAyM2gydjFoLTJ6TTAgMjRoMnYxaC0yek0yMCAyNGgydjFoLTJ6TTAgMjVoMnYxaC0yek0yMCAyNWgydjFoLTJ6TTAgMjZoMnYxaC0yek0yMCAyNmgydjFoLTJ6TTEgMjdoMnYxaC0yek0xOSAyN2gydjFoLTJ6TTEgMjhoM3YxaC0zek0xOCAyOGgzdjFoLTN6TTIgMjloM3YxaC0zek0xNyAyOWgzdjFoLTN6TTMgMzBoMnYxaC0yek0xMCAzMGgydjFoLTJ6TTE3IDMwaDJ2MWgtMnpNNCAzMWgxNHYxaC0xNHpNNSAzMmgxMnYxaC0xMnoiPjwvcGF0aD48cGF0aCBmaWxsPSIjMkIxRDE4IiBkPSJNOSAyaDN2MWgtM3pNNyAzaDJ2MWgtMnpNMTIgM2gzdjFoLTN6TTYgNGgxdjFoLTF6TTE1IDRoMXYxaC0xek01IDVoMXYxaC0xek0xNiA1aDF2MWgtMXpNNSA2aDF2MWgtMXpNMTYgNmgxdjFoLTF6TTYgN2gxMHYxaC0xMHpNMTMgMTNoMXYxaC0xek0xNSAxM2gxdjFoLTF6TTEzIDE0aDF2MWgtMXpNMTYgMTRoMXYxaC0xek03IDE1aDh2MWgtOHpNNSAxNmgydjFoLTJ6TTE1IDE2aDJ2MWgtMnpNNCAxN2gxdjFoLTF6TTE3IDE3aDF2MWgtMXpNMyAxOGgxdjFoLTF6TTE4IDE4aDF2MWgtMXpNMyAxOWgxdjFoLTF6TTcgMTloMnYxaC0yek0xMyAxOWgydjFoLTJ6TTE4IDE5aDF2MWgtMXpNMiAyMGgxdjFoLTF6TTYgMjBoMXYxaC0xek0xNSAyMGgxdjFoLTF6TTE5IDIwaDF2MWgtMXpNMiAyMWgxdjFoLTF6TTcgMjFoMXYxaC0xek0xMyAyMWgxdjFoLTF6TTE5IDIxaDF2MWgtMXpNMiAyMmgxdjFoLTF6TTcgMjJoMnYxaC0yek0xMyAyMmgydjFoLTJ6TTE5IDIyaDF2MWgtMXpNMiAyM2gxdjFoLTF6TTE5IDIzaDF2MWgtMXpNMiAyNGgxdjFoLTF6TTE5IDI0aDF2MWgtMXpNMiAyNWgxdjFoLTF6TTEwIDI1aDJ2MWgtMnpNMTkgMjVoMXYxaC0xek0yIDI2aDF2MWgtMXpNOSAyNmgxdjFoLTF6TTEyIDI2aDF2MWgtMXpNMTkgMjZoMXYxaC0xek0zIDI3aDF2MWgtMXpNMTggMjdoMXYxaC0xek00IDI4aDF2MWgtMXpNMTcgMjhoMXYxaC0xek01IDI5aDF2MWgtMXpNOSAyOWg0djFoLTR6TTE2IDI5aDF2MWgtMXpNNSAzMGg1djFoLTV6TTEyIDMwaDV2MWgtNXoiPjwvcGF0aD48cGF0aCBmaWxsPSIjQ0REM0REIiBkPSJNOSAzaDN2MWgtM3pNNyA0aDh2MWgtOHpNNiA1aDEwdjFoLTEweiI+PC9wYXRoPjxwYXRoIGZpbGw9IiM5QUEzQjMiIGQ9Ik02IDZoMTB2MWgtMTB6Ij48L3BhdGg+PHBhdGggZmlsbD0iIzRGQjBFQSIgZD0iTTggOGgxdjFoLTF6TTE0IDhoMXYxaC0xek04IDloMXYxaC0xek0xMSA5aDF2MWgtMXpNMTQgOWgxdjFoLTF6TTExIDEwaDF2MWgtMXpNNyAyM2gxdjFoLTF6TTcgMjRoMXYxaC0xeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiM0RjdEMzYiIGQ9Ik0xMSAxMmgzdjFoLTN6TTExIDEzaDF2MWgtMXpNMTEgMTRoMXYxaC0xeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiM4NkI4NUMiIGQ9Ik0xNCAxM2gxdjFoLTF6TTE0IDE0aDJ2MWgtMnoiPjwvcGF0aD48cGF0aCBmaWxsPSIjOEM5QUIwIiBkPSJNNyAxNmg4djFoLTh6TTUgMTdoMXYxaC0xek04IDE3aDl2MWgtOXpNNCAxOGgxdjFoLTF6TTYgMThoMTJ2MWgtMTJ6TTUgMTloMnYxaC0yek05IDE5aDR2MWgtNHpNMTUgMTloM3YxaC0zek0zIDIwaDN2MWgtM3pNNyAyMGg4djFoLTh6TTE2IDIwaDN2MWgtM3pNMyAyMWg0djFoLTR6TTkgMjFoNHYxaC00ek0xNSAyMWgzdjFoLTN6TTMgMjJoNHYxaC00ek05IDIyaDR2MWgtNHpNMTUgMjJoM3YxaC0zek0zIDIzaDR2MWgtNHpNOCAyM2gxMHYxaC0xMHpNMyAyNGg0djFoLTR6TTggMjRoMTB2MWgtMTB6TTMgMjVoNHYxaC00ek04IDI1aDJ2MWgtMnpNMTIgMjVoNnYxaC02ek0zIDI2aDZ2MWgtNnpNMTAgMjZoMnYxaC0yek0xMyAyNmg1djFoLTV6TTQgMjdoMTJ2MWgtMTJ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2JhYzJkMCIgZD0iTTYgMTdoMnYxaC0yek01IDE4aDF2MWgtMXpNNCAxOWgxdjFoLTF6Ij48L3BhdGg+PHBhdGggZmlsbD0iIzc0N2I4YSIgZD0iTTE4IDIxaDF2MWgtMXpNMTggMjJoMXYxaC0xek0xOCAyM2gxdjFoLTF6TTE4IDI0aDF2MWgtMXpNMTggMjVoMXYxaC0xek0xOCAyNmgxdjFoLTF6TTE2IDI3aDJ2MWgtMnpNNSAyOGgxMnYxaC0xMnpNNiAyOWgzdjFoLTN6TTEzIDI5aDN2MWgtM3oiPjwvcGF0aD48cGF0aCBmaWxsPSIjQTlEREY3IiBkPSJNNyAyNWgxdjFoLTF6Ij48L3BhdGg+PC9zdmc+" alt="Enforcement · Grey" style="position: absolute; top: 2px; height: 44px; width: auto; left: calc(62.5% + 22px)">
+</div>
+<span style="font-size: 13px">তিনজনই High। সর্বসম্মত ৩–০।</span>
+</div>
+
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+<span style="font-size: 12px; font-weight: 700; color: #59635d">প্রমাণ</span>
+<span style="font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 18px">২ / ৩</span>
+</div>
+<div aria-hidden="true" style="display: flex; gap: 4px">
+
+<span style="flex: 1 1 0; height: 8px; border-radius: 999px; background: #067647"></span>
+
+<span style="flex: 1 1 0; height: 8px; border-radius: 999px; background: #067647"></span>
+
+<span style="flex: 1 1 0; height: 8px; border-radius: 999px; background: #e2e6e1"></span>
+
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px">
+<span>চুক্তির clause 2</span>
+<span style="flex-shrink: 0; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #e8f5ee; color: #05603a">আছে</span>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px">
+<span>কথার রেকর্ড, তারিখসহ</span>
+<span style="flex-shrink: 0; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #e8f5ee; color: #05603a">আছে</span>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px">
+<span>আরও ২ মাসের payslip</span>
+<span style="flex-shrink: 0; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #fef5e1; color: #7a4500">লাগবে</span>
+</div>
+
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px">
+<span style="font-weight: 700; color: #59635d; font-size: 12px">ILO indicator</span>
+<span lang="en" style="padding: 2px 10px; border-radius: 999px; background: #f2f4f1; font-weight: 600">Withholding of wages</span>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" style="flex: 1 1 140px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #c9d0ca; background: #ffffff; font-weight: 600; cursor: pointer">কাউন্সিলে শুনানি</button>
+<button type="button" style="flex: 1 1 140px; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #0f4c3a; background: #0f4c3a; color: #ffffff; font-weight: 700; cursor: pointer">অভিযোগে যোগ করুন</button>
+</div>
+
+<p style="margin: 0; font-size: 12px; color: #59635d">সিদ্ধান্তে সহায়তা, আইনি পরামর্শ নয়।</p>
+</div>
+</aside>
+
+</main>
+</div>
+</body>
+</html>

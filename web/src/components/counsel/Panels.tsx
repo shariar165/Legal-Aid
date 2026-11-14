@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { api, type Ablation, type AnalysisResult, type TraceEvent, type Verdict } from "@/lib/api";
 import { citeLabel, GATE_ICON, GATE_STATUS_LABEL, GATES, ORIGIN_LABEL, OUTCOME, VERDICT_ICON, VERDICT_LABEL } from "./format";
-import { Icon } from "./Icons";
+import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
 /* ------------------------------------------------------------------ Ledger */

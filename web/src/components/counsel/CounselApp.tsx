@@ -7,7 +7,7 @@ import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAn
 import { AccountMenu } from "./Account";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
-import { Icon, type IconName } from "./Icons";
+import { Icon, type IconName } from "@/components/shared/Icons";
 import { AblationPanel, LedgerPanel, PrivacyPanel, TracePanel } from "./Panels";
 import { RiskCard } from "./RiskCard";
 import styles from "./counsel.module.css";

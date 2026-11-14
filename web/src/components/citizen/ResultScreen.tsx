@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { AnalysisResult, CardKind } from "@/lib/api";
 import { bannerTitle, countryCheckLine, formatNumber, SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
+import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
 
@@ -65,7 +66,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
     <div className={styles.screen}>
       <header className={styles.resultHead}>
         <button type="button" className={styles.backBtn} aria-label={T.back[lang]} onClick={onBack}>
-          ←
+          <Icon name="arrowLeft" size={24} strokeWidth={2.25} />
         </button>
         <h1 ref={heading} tabIndex={-1} className={styles.resultTitle}>
           {T.title[lang]}
@@ -81,7 +82,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
         {destination && (
           <section className={styles.countryCard} data-supported={destination.supported} aria-label={T.workIn[lang]}>
             <p className={styles.countryName}>
-              <PinGlyph /> {destination.name[lang]}
+              <Icon name="pin" size={20} strokeWidth={2} /> {destination.name[lang]}
             </p>
             <p className={styles.countryLine}>{countryCheckLine(destination, lang)}</p>
             {destination.help && (
@@ -118,7 +119,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                   aria-pressed={playing}
                   onClick={() => speech.toggle(card.kind, spoken, SPEECH_LANG[lang])}
                 >
-                  <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span> {playing ? T.stop[lang] : T.listen[lang]}
+                  <Icon name={playing ? "pause" : "play"} size={18} strokeWidth={2.5} /> {playing ? T.stop[lang] : T.listen[lang]}
                 </button>
               </div>
               {playing && (
@@ -133,7 +134,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                   {card.lines.map((line, i) => (
                     <li key={i} className={styles.line}>
                       <span className={styles.lineMark} aria-hidden="true">
-                        {card.lines.length > 1 ? `${formatNumber(i + 1, lang)}.` : "•"}
+                        {card.lines.length > 1 ? `${formatNumber(i + 1, lang)}.` : <span className={styles.lineDot} />}
                       </span>
                       <span>{line[lang]}</span>
                     </li>
@@ -150,7 +151,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                     aria-controls={detailsId}
                     onClick={() => setOpen((p) => ({ ...p, [card.kind]: !p[card.kind] }))}
                   >
-                    {T.details[lang]} {isOpen ? "▾" : "▸"}
+                    {T.details[lang]} <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={18} strokeWidth={2.25} />
                   </button>
                   {isOpen && (
                     <div id={detailsId} className={styles.cits}>
@@ -159,7 +160,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                         {card.citations.map((cit) => (
                           <li key={cit.citation_id} className={styles.cit} data-status={cit.status}>
                             <span className={styles.citSym} aria-hidden="true">
-                              {cit.status === "verified" ? "✓" : "⚠"}
+                              <Icon name={cit.status === "verified" ? "check" : "alert"} size={15} strokeWidth={2.5} />
                             </span>
                             <a className={styles.citName} href={cit.url || undefined} target="_blank" rel="noreferrer" title={cit.url ? T.openSource[lang] : undefined}>
                               {cit.name[lang]}
@@ -189,7 +190,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
                 aria-pressed={letterPlaying}
                 onClick={() => speech.toggle(LETTER_ID, letter, SPEECH_LANG[lang])}
               >
-                <span aria-hidden="true">{letterPlaying ? "❚❚" : "▶"}</span> {letterPlaying ? T.stop[lang] : T.listen[lang]}
+                <Icon name={letterPlaying ? "pause" : "play"} size={18} strokeWidth={2.5} /> {letterPlaying ? T.stop[lang] : T.listen[lang]}
               </button>
             </div>
             <div className={styles.cardBody}>
@@ -197,7 +198,14 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
               <pre className={styles.letterText}>{letter}</pre>
               <div className={styles.twoUp}>
                 <button type="button" className={styles.btnSolid} onClick={copyLetter}>
-                  {copied ? T.copied[lang] : T.copy[lang]}
+                  {copied ? (
+                    <span className={styles.withIcon}>
+                      <Icon name="check" size={18} strokeWidth={2.5} />
+                      {T.copied[lang]}
+                    </span>
+                  ) : (
+                    T.copy[lang]
+                  )}
                 </button>
                 <button type="button" className={styles.btnOutline} onClick={shareLetter}>
                   {T.share[lang]}
@@ -208,7 +216,10 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
         )}
 
         <Link href={`/counsel/${result.job_id}`} className={styles.memoLink}>
-          <span className={styles.memoMain}>{T.memoLink[lang]}</span>
+          <span className={styles.memoMain}>
+            {T.memoLink[lang]}
+            <Icon name="arrowRight" size={18} strokeWidth={2.25} />
+          </span>
           <span className={styles.memoSub}>{T.memoSub[lang]}</span>
         </Link>
 
@@ -235,15 +246,5 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
         )}
       </div>
     </div>
-  );
-}
-
-/* Inline SVG instead of a flag emoji: Windows and many Android fonts have no flag glyphs. */
-function PinGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z" />
-      <circle cx="12" cy="9.5" r="2.5" />
-    </svg>
   );
 }

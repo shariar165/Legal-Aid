@@ -1,10 +1,10 @@
-import { inter, silkscreen, sourceSerif } from "@/lib/fonts";
+import { silkscreen } from "@/lib/fonts";
 
-/* Counsel mode is an English-first professional workspace: Latin faces here,
-   with the root layout's Bengali fonts as the fallback for Bangla text. */
+/* Counsel mode is an English-first professional workspace. The root layout loads the shared faces;
+   only the council scene's pixel face is added here. */
 export default function CounselLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div lang="en" className={`${inter.variable} ${sourceSerif.variable} ${silkscreen.variable}`}>
+    <div lang="en" className={silkscreen.variable}>
       {children}
     </div>
   );

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type JobSummary, type Me } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
-import { Icon } from "./Icons";
+import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
 const AccountContext = createContext<Me | null>(null);
