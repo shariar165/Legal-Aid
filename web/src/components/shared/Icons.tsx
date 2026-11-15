@@ -125,6 +125,8 @@ const PATHS = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  equal: <path d="M5 9h14M5 15h14" />,
+  notEqual: <path d="M5 9h14M5 15h14M16 4 8 20" />,
   play: <path d="M8 5.5v13l10.5-6.5Z" />,
   pause: <path d="M9 5v14M15 5v14" />,
   pin: (

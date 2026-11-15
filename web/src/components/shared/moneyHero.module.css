@@ -1,0 +1,339 @@
+/* The money hero (spec 20): Case Desk ("desk") and the citizen result ("phone"). Shared tokens only. */
+
+.hero {
+  --label-w: 132px;
+  --chip-room: 120px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 32px 48px;
+  padding: 36px 28px 40px;
+  background-color: var(--accent);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.055) 0, rgba(255, 255, 255, 0.055) 1px, transparent 1px, transparent 34px);
+  color: var(--on-deep);
+  font-family: var(--sans);
+}
+
+.lead {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.eyebrowRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.eyebrow {
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--on-deep-muted);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--serif-bn);
+  font-weight: 700;
+  font-size: var(--fs-40);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.headline:focus {
+  outline: none;
+}
+
+.amount {
+  color: var(--gold);
+  font-family: var(--serif);
+  white-space: nowrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--deep-line);
+  font-size: var(--fs-14);
+}
+
+.chip b {
+  font-family: var(--serif);
+  font-size: var(--fs-16);
+}
+
+.chip[data-tone="bad"] {
+  background: var(--bad-tint);
+  border-color: var(--bad-tint);
+  color: var(--bad-ink);
+}
+
+/* ---------------------------------------------------------------- bars */
+
+.chart {
+  position: relative;
+  flex: 2 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 34px;
+}
+
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: var(--label-w) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.barLabel {
+  display: flex;
+  flex-direction: column;
+}
+
+.barLabel b {
+  font-size: var(--fs-16);
+}
+
+.barLabel span {
+  font-size: var(--fs-12);
+  color: var(--on-deep-muted);
+}
+
+/* the bar area: widths and the minimum line are percentages of this box */
+.barTrack {
+  position: relative;
+  height: 48px;
+  margin-right: var(--chip-room);
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  min-width: 132px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: var(--r);
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: var(--fs-28);
+  white-space: nowrap;
+}
+
+.bar[data-k="said"] {
+  background: var(--lg-said-bar);
+  color: var(--gold-ink);
+}
+
+.bar[data-k="paper"] {
+  background: var(--card);
+  color: var(--ink);
+}
+
+.bar[data-k="take"] {
+  background: var(--lg-paid-bar);
+  color: #0b2e23;
+}
+
+.bar[data-free="true"] {
+  background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgba(0, 0, 0, 0.06) 10px 20px);
+}
+
+.delta {
+  position: absolute;
+  top: 50%;
+  left: calc(max(var(--w), 132px) + 12px);
+  transform: translateY(-50%);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bad-tint);
+  color: var(--bad-ink);
+  font-weight: 700;
+  font-size: var(--fs-14);
+  white-space: nowrap;
+}
+
+.offScale {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  font-size: var(--fs-12);
+  color: var(--on-deep-muted);
+}
+
+.minLine {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  border-left: 2px dashed var(--on-deep);
+  pointer-events: none;
+}
+
+.minTag {
+  position: absolute;
+  top: 0;
+  right: var(--chip-room);
+  transform: translateX(50%);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--lg-law-tint);
+  color: var(--lg-law-ink);
+  font-weight: 700;
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+
+.steps {
+  margin: 0;
+  padding-left: calc(var(--label-w) + 16px);
+  font-size: var(--fs-14);
+  color: var(--on-deep-muted);
+}
+
+.foot {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- phone */
+
+.hero[data-layout="phone"] {
+  --chip-room: 0px;
+  gap: 20px;
+  padding: 24px 16px 28px;
+}
+
+.hero[data-layout="phone"] .headline {
+  font-size: var(--fs-28);
+}
+
+.hero[data-layout="phone"] .chart {
+  flex-basis: 100%;
+  padding-top: 0;
+}
+
+.hero[data-layout="phone"] .barRow {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.hero[data-layout="phone"] .barLabel {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hero[data-layout="phone"] .barTrack {
+  height: 44px;
+}
+
+.hero[data-layout="phone"] .bar {
+  font-size: var(--fs-20);
+  min-width: 112px;
+}
+
+/* the chip sits at the end of the label line; the bar keeps the full width */
+.hero[data-layout="phone"] .delta {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.hero[data-layout="phone"] .minTag {
+  position: static;
+  align-self: flex-start;
+  transform: none;
+  order: 2;
+}
+
+.hero[data-layout="phone"] .steps {
+  padding-left: 0;
+  order: 3;
+}
+
+@media (max-width: 1100px) {
+  .hero[data-layout="desk"] {
+    padding: 28px 20px 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero[data-layout="desk"] {
+    --chip-room: 0px;
+    padding: 24px 16px 28px;
+  }
+
+  .hero[data-layout="desk"] .headline {
+    font-size: var(--fs-28);
+  }
+
+  .hero[data-layout="desk"] .chart {
+    padding-top: 0;
+  }
+
+  .hero[data-layout="desk"] .barRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .hero[data-layout="desk"] .barLabel {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .hero[data-layout="desk"] .bar {
+    font-size: var(--fs-20);
+    min-width: 112px;
+  }
+
+  .hero[data-layout="desk"] .delta {
+    top: auto;
+    bottom: calc(100% + 6px);
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .hero[data-layout="desk"] .minTag {
+    position: static;
+    align-self: flex-start;
+    transform: none;
+    order: 2;
+  }
+
+  .hero[data-layout="desk"] .steps {
+    padding-left: 0;
+    order: 3;
+  }
+}

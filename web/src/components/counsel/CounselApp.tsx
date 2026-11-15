@@ -10,9 +10,11 @@ import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "@/components/shared/Icons";
 import { AblationPanel, LedgerPanel, PrivacyPanel, TracePanel } from "./Panels";
 import { RiskCard } from "./RiskCard";
+import { CaseDesk } from "./desk/CaseDesk";
 import styles from "./counsel.module.css";
 
-type View = "report" | "contract" | "council" | "checks";
+/* Case Desk is the default; the Contract tab folded into its left pane (spec 20). */
+type View = "desk" | "memo" | "council" | "checks";
 
 const STEP_LABEL: Record<StepId, { title: string; detail: string }> = {
   read: { title: "Reading the document", detail: "Text extraction and clause splitting" },
@@ -28,23 +30,11 @@ function liveRisks(result: AnalysisResult) {
   return result.risks.filter((r) => r.status !== "dropped").sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
 }
 
-/* clause id -> the most serious live risk that touches it */
-function clauseHeat(risks: Risk[]) {
-  const m = new Map<string, { sev: Severity; risk: string; title: string }>();
-  for (const r of risks) {
-    if (r.status === "dropped") continue;
-    for (const c of r.clause_ids) {
-      const cur = m.get(c);
-      if (!cur || SEVERITY_RANK[r.severity] < SEVERITY_RANK[cur.sev]) m.set(c, { sev: r.severity, risk: r.id, title: r.title.en });
-    }
-  }
-  return m;
-}
-
 export function CounselApp({ jobId }: { jobId: string }) {
   const analysis = useAnalysis(jobId);
   const { result, status, events, error, stepsDone } = analysis;
-  const [view, setView] = useState<View>("report");
+  const [view, setView] = useState<View>("desk");
+  const [deskClause, setDeskClause] = useState<string | null>(null);
   const [target, setTarget] = useState<CouncilTarget>("all");
   const [riskId, setRiskId] = useState<string | null>(null);
   const [focusRisk, setFocusRisk] = useState<string | null>(null);
@@ -70,11 +60,10 @@ export function CounselApp({ jobId }: { jobId: string }) {
 
   const showRisk = (id: string) => {
     setFocusRisk(id);
-    go("report", `risk-${id}`);
+    go("memo", `risk-${id}`);
   };
 
   const live = useMemo(() => (result ? liveRisks(result) : []), [result]);
-  const heat = useMemo(() => clauseHeat(result?.risks ?? []), [result]);
 
   return (
     <div className={styles.page}>
@@ -121,18 +110,17 @@ export function CounselApp({ jobId }: { jobId: string }) {
         </div>
         {result && (
           <nav className={styles.views} aria-label="Sections">
-            <ViewTab id="report" view={view} icon="book" count={live.length} onClick={() => go("report")}>
-              Report
+            <ViewTab id="desk" view={view} icon="scale" onClick={() => go("desk")}>
+              Case Desk
             </ViewTab>
-            <ViewTab id="contract" view={view} icon="file" count={heat.size} onClick={() => go("contract")}>
-              Contract
+            <ViewTab id="memo" view={view} icon="book" count={live.length} onClick={() => go("memo")}>
+              Memo
             </ViewTab>
             <ViewTab id="council" view={view} onClick={() => go("council")}>
               <CouncilFaces size={18} /> Council
             </ViewTab>
             <ViewTab id="checks" view={view} icon="shieldCheck" count={`${result.stats.verified}/${result.stats.claims}`} onClick={() => go("checks")}>
-              <span className={styles.longOnly}>Verification</span>
-              <span className={styles.shortOnly}>Checks</span>
+              Checks
             </ViewTab>
           </nav>
         )}
@@ -175,7 +163,10 @@ export function CounselApp({ jobId }: { jobId: string }) {
         />
       )}
 
-      {result && view === "report" && (
+      {result && view === "desk" && (
+        <CaseDesk result={result} reload={analysis.reload} onAsk={(id) => open("all", id)} clause={deskClause} />
+      )}
+      {result && view === "memo" && (
         <Report
           result={result}
           live={live}
@@ -184,10 +175,12 @@ export function CounselApp({ jobId }: { jobId: string }) {
           onCouncil={() => open("all", null)}
           onChecks={() => go("checks")}
           onJump={showRisk}
-          onClause={(id) => go("contract", `clause-${id}`)}
+          onClause={(id) => {
+            setDeskClause(id);
+            go("desk");
+          }}
         />
       )}
-      {result && view === "contract" && <Contract result={result} heat={heat} onRisk={showRisk} />}
       {result && (
         <main className={styles.wide} hidden={view !== "council"}>
           <CouncilPanel result={result} nav={nav} />
@@ -628,78 +621,11 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
   );
 }
 
-/* ------------------------------------------------------------------ Contract */
-
-function Contract({ result, heat, onRisk }: { result: AnalysisResult; heat: ReturnType<typeof clauseHeat>; onRisk: (riskId: string) => void }) {
-  const [onlyFlagged, setOnlyFlagged] = useState(false);
-  const all = result.document.clauses;
-  const clauses = all.filter((c) => !onlyFlagged || heat.has(c.id));
-
-  return (
-    <main className={styles.narrow}>
-      <header className={styles.viewHead}>
-        <h1 className={styles.viewTitle}>The contract</h1>
-        <p className={styles.viewLead}>
-          This is the exact copy the AI saw. Names, phone numbers and ID numbers are hidden. Highlighted clauses carry a risk; select one to read the
-          analysis.
-        </p>
-      </header>
-      <div className={styles.contractBar}>
-        <div className={styles.segmented} role="group" aria-label="Which clauses to show">
-          <button type="button" aria-pressed={!onlyFlagged} onClick={() => setOnlyFlagged(false)}>
-            All clauses <span className={styles.count}>{all.length}</span>
-          </button>
-          <button type="button" aria-pressed={onlyFlagged} onClick={() => setOnlyFlagged(true)}>
-            Flagged only <span className={styles.count}>{heat.size}</span>
-          </button>
-        </div>
-        <span className={styles.legend}>
-          {(["critical", "high", "medium", "low"] as Severity[]).map((s) => (
-            <span key={s}>
-              <span className={styles.sevDot} data-sev={s} />
-              {SEVERITY_LABEL[s]}
-            </span>
-          ))}
-        </span>
-      </div>
-      <ol className={styles.sheet}>
-        {clauses.map((c) => {
-          const h = heat.get(c.id);
-          return (
-            <li key={c.id} id={`clause-${c.id}`} className={styles.clauseItem}>
-              <span className={styles.clauseNum} aria-hidden="true">
-                {c.index + 1}
-              </span>
-              {h ? (
-                <button type="button" className={styles.clause} data-sev={h.sev} onClick={() => onRisk(h.risk)}>
-                  <span className={styles.clauseText}>{c.text}</span>
-                  <span className={styles.clauseRisk}>
-                    <span className={styles.sev} data-sev={h.sev}>
-                      <span className={styles.sevDot} data-sev={h.sev} />
-                      {SEVERITY_LABEL[h.sev]}
-                    </span>
-                    {h.title}
-                    <Icon name="arrowRight" size={14} />
-                  </span>
-                </button>
-              ) : (
-                <div className={styles.clause} data-sev="none">
-                  <span className={styles.clauseText}>{c.text}</span>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </main>
-  );
-}
-
 /* ------------------------------------------------------------------ Verification */
 
 type CheckTab = "ledger" | "trace" | "ablation" | "privacy";
 const CHECK_TABS: { id: CheckTab; label: string; icon: IconName }[] = [
-  { id: "ledger", label: "Every legal claim", icon: "list" },
+  { id: "ledger", label: "Citations", icon: "list" },
   { id: "trace", label: "Agent activity", icon: "activity" },
   { id: "ablation", label: "Compare with a plain chatbot", icon: "scale" },
   { id: "privacy", label: "Privacy", icon: "lock" },

@@ -94,6 +94,7 @@
 
 /* ================================================================ shell */
 
+/* the dark green shell of the Case Desk reference, shared by every Counsel view (spec 20) */
 .topbar {
   position: sticky;
   top: 0;
@@ -101,52 +102,51 @@
   display: flex;
   flex-direction: column;
   padding: 0 24px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(1.4) blur(10px);
-  border-bottom: 1px solid var(--c-line);
+  background: var(--deep);
+  color: var(--on-deep);
+  border-bottom: 1px solid var(--deep-line);
 }
 
 .topRow {
   display: flex;
   align-items: center;
   gap: 16px;
-  min-height: 60px;
+  min-height: 64px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--c-ink) !important;
+  color: var(--on-deep) !important;
   text-decoration: none;
   flex: none;
 }
 
 .brandMark {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--c-accent);
-  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r);
+  background: var(--gold);
+  color: var(--gold-ink);
   display: grid;
   place-items: center;
   font-family: var(--font-noto-serif-bengali), serif;
-  font-size: 18px;
+  font-size: var(--fs-20);
+  font-weight: 700;
   line-height: 1;
 }
 
 .brandText {
-  font-size: 16px;
-  font-weight: 650;
+  font-size: var(--fs-16);
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .brandText span {
-  margin-left: 6px;
-  padding-left: 8px;
-  border-left: 1px solid var(--c-line-strong);
+  margin-left: 4px;
   font-weight: 500;
-  color: var(--c-muted);
+  color: var(--on-deep-muted);
 }
 
 .docPill {
@@ -154,12 +154,22 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 5px 6px 5px 12px;
-  border-radius: 999px;
-  background: var(--c-subtle);
-  border: 1px solid var(--c-line);
-  color: var(--c-ink-2);
-  font-size: 13.5px;
+  padding: 6px 8px 6px 12px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--deep-line);
+  color: var(--on-deep);
+  font-size: var(--fs-14);
+}
+
+.docPill > svg {
+  color: var(--on-deep-muted);
+}
+
+.docPill .chip {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .docName {
@@ -168,7 +178,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .actions {
@@ -176,6 +186,42 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+.topbar .quietBtn,
+.topbar .iconBtn {
+  min-height: 44px;
+  background: transparent;
+  border: 1px solid var(--deep-line);
+  color: var(--on-deep) !important;
+}
+
+.topbar .iconBtn {
+  width: 44px;
+  height: 44px;
+}
+
+.topbar .quietBtn:hover,
+.topbar .iconBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--on-deep-muted);
+}
+
+.topbar .primaryBtn {
+  min-height: 44px;
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink) !important;
+  box-shadow: none;
+}
+
+.topbar .primaryBtn:hover {
+  background: #f8d36f;
+  border-color: #f8d36f;
+}
+
+.topbar :focus-visible {
+  outline-color: var(--gold);
 }
 
 .views {
@@ -194,30 +240,31 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   padding: 10px 12px 12px;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   background: none;
   font: inherit;
-  font-size: 14px;
-  font-weight: 550;
-  color: var(--c-muted);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--on-deep-muted);
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
 
 .viewTab:hover {
-  color: var(--c-ink);
+  color: var(--on-deep);
 }
 
 .viewTab[aria-current="page"] {
-  color: var(--c-ink);
-  border-bottom-color: var(--c-accent);
+  color: var(--on-deep);
+  border-bottom-color: var(--gold);
 }
 
 .viewTab[aria-current="page"] svg {
-  color: var(--c-accent);
+  color: var(--gold);
 }
 
 .count {
@@ -230,16 +277,22 @@
   border-radius: 999px;
   background: var(--c-subtle);
   border: 1px solid var(--c-line);
-  font-size: 11.5px;
+  font-size: var(--fs-12);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--c-muted);
 }
 
+.views .count {
+  background: transparent;
+  border-color: var(--deep-line);
+  color: var(--on-deep-muted);
+}
+
 .viewTab[aria-current="page"] .count {
-  background: var(--c-accent-tint);
+  background: var(--gold);
   border-color: transparent;
-  color: var(--c-accent);
+  color: var(--gold-ink);
 }
 
 .narrow,
@@ -4543,6 +4596,12 @@ button.clause:hover {
 
   .docPill {
     flex: 1;
+    overflow: hidden;
+  }
+
+  /* the dark header is tight on a phone: printing stays in the browser menu */
+  .topbar .iconBtn {
+    display: none;
   }
 
   .docName {
@@ -4550,13 +4609,13 @@ button.clause:hover {
   }
 
   .actions .primaryBtn {
-    width: 38px;
+    width: 44px;
     padding: 0;
   }
 
   .viewTab {
     padding: 10px 10px 12px;
-    font-size: 13.5px;
+    font-size: var(--fs-14);
   }
 
   .narrow,

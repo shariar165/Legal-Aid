@@ -323,6 +323,142 @@ export interface DocumentInfo {
   pages: number;
 }
 
+/* ---------------------------------------------------------------- Four Ledgers (backend/ain/models.py, spec 19 + 20) */
+
+export type Party = "worker" | "employer" | "agency";
+
+/** 1 `per` = `value` `currency`, only ever typed by the user. */
+export interface ExchangeRate {
+  currency: string;
+  per: string;
+  value: number;
+  source?: "user-entered";
+}
+
+/** What the worker was told, as structured fields. */
+export interface Promises {
+  salary_amount?: number | null;
+  salary_currency?: string | null;
+  no_deductions?: boolean | null;
+  recruitment_cost_paid?: number | null;
+  recruitment_cost_currency?: string | null;
+  hours_per_day?: number | null;
+  ticket_paid_by?: Party | null;
+  passport_kept_by?: Party | null;
+  contract_months?: number | null;
+  said_on?: string | null;
+  note?: string;
+  exchange_rate?: ExchangeRate | null;
+}
+
+export interface LedgerCell {
+  value: L10n;
+  amount: number | null;
+  currency: string | null;
+  party?: Party | null;
+  clause_id: string | null;
+  source: "worker" | "contract" | "payslip" | "law";
+  confirmed_by_user?: boolean;
+}
+
+export type LawStatus = "verified" | "partial" | "not_verified" | "none";
+export type RiskStatus = "verified" | "partial" | "not_verified" | "not_verified_yet";
+
+export interface LawCell {
+  status: LawStatus;
+  citation_ids: string[];
+  risk_id: string | null;
+  proposition: string;
+  title?: L10n | null;
+}
+
+export interface Mismatch {
+  type: "said_vs_paper" | "paper_vs_law" | "paid_vs_paper";
+  detail: L10n;
+  risk_id: string | null;
+  risk_status?: RiskStatus | null;
+  title?: L10n | null;
+  citation_ids?: string[];
+}
+
+export interface LedgerRow {
+  term: string;
+  said: LedgerCell | null;
+  paper: LedgerCell | null;
+  /** always null until payslips exist */
+  paid: LedgerCell | null;
+  law: LawCell;
+  mismatches: Mismatch[];
+  severity: Severity | null;
+  risk_id: string | null;
+}
+
+export interface ClaimLine {
+  label: L10n;
+  amount: number;
+  currency: string;
+  citation_id: string;
+  risk_id: string;
+  basis: "projected" | "accrued";
+  months: number | null;
+  source: string;
+}
+
+export interface ContractTerm {
+  months: number;
+  source: "user" | "contract" | "worker";
+  clause_id: string | null;
+  label: L10n;
+}
+
+export interface ClaimProjection {
+  lines: ClaimLine[];
+  term?: ContractTerm | null;
+  projected_total: number;
+  accrued_total: number | null;
+  currency: string | null;
+  label: L10n;
+}
+
+export interface PromiseGap {
+  monthly: number;
+  months: number;
+  total: number;
+  currency: string;
+  label: L10n;
+}
+
+export interface NetStep {
+  from_month: number;
+  to_month: number | null;
+  net: number;
+}
+
+export interface BreakEven {
+  months: number | null;
+  cost: number | null;
+  monthly_net: number | null;
+  currency: string | null;
+  rate: ExchangeRate | null;
+  steps: NetStep[];
+  horizon_months: number | null;
+  earned_back: number | null;
+  is_minimum: boolean;
+  assumption: L10n | null;
+  note: L10n | null;
+}
+
+export interface FourLedgers {
+  promises: Promises | null;
+  rows: LedgerRow[];
+  claim_projection: ClaimProjection;
+  pending_risks: Risk[];
+  pending_claims: Claim[];
+  promise_gap: PromiseGap | null;
+  break_even: BreakEven | null;
+  memo_includes_promises: boolean;
+}
+
 export interface AnalysisResult {
   job_id: string;
   llm_mode: string;
@@ -343,6 +479,10 @@ export interface AnalysisResult {
   trace: TraceEvent[];
   stats: Stats;
   ablation: Ablation | null;
+  /** Four Ledgers: absent with the flag off and on older results. `ledger` above is the citation ledger. */
+  four_ledgers?: FourLedgers | null;
+  /** every cited section's name in Bangla and English (computed by the backend) */
+  citation_names?: Record<string, L10n>;
 }
 
 export interface CouncilMember {
@@ -502,6 +642,10 @@ export const api = {
   councilChat: (jobId: string, body: CouncilChatBody) => post(`/api/jobs/${jobId}/council/chat`, body).then((r) => json<{ replies: CouncilReply[] }>(r)),
   councilDeliberate: (jobId: string, body: CouncilDeliberateBody) =>
     post(`/api/jobs/${jobId}/council/deliberate`, body).then((r) => json<{ rebuttals: CouncilReply[]; ruling: CouncilRuling }>(r)),
+  /** Four Ledgers, 404 while `ledger.enabled` is off. `promises` and `confirmTerm` make no model call; `verifyPromises` runs the 4 gates. */
+  promises: (jobId: string, body: Promises) => post(`/api/jobs/${jobId}/promises`, body).then((r) => json<FourLedgers>(r)),
+  verifyPromises: (jobId: string) => post(`/api/jobs/${jobId}/promises/verify`).then((r) => json<FourLedgers>(r)),
+  confirmTerm: (jobId: string, months: number) => post(`/api/jobs/${jobId}/term`, { months }).then((r) => json<FourLedgers>(r)),
   memoUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/memo.docx`,
   eventsUrl: (jobId: string) => `${API_URL}/api/jobs/${jobId}/events`,
 

@@ -134,6 +134,13 @@ export function useAnalysis(existingJobId?: string) {
     [state.jobId],
   );
 
+  /** Refetch the saved result, after a change made on the server (promises, term, verification). */
+  const reload = useCallback(async () => {
+    if (!state.jobId) return;
+    const result = await api.result(state.jobId);
+    setState((s) => ({ ...s, result }));
+  }, [state.jobId]);
+
   const reset = useCallback(() => {
     close();
     setState(INITIAL);
@@ -159,5 +166,5 @@ export function useAnalysis(existingJobId?: string) {
 
   useEffect(() => close, []);
 
-  return { ...state, start, confirm, reset };
+  return { ...state, start, confirm, reset, reload };
 }
