@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 Severity = Literal["critical", "high", "medium", "low"]
 SEVERITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -14,6 +14,11 @@ SEVERITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 
 class L10n(BaseModel):
     bn: str
     en: str
+
+
+def _legacy_l10n(v: object) -> object:
+    """A plain string saved by an older result: the English text, also shown for Bangla until the result is rebuilt."""
+    return {"en": v, "bn": v} if isinstance(v, str) else v
 
 
 class Section(BaseModel):
@@ -85,6 +90,9 @@ class DocFacts(BaseModel):
     hours_per_day: int | None = None
     ticket_paid_by: Literal["worker", "employer"] | None = None
     passport_held_by: Literal["worker", "employer"] | None = None
+    # fact name (contract_months | hours_per_day | ticket | passport) -> the clause it was read from
+    fact_clauses: dict[str, str] = Field(default_factory=dict)
+    contract_months_confirmed: bool = False  # the user confirmed or corrected the term (POST /term), like the OCR salary
 
 
 class OcrCheck(BaseModel):
@@ -286,11 +294,18 @@ class Promises(BaseModel):
 
 
 class LedgerCell(BaseModel):
-    value: str
+    value: L10n  # what the cell says, in both languages
     amount: float | None = None
     currency: str | None = None
+    party: Party | None = None  # ticket and passport: who pays or who keeps it
     clause_id: str | None = None
     source: Literal["worker", "contract", "payslip", "law"]
+    confirmed_by_user: bool = False  # contract term: confirmed or corrected by the user (POST /term)
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def _legacy_value(cls, v: object) -> object:
+        return _legacy_l10n(v)
 
 
 class LawCell(BaseModel):
@@ -300,6 +315,7 @@ class LawCell(BaseModel):
     citation_ids: list[str] = Field(default_factory=list)
     risk_id: str | None = None
     proposition: str = ""
+    title: L10n | None = None  # a short name for the rule, e.g. "Minimum wage"; None for a risk outside the playbook
 
 
 MismatchType = Literal["said_vs_paper", "paper_vs_law", "paid_vs_paper"]  # paid_vs_paper: reserved for the payslip spec
@@ -312,6 +328,9 @@ class Mismatch(BaseModel):
     # the linked risk's standing with the 4 gates; not_verified_yet: raised with no model call (POST /promises), and
     # held back until POST /promises/verify runs the gates on it
     risk_status: Literal["verified", "partial", "not_verified", "not_verified_yet"] | None = None
+    # the law the linked risk rests on: a short title and the citations its claims make (passed or, while pending, not)
+    title: L10n | None = None
+    citation_ids: list[str] = Field(default_factory=list)
 
 
 class LedgerRow(BaseModel):
@@ -337,10 +356,20 @@ class ClaimLine(BaseModel):
     source: str = ""  # where the months or amounts come from, e.g. "contract term on paper"
 
 
+class ContractTerm(BaseModel):
+    """The months a projection runs over, and where that number came from."""
+
+    months: int
+    source: Literal["user", "contract", "worker"]  # confirmed by the user | read from the contract | told (none on paper)
+    clause_id: str | None = None
+    label: L10n
+
+
 class ClaimProjection(BaseModel):
     """Arithmetic under verified law only. A projection over the contract term, not money owed."""
 
     lines: list[ClaimLine] = Field(default_factory=list)
+    term: ContractTerm | None = None
     projected_total: float = 0.0
     accrued_total: float | None = None  # reserved: needs payslips (months actually worked)
     currency: str | None = None
@@ -376,7 +405,12 @@ class BreakEven(BaseModel):
     earned_back: float | None = None  # set when the cost is not earned back within the contract
     is_minimum: bool = True
     assumption: L10n | None = None
-    note: str = ""
+    note: L10n | None = None
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _legacy_note(cls, v: object) -> object:
+        return None if v == "" else _legacy_l10n(v)
 
 
 class FourLedgers(BaseModel):
@@ -497,6 +531,15 @@ class AnalysisResult(BaseModel):
     stats: Stats
     ablation: AblationResult | None = None
     four_ledgers: FourLedgers | None = None  # behind `ledger.enabled`; `ledger` above is the citation ledger
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def citation_names(self) -> dict[str, L10n]:
+        """Every cited section's name in Bangla and English, built from its corpus record (computed, so older results
+        have it too)."""
+        from ain.naming import label  # naming imports this module
+
+        return {v.claim.citation_id: label(v.section) for v in self.ledger if v.section is not None}
 
 
 # ---------------------------------------------------------------- council chat

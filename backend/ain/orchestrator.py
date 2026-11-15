@@ -403,6 +403,22 @@ def recompute_ledger(result: AnalysisResult, promises: Promises) -> FourLedgers:
     return result.four_ledgers
 
 
+def confirm_term(result: AnalysisResult, months: int) -> FourLedgers:
+    """POST /term: the user confirms or corrects the contract term the projection runs over, as with the OCR salary.
+    The regex reading can miss or be ambiguous, and the term drives every projected amount. No model call; the
+    promises and any pending promise-gap risk stand as they were."""
+    result.facts.contract_months = months
+    result.facts.contract_months_confirmed = True
+    four = result.four_ledgers
+    result.four_ledgers = ledger_mod.build(
+        result.facts, result.wage, result.document.clauses, result.risks, result.ledger,
+        four.promises if four else None, memo_includes_promises=four.memo_includes_promises if four else False,
+        pending_risks=four.pending_risks if four else None, pending_claims=four.pending_claims if four else None,
+    )
+    save_result(result)
+    return result.four_ledgers
+
+
 async def verify_pending(result: AnalysisResult, llm: LLM) -> FourLedgers:
     """POST /promises/verify: the pending promise-gap risk's claims go through the same verifier as in a full run
     (4 gates; the Virtual Bench too if its severity calls for it). Only then does the risk join the risk list."""

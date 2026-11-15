@@ -13,7 +13,7 @@ import re
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 from ain import auth, automation, config, countries, mcp_server, seat_health
@@ -39,7 +39,7 @@ from ain.models import (
     Risk,
     Section,
 )
-from ain.orchestrator import JOBS, delete_result, load_result, new_job, recompute_ledger, run_pipeline, save_result, verify_pending
+from ain.orchestrator import JOBS, confirm_term, delete_result, load_result, new_job, recompute_ledger, run_pipeline, save_result, verify_pending
 from ain.retrieval import get_corpus
 
 MAX_BYTES = 15 * 1024 * 1024
@@ -460,6 +460,18 @@ async def verify_promises(job_id: str) -> FourLedgers:
         raise HTTPException(422, PII_MESSAGE) from None
     except LLMError as e:
         raise HTTPException(502, "The verifier could not reach a judge model just now. Please try again.") from e
+
+
+class TermBody(BaseModel):
+    months: int = Field(gt=0, le=240)
+
+
+@app.post("/api/jobs/{job_id}/term", response_model=FourLedgers, dependencies=[Depends(owned_job)])
+def confirm_contract_term(job_id: str, body: TermBody) -> FourLedgers:
+    """Confirm or correct the contract term the projection runs over (like the OCR salary check). No model call."""
+    if not config.ledger_enabled():
+        raise HTTPException(404, "Not Found")
+    return confirm_term(_result_or_409(job_id), body.months)
 
 
 @app.get("/api/jobs/{job_id}/memo.docx", dependencies=[Depends(owned_job)])

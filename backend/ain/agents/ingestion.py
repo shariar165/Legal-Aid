@@ -307,38 +307,94 @@ def extract_facts(text: str, clauses: list[Clause]) -> DocFacts:
         ba = re.findall(r"\(?(\d{2,3})\)?\s*days\s+(?:before|after)\s+(?:and\s+)?(?:\(?\w+\)?\s*)?", text, re.I)
         if ba and re.search(r"maternity", low):
             f.maternity_days = sum(int(x) for x in ba[:2])
-    f.contract_months = _contract_months(text)
-    hours = re.search(r"\(?(\d{1,2})\)?\s*hours?\s*(?:per|a|each)\s*day", text, re.I)
-    f.hours_per_day = int(hours.group(1)) if hours and 0 < int(hours.group(1)) <= 24 else None
-    f.ticket_paid_by = _who_pays_ticket(text)
-    f.passport_held_by = _passport_holder(text)
+    for name, read in PAPER_TERMS.items():
+        value, clause_id = _single(clauses, read)
+        setattr(f, FACT_FIELD[name], value)
+        if clause_id:
+            f.fact_clauses[name] = clause_id
     return f
 
 
-def _contract_months(text: str) -> int | None:
-    """The contract term on paper: '(3) years' / '24 months' near 'period', 'term' or 'মেয়াদ'."""
-    m = re.search(r"(?:\bperiod\b|\bterm\b|\bduration\b|মেয়াদ).{0,60}?\(?(\d{1,3})\)?\s*(years?|months?|বছর|মাস)", text, re.I | re.S)
-    if not m:
-        return None
-    n = int(m.group(1))
-    return n * 12 if m.group(2).lower().startswith(("year", "বছর")) else n
+# ---------------------------------------------------------------- paper terms for the Four Ledgers
+# Read clause by clause and sentence by sentence, so each fact keeps the clause it came from. Two readings that
+# disagree give None, never a guess: the contract term drives the projection, and the user can confirm it (POST /term).
+
+SENTENCE = re.compile(r"(?<=[.;।])\s+")
 
 
-def _who_pays_ticket(text: str) -> str | None:
-    """Who pays the ticket out to the job (a return ticket is PB-RETURN-TICKET's, not this term)."""
-    for m in re.finditer(r"(worker|employee|employer|company)\s+shall\s+(?:bear|pay|provide|meet)([^.]{0,60}?)(?:air\s*)?ticket", text, re.I):
-        if "return" in m.group(2).lower():
+def _single(clauses: list[Clause], read) -> tuple[object, str | None]:
+    """The one value `read` finds across the clauses, with the first clause that says it; None if none or several."""
+    found = [(v, c.id) for c in clauses for s in SENTENCE.split(c.text) for v in read(s)]
+    if len({v for v, _ in found}) != 1:
+        return None, None
+    return found[0]
+
+
+TERM_RE = re.compile(
+    r"(?P<lead>[\w-]+\s+)?(?:\bperiod\b|\bterm\b|\bduration\b|মেয়াদ)(?P<mid>[^.;]{0,40}?)\(?(?P<n>\d{1,3})\)?\s*(?P<unit>years?|months?|বছর|মাস)(?P<tail>\s+\w+)?",
+    re.I,
+)
+NOT_TERM = re.compile(r"probation|notice|trial|leave|warranty|grace|payment|credit|cooling", re.I)
+
+
+def _term_in(s: str) -> list[int]:
+    """The contract term in months: '(3) years' / '24 months' after 'period', 'term' or 'মেয়াদ'. A probation or notice
+    period is not the term, nor is a period that follows the term ('the Term and for three (3) years afterwards')."""
+    out = []
+    for m in TERM_RE.finditer(s):
+        lead, mid, tail = m.group("lead") or "", m.group("mid"), m.group("tail") or ""
+        if NOT_TERM.search(lead + mid) or re.search(r"\b(?:and|or|after|within)\b", mid, re.I) or re.match(r"\s+(?:after|afterwards|thereafter)\b", tail, re.I):
             continue
-        return "employer" if m.group(1).lower() in ("employer", "company") else "worker"
-    return None
+        n = int(m.group("n"))
+        out.append(n * 12 if m.group("unit").lower().startswith(("year", "বছর")) else n)
+    return out
 
 
-def _passport_holder(text: str) -> str | None:
-    if re.search(r"passport.{0,80}(surrender|custody|kept by the employer|retain(?:ed)? by the employer|deposit)|(surrender|deposit).{0,40}passport", text, re.I | re.S):
-        return "employer"
-    if re.search(r"(worker|employee)\s+shall\s+(?:retain|keep)[^.]{0,40}passport", text, re.I):
-        return "worker"
-    return None
+HOURS_RE = re.compile(r"\(?(\d{1,2})\)?\s*hours?\s*(?:per|a|each)\s*day", re.I)
+NOT_WORKDAY = re.compile(r"\b(?:overtime|exceed\w*|maximum|at most|up to|not more than|reduced|ramadan|rest|breaks?|meals?)\b", re.I)
+
+
+def _hours_in(s: str) -> list[int]:
+    """Normal hours a day. An overtime limit, a maximum or Ramadan hours in the same sentence are not the working day."""
+    out = []
+    for m in HOURS_RE.finditer(s):
+        if NOT_WORKDAY.search(s[max(0, m.start() - 40) : m.start()]) or re.match(r"\s*(?:during|in)\s+ramadan|\s+of\s+overtime", s[m.end() :], re.I):
+            continue
+        if 0 < (n := int(m.group(1))) <= 24:
+            out.append(n)
+    return out
+
+
+TICKET_RE = re.compile(r"\b(worker|employee|employer|company)\s+shall\s+(?:bear|pay|provide|meet)([^.]{0,60}?)\b(?:air\s*)?ticket", re.I)
+
+
+def _ticket_in(s: str) -> list[str]:
+    """Who pays the ticket out to the job (a return ticket is PB-RETURN-TICKET's, not this term)."""
+    return ["employer" if m.group(1).lower() in ("employer", "company") else "worker" for m in TICKET_RE.finditer(s) if "return" not in m.group(2).lower()]
+
+
+_HOLDER = r"(?:employer|company|agency|sponsor)"
+EMPLOYER_HOLDS = [
+    re.compile(r"\b(?:surrender|hand\s+over|hand\s+in|deposit|give\s+up)\b[^.]{0,30}\bpassport", re.I),
+    re.compile(rf"\bpassport\b[^.]{{0,80}}\b(?:kept|held|retained)\s+(?:by|with)\s+the\s+{_HOLDER}", re.I),
+    re.compile(rf"\b{_HOLDER}['’]s\s+(?:safe\s+)?(?:custody|possession)", re.I),
+    re.compile(rf"\b{_HOLDER}\s+(?:shall|will|may|must)\s+(?:keep|retain|hold)\b[^.]{{0,40}}\bpassport", re.I),
+]
+WORKER_HOLDS = [
+    re.compile(r"\bpassports?\b[^.]{0,60}\b(?:remain|stay|be\s+kept)\w*\s+(?:in|with)\s+the\s+(?:worker|employee)", re.I),
+    re.compile(r"\b(?:worker|employee)\s+shall\s+(?:retain|keep|hold)\b[^.]{0,40}\bpassport", re.I),
+    re.compile(rf"\b{_HOLDER}\s+(?:shall|will|may|must)\s+(?:not|never)\b[^.]{{0,40}}\bpassport", re.I),
+]
+
+
+def _passport_in(s: str) -> list[str]:
+    """Who keeps the passport. 'Custody' counts only when it is the employer's; a sentence saying both gives both, so
+    the reading is ambiguous."""
+    return [who for who, pats in (("employer", EMPLOYER_HOLDS), ("worker", WORKER_HOLDS)) if any(p.search(s) for p in pats)]
+
+
+PAPER_TERMS = {"contract_months": _term_in, "hours_per_day": _hours_in, "ticket": _ticket_in, "passport": _passport_in}
+FACT_FIELD = {"contract_months": "contract_months", "hours_per_day": "hours_per_day", "ticket": "ticket_paid_by", "passport": "passport_held_by"}
 
 
 def build_document(data: bytes, filename: str, source_kind: str | None = None) -> tuple[Document, DocFacts, Extracted]:

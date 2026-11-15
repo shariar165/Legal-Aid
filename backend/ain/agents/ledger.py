@@ -6,6 +6,8 @@ what was PAID (টাকা) and what the LAW says (আইন). Plain comparison
   `not_verified` and empty.
 * The টাকা cell waits for the payslip spec and is always empty.
 * Money is never converted with a rate of our own: only with one the user typed, returned marked "user-entered".
+* Every string a person reads is in Bangla and English (spec 20). Bangla counts use Bangla digits; money is written
+  `RM 1,200` in both, as on the contract.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from ain.models import (
     ClaimLine,
     ClaimProjection,
     Clause,
+    ContractTerm,
     Deduction,
     DocFacts,
     ExchangeRate,
@@ -44,6 +47,7 @@ PROMISE_RULE = "PB-PROMISE-GAP"
 RULE_FOR = {"salary": "PB-MIN-WAGE", "deductions": "PB-DEDUCTION-CAP", "recruitment_cost": "PB-RECRUIT-FEE", "passport": "PB-PASSPORT"}
 PAY_BENEFIT_TERMS = ("salary", "deductions", "ticket")  # a said_vs_paper gap on these is the PB-PROMISE-GAP risk
 TERMS = ("salary", "deductions", "recruitment_cost", "hours_per_day", "ticket", "passport", "contract_months")
+# where the paper cell's clause is found when ingestion did not record one (fact_clauses covers the four regex facts)
 TERM_HINTS = {
     "salary": r"salary|wage|বেতন|মজুরি",
     "deductions": r"deduct|কর্তন",
@@ -54,7 +58,40 @@ TERM_HINTS = {
     "contract_months": r"\bperiod\b|\bterm\b|\bduration\b|মেয়াদ",
 }
 RECRUIT_RE = re.compile(r"recruit|visa|agency|placement|levy|iqama|নিয়োগ", re.I)
-PARTY_BN = {"worker": "কর্মী", "employer": "মালিক", "agency": "এজেন্সি"}
+BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+
+PAID_BY = {
+    "worker": L10n(en="the worker pays", bn="কর্মী দেবে"),
+    "employer": L10n(en="the employer pays", bn="মালিক দেবে"),
+    "agency": L10n(en="the agency pays", bn="এজেন্সি দেবে"),
+}
+KEPT_BY = {
+    "worker": L10n(en="the worker keeps it", bn="কর্মীর নিজের কাছে থাকবে"),
+    "employer": L10n(en="the employer keeps it", bn="মালিকের কাছে থাকবে"),
+    "agency": L10n(en="the agency keeps it", bn="এজেন্সির কাছে থাকবে"),
+}
+# a short name for the law each playbook rule rests on (a topic, not a statement of the law: the verbatim quote and
+# the citation say what the law is)
+LAW_TITLE = {
+    "PB-MIN-WAGE": L10n(en="Minimum wage", bn="ন্যূনতম মজুরি"),
+    "PB-DEDUCTION-CAP": L10n(en="Limit on deductions", bn="কর্তনের আইনি সীমা"),
+    "PB-RECRUIT-FEE": L10n(en="Recruitment costs", bn="নিয়োগের খরচ"),
+    "PB-PASSPORT": L10n(en="Keeping the worker's passport", bn="কর্মীর পাসপোর্ট আটকে রাখা"),
+    "PB-RETURN-COST": L10n(en="The trip home", bn="দেশে ফেরার খরচ"),
+    "PB-RETURN-TICKET": L10n(en="The trip home", bn="দেশে ফেরার খরচ"),
+    "PB-CLAIM-WAIVER": L10n(en="The right to complain or sue", bn="অভিযোগ ও মামলার অধিকার"),
+    "PB-NO-FORUM": L10n(en="A place to bring complaints", bn="অভিযোগ জানানোর জায়গা"),
+}
+# the promise gap rests on what the worker reports: the section may apply, it is never shown as a proven offence
+PROMISE_TITLE = L10n(
+    en="May fall under the cited section on false promises of pay and benefits",
+    bn="বেতন-সুবিধার মিথ্যা আশ্বাস নিয়ে উল্লেখিত ধারার আওতায় পড়তে পারে",
+)
+TERM_LABEL = {
+    "user": L10n(en="Term confirmed by user", bn="মেয়াদ ব্যবহারকারী নিশ্চিত করেছেন"),
+    "contract": L10n(en="Term read from the contract", bn="মেয়াদ চুক্তি থেকে পড়া"),
+    "worker": L10n(en="Term the worker was told (none on paper)", bn="মেয়াদ কর্মীকে যা বলা হয়েছিল (কাগজে নেই)"),
+}
 
 CLAIM_LABEL = L10n(
     en="Projected over the contract term at the rate on paper, under the cited law. Not money owed, and not a prediction of any award.",
@@ -70,11 +107,21 @@ GAP_LABEL = L10n(
 )
 
 
-# ------------------------------------------------------------------ money
+# ------------------------------------------------------------------ money and numbers
 
 
 def _money(amount: float, currency: str) -> str:
     return f"{currency} {amount:,.0f}"
+
+
+def _bn(n: float | int) -> str:
+    """A count in Bangla digits: 12 -> ১২, 54.2 -> ৫৪.২."""
+    return (f"{int(n)}" if float(n).is_integer() else f"{n:g}").translate(BN_DIGITS)
+
+
+def _per_month(amount: float, currency: str) -> L10n:
+    m = _money(amount, currency)
+    return L10n(en=f"{m} a month", bn=f"মাসে {m}")
 
 
 def convert(amount: float, frm: str | None, to: str | None, rate: ExchangeRate | None) -> float | None:
@@ -101,19 +148,28 @@ def _said_salary(facts: DocFacts, promises: Promises) -> float | None:
     return convert(promises.salary_amount, promises.salary_currency or facts.salary_currency, facts.salary_currency, promises.exchange_rate)
 
 
-def _months(facts: DocFacts, promises: Promises | None) -> tuple[int | None, str]:
+def contract_term(facts: DocFacts, promises: Promises | None) -> ContractTerm | None:
+    """The months the projection runs over, and where they came from: the user, the paper, or (none on paper) what the
+    worker was told."""
     if facts.contract_months:
-        return facts.contract_months, "contract term on paper"
+        source = "user" if facts.contract_months_confirmed else "contract"
+        return ContractTerm(months=facts.contract_months, source=source, clause_id=facts.fact_clauses.get("contract_months"), label=TERM_LABEL[source])
     if promises and promises.contract_months:
-        return promises.contract_months, "contract term the worker was told (none on paper)"
-    return None, ""
+        return ContractTerm(months=promises.contract_months, source="worker", label=TERM_LABEL["worker"])
+    return None
+
+
+def _months(facts: DocFacts, promises: Promises | None) -> tuple[int | None, str]:
+    term = contract_term(facts, promises)
+    return (term.months, term.label.en) if term else (None, "")
 
 
 # ------------------------------------------------------------------ told vs paper
 
 
 def pay_benefit_gaps(facts: DocFacts, wage: WageCalc | None, promises: Promises | None) -> list[str]:
-    """Where the paper gives less pay or fewer benefits than the worker was told. Shared with the PB-PROMISE-GAP rule."""
+    """Where the paper gives less pay or fewer benefits than the worker was told. Shared with the PB-PROMISE-GAP rule
+    (these lines become the risk's finding, in the memo's English)."""
     if promises is None:
         return []
     out = []
@@ -132,7 +188,9 @@ def pay_benefit_gaps(facts: DocFacts, wage: WageCalc | None, promises: Promises 
 # ------------------------------------------------------------------ cells
 
 
-def _clause_for(term: str, clauses: list[Clause]) -> str | None:
+def _clause_for(term: str, facts: DocFacts, clauses: list[Clause]) -> str | None:
+    if term in facts.fact_clauses:  # the clause the regex fact was read from
+        return facts.fact_clauses[term]
     pat = re.compile(TERM_HINTS[term], re.I)
     for c in clauses:
         if pat.search(c.text) and not (term == "salary" and re.search(r"deduct", c.text, re.I)):
@@ -140,29 +198,37 @@ def _clause_for(term: str, clauses: list[Clause]) -> str | None:
     return None
 
 
+def _deductions_text(facts: DocFacts, wage: WageCalc | None, monthly: float, cur: str) -> L10n:
+    en, bn = f"{_money(monthly, cur)} a month", f"মাসে {_money(monthly, cur)}"
+    if wage:
+        en, bn = f"{en} ({wage.pct_deducted}% of the salary)", f"{bn} (বেতনের {_bn(wage.pct_deducted)}%)"
+    for end in sorted({d.months for d in facts.deductions if d.per == "month" and d.months}):  # a deduction that stops
+        after = _money(round(sum(d.amount for d in facts.deductions if d.per == "month" and (d.months is None or d.months > end)), 2), cur)
+        en, bn = f"{en}; {after} a month after month {end}", f"{bn}; {_bn(end)} মাস পর মাসে {after}"
+    return L10n(en=en, bn=bn)
+
+
 def _paper(term: str, facts: DocFacts, wage: WageCalc | None, clause_id: str | None) -> LedgerCell | None:
     cur = facts.salary_currency
+    cell = dict(clause_id=clause_id, source="contract")
     if term == "salary" and facts.salary_amount is not None:
-        return LedgerCell(value=f"{_money(facts.salary_amount, cur or '')} a month", amount=facts.salary_amount, currency=cur, clause_id=clause_id, source="contract")
+        return LedgerCell(value=_per_month(facts.salary_amount, cur or ""), amount=facts.salary_amount, currency=cur, **cell)
     if term == "deductions" and facts.deductions:
         monthly = round(sum(d.amount for d in facts.deductions if d.per == "month"), 2)
-        pct = f" ({wage.pct_deducted}% of the salary)" if wage else ""
-        for end in sorted({d.months for d in facts.deductions if d.per == "month" and d.months}):  # a deduction that stops
-            after = round(sum(d.amount for d in facts.deductions if d.per == "month" and (d.months is None or d.months > end)), 2)
-            pct += f"; {_money(after, cur or '')} a month after month {end}"
-        return LedgerCell(value=f"{_money(monthly, cur or '')} a month{pct}", amount=monthly, currency=cur, clause_id=clause_id, source="contract")
-    if term == "recruitment_cost":
-        total = _recruit_from_wages(facts, None)
-        if total:
-            return LedgerCell(value=f"{_money(total, cur or '')} taken from wages", amount=total, currency=cur, clause_id=clause_id, source="contract")
+        return LedgerCell(value=_deductions_text(facts, wage, monthly, cur or ""), amount=monthly, currency=cur, **cell)
+    if term == "recruitment_cost" and (total := _recruit_from_wages(facts, None)):
+        m = _money(total, cur or "")
+        return LedgerCell(value=L10n(en=f"{m} taken from wages", bn=f"বেতন থেকে {m} কাটা হবে"), amount=total, currency=cur, **cell)
     if term == "hours_per_day" and facts.hours_per_day:
-        return LedgerCell(value=f"{facts.hours_per_day} hours a day", amount=facts.hours_per_day, clause_id=clause_id, source="contract")
+        h = facts.hours_per_day
+        return LedgerCell(value=L10n(en=f"{h} hours a day", bn=f"দিনে {_bn(h)} ঘণ্টা"), amount=h, **cell)
     if term == "ticket" and facts.ticket_paid_by:
-        return LedgerCell(value=f"{facts.ticket_paid_by} pays", clause_id=clause_id, source="contract")
+        return LedgerCell(value=PAID_BY[facts.ticket_paid_by], party=facts.ticket_paid_by, **cell)
     if term == "passport" and facts.passport_held_by:
-        return LedgerCell(value=f"{facts.passport_held_by} keeps it", clause_id=clause_id, source="contract")
+        return LedgerCell(value=KEPT_BY[facts.passport_held_by], party=facts.passport_held_by, **cell)
     if term == "contract_months" and facts.contract_months:
-        return LedgerCell(value=f"{facts.contract_months} months", amount=facts.contract_months, clause_id=clause_id, source="contract")
+        n = facts.contract_months
+        return LedgerCell(value=L10n(en=f"{n} months", bn=f"{_bn(n)} মাস"), amount=n, confirmed_by_user=facts.contract_months_confirmed, **cell)
     return None
 
 
@@ -172,20 +238,22 @@ def _said(term: str, promises: Promises | None, facts: DocFacts) -> LedgerCell |
         return None
     if term == "salary" and p.salary_amount is not None:
         cur = _cur(p.salary_currency or facts.salary_currency or "")
-        return LedgerCell(value=f"{_money(p.salary_amount, cur)} a month", amount=p.salary_amount, currency=cur or None, source="worker")
+        return LedgerCell(value=_per_month(p.salary_amount, cur), amount=p.salary_amount, currency=cur or None, source="worker")
     if term == "deductions" and p.no_deductions is not None:
-        return LedgerCell(value="no deductions" if p.no_deductions else "deductions were mentioned", amount=0.0 if p.no_deductions else None, source="worker")
+        text = L10n(en="no deductions", bn="কোনো কর্তন নেই") if p.no_deductions else L10n(en="deductions were mentioned", bn="কর্তনের কথা বলা হয়েছিল")
+        return LedgerCell(value=text, amount=0.0 if p.no_deductions else None, source="worker")
     if term == "recruitment_cost" and p.recruitment_cost_paid is not None:
         cur = _cur(p.recruitment_cost_currency or "")
-        return LedgerCell(value=f"{_money(p.recruitment_cost_paid, cur)} already paid", amount=p.recruitment_cost_paid, currency=cur or None, source="worker")
+        m = _money(p.recruitment_cost_paid, cur)
+        return LedgerCell(value=L10n(en=f"{m} already paid", bn=f"আগেই {m} দেওয়া হয়েছে"), amount=p.recruitment_cost_paid, currency=cur or None, source="worker")
     if term == "hours_per_day" and p.hours_per_day:
-        return LedgerCell(value=f"{p.hours_per_day} hours a day", amount=p.hours_per_day, source="worker")
+        return LedgerCell(value=L10n(en=f"{p.hours_per_day} hours a day", bn=f"দিনে {_bn(p.hours_per_day)} ঘণ্টা"), amount=p.hours_per_day, source="worker")
     if term == "ticket" and p.ticket_paid_by:
-        return LedgerCell(value=f"{p.ticket_paid_by} pays", source="worker")
+        return LedgerCell(value=PAID_BY[p.ticket_paid_by], party=p.ticket_paid_by, source="worker")
     if term == "passport" and p.passport_kept_by:
-        return LedgerCell(value=f"{p.passport_kept_by} keeps it", source="worker")
+        return LedgerCell(value=KEPT_BY[p.passport_kept_by], party=p.passport_kept_by, source="worker")
     if term == "contract_months" and p.contract_months:
-        return LedgerCell(value=f"{p.contract_months} months", amount=p.contract_months, source="worker")
+        return LedgerCell(value=L10n(en=f"{p.contract_months} months", bn=f"{_bn(p.contract_months)} মাস"), amount=p.contract_months, source="worker")
     return None
 
 
@@ -197,12 +265,13 @@ def _passed(ledger: list[Verification], risk_id: str) -> list[Verification]:
 def _law_from(risk: Risk | None, ledger: list[Verification]) -> LawCell:
     if risk is None:
         return LawCell(status="none")
+    title = LAW_TITLE.get(risk.rule_id or "")
     rows = _passed(ledger, risk.id)
     if risk.status == "dropped" or not rows:
-        return LawCell(status="not_verified", risk_id=risk.id)
+        return LawCell(status="not_verified", risk_id=risk.id, title=title)
     ids = list(dict.fromkeys(v.claim.citation_id for v in rows))
     best = next((v for v in rows if v.verdict == "verified"), rows[0])
-    return LawCell(status="verified" if best.verdict == "verified" else "partial", citation_ids=ids, risk_id=risk.id, proposition=best.claim.proposition)
+    return LawCell(status="verified" if best.verdict == "verified" else "partial", citation_ids=ids, risk_id=risk.id, proposition=best.claim.proposition, title=title)
 
 
 def _linked_risk(term: str, risks: list[Risk], clause_id: str | None) -> Risk | None:
@@ -214,20 +283,24 @@ def _linked_risk(term: str, risks: list[Risk], clause_id: str | None) -> Risk | 
     return None
 
 
-def _law_extra(term: str, wage: WageCalc | None) -> tuple[str, str]:
+def _against_law(term: str, paper: LedgerCell, wage: WageCalc | None) -> L10n:
+    """The paper_vs_law sentence, written per term so the Bangla reads as a sentence, not a template."""
     if term == "salary" and wage and wage.minimum_wage is not None:
         m = _money(wage.minimum_wage, wage.currency)
-        return f" (minimum {m} a month)", f" (ন্যূনতম মাসে {m})"
+        return L10n(en=f"The contract pays {paper.value.en}; the cited law sets a minimum of {m} a month.",
+                    bn=f"চুক্তিতে বেতন {paper.value.bn}, অথচ উল্লেখিত আইনে ন্যূনতম মাসে {m}।")
     if term == "deductions" and wage and wage.deduction_cap_pct is not None:
-        return f" (deductions capped at {wage.deduction_cap_pct:.0f}%)", f" (কর্তনের সীমা {wage.deduction_cap_pct:.0f}%)"
-    return "", ""
-
-
-def _bn(cell: LedgerCell) -> str:
-    v = cell.value
-    for en, bn in PARTY_BN.items():
-        v = re.sub(rf"^{en}\b", bn, v)
-    return v
+        m, pct, cap = _money(wage.monthly_deductions, wage.currency), wage.pct_deducted, wage.deduction_cap_pct
+        return L10n(en=f"The contract deducts {m} a month ({pct}% of the salary); the cited law caps deductions at {cap:.0f}%.",
+                    bn=f"চুক্তিতে মাসে {m} কর্তন (বেতনের {_bn(pct)}%), অথচ উল্লেখিত আইনে কর্তনের সীমা {_bn(round(cap))}%।")
+    if term == "recruitment_cost" and paper.amount is not None:
+        m = _money(paper.amount, paper.currency or "")
+        return L10n(en=f"The contract takes {m} of recruitment costs from wages, against the cited law.",
+                    bn=f"চুক্তি অনুযায়ী বেতন থেকে {m} নিয়োগের খরচ কাটা হবে, যা উল্লেখিত আইনের পরিপন্থী।")
+    if term == "passport":
+        return L10n(en=f"Under the contract {paper.value.en}, against the cited law.",
+                    bn=f"চুক্তি অনুযায়ী পাসপোর্ট {paper.value.bn}, যা উল্লেখিত আইনের পরিপন্থী।")
+    return L10n(en=f"The contract says {paper.value.en}, against the cited law.", bn=f"চুক্তিতে লেখা {paper.value.bn}, যা উল্লেখিত আইনের পরিপন্থী।")
 
 
 def _said_worse(term: str, said: LedgerCell, paper: LedgerCell, facts: DocFacts, promises: Promises) -> bool:
@@ -248,9 +321,16 @@ def _said_worse(term: str, said: LedgerCell, paper: LedgerCell, facts: DocFacts,
     return False  # recruitment_cost: what was paid is a fact the worker reports, not a promise to compare
 
 
+def _promise_citations(risk: Risk, ledger: list[Verification], pending_claims: list[Claim]) -> list[str]:
+    """The sections the promise-gap risk was checked against: passed ones first; while pending, the ones it will be."""
+    rows = _passed(ledger, risk.id) or [v for v in ledger if v.claim.risk_id == risk.id]
+    ids = [v.claim.citation_id for v in rows] or [c.citation_id for c in pending_claims if c.risk_id == risk.id]
+    return list(dict.fromkeys(ids))
+
+
 def _row(term: str, facts: DocFacts, wage: WageCalc | None, clauses: list[Clause], risks: list[Risk], ledger: list[Verification],
-         promises: Promises | None, promise_risk: Risk | None, pending: list[Risk]) -> LedgerRow | None:
-    clause_id = _clause_for(term, clauses)
+         promises: Promises | None, promise_risk: Risk | None, pending: list[Risk], pending_claims: list[Claim]) -> LedgerRow | None:
+    clause_id = _clause_for(term, facts, clauses)
     said, paper = _said(term, promises, facts), _paper(term, facts, wage, clause_id)
     if said is None and paper is None:
         return None
@@ -258,23 +338,25 @@ def _row(term: str, facts: DocFacts, wage: WageCalc | None, clauses: list[Clause
     if term == "salary" and risk is None and wage and wage.minimum_wage_citation:
         # the calculator's own citation, shown only if the verifier passed a claim on it
         rows = [v for v in ledger if v.claim.citation_id == wage.minimum_wage_citation and v.verdict in ("verified", "partial")]
-        law = LawCell(status="verified" if any(v.verdict == "verified" for v in rows) else "partial", citation_ids=[wage.minimum_wage_citation], proposition=rows[0].claim.proposition) if rows else LawCell(status="not_verified")
+        title = LAW_TITLE["PB-MIN-WAGE"]
+        law = (LawCell(status="verified" if any(v.verdict == "verified" for v in rows) else "partial", citation_ids=[wage.minimum_wage_citation],
+                       proposition=rows[0].claim.proposition, title=title) if rows else LawCell(status="not_verified", title=title))
     else:
         law = _law_from(risk, ledger)
     mismatches: list[Mismatch] = []
     sevs: list[str] = []
     if said and paper and promises and _said_worse(term, said, paper, facts, promises):
-        rid, status = None, None
+        rid, status, title, cites = None, None, None, []
         if promise_risk is not None and term in PAY_BENEFIT_TERMS:
             rid, status = promise_risk.id, _risk_status(promise_risk, ledger, pending)
-        mismatches.append(Mismatch(type="said_vs_paper", risk_id=rid, risk_status=status, detail=L10n(
-            en=f"Told {said.value}; the contract says {paper.value}.", bn=f"বলা হয়েছিল {_bn(said)}; চুক্তিতে লেখা {_bn(paper)}।")))
+            title, cites = PROMISE_TITLE, _promise_citations(promise_risk, ledger, pending_claims)
+        mismatches.append(Mismatch(type="said_vs_paper", risk_id=rid, risk_status=status, title=title, citation_ids=cites, detail=L10n(
+            en=f"Told {said.value.en}; the contract says {paper.value.en}.", bn=f"বলা হয়েছিল {said.value.bn}, কিন্তু চুক্তিতে লেখা {paper.value.bn}।")))
         # the risk's severity counts only once the gates have passed it
         sevs.append(promise_risk.severity if promise_risk and status in ("verified", "partial") else "low")
     if paper and risk is not None and risk.rule_id == RULE_FOR.get(term) and risk.status != "dropped" and law.status in ("verified", "partial"):
-        en_x, bn_x = _law_extra(term, wage)
-        mismatches.append(Mismatch(type="paper_vs_law", risk_id=risk.id, detail=L10n(
-            en=f"The contract says {paper.value}, against the cited law{en_x}.", bn=f"চুক্তিতে লেখা {_bn(paper)}, যা উল্লেখিত আইনের বিরুদ্ধে{bn_x}।")))
+        mismatches.append(Mismatch(type="paper_vs_law", risk_id=risk.id, risk_status=law.status, title=law.title,
+                                   citation_ids=law.citation_ids, detail=_against_law(term, paper, wage)))
         sevs.append(risk.severity)
     return LedgerRow(
         term=term, said=said, paper=paper, law=law, mismatches=mismatches,
@@ -310,15 +392,16 @@ def _verified_claim(ledger: list[Verification], risk: Risk | None, citation_id: 
 
 def claim_projection(facts: DocFacts, wage: WageCalc | None, risks: list[Risk], ledger: list[Verification], promises: Promises | None) -> ClaimProjection:
     """Every line is `projected`: over the contract term at the rate on paper. `accrued` (months actually worked)
-    needs payslips, so `accrued_total` stays None."""
-    months, source = _months(facts, promises)
+    needs payslips, so `accrued_total` stays None. `term` says where the months came from."""
+    term = contract_term(facts, promises)
+    months, source = (term.months, term.label.en) if term else (None, "")
     lines: list[ClaimLine] = []
     if wage and wage.below_minimum and wage.minimum_wage_citation and months:
         risk = next((r for r in risks if r.rule_id == "PB-MIN-WAGE"), None)
         if v := _verified_claim(ledger, risk, wage.minimum_wage_citation):
+            short = _money(wage.shortfall, wage.currency)
             lines.append(ClaimLine(
-                label=L10n(en=f"Minimum-wage shortfall: {_money(wage.shortfall, wage.currency)} a month × {months} months",
-                           bn=f"ন্যূনতম মজুরির ঘাটতি: মাসে {_money(wage.shortfall, wage.currency)} × {months} মাস"),
+                label=L10n(en=f"Minimum-wage shortfall: {short} a month × {months} months", bn=f"ন্যূনতম মজুরির ঘাটতি: মাসে {short} × {_bn(months)} মাস"),
                 amount=round(wage.shortfall * months, 2), currency=wage.currency, citation_id=v.claim.citation_id, risk_id=risk.id,
                 basis="projected", months=months, source=source))
     if wage and (taken := _recruit_from_wages(facts, months)):
@@ -329,7 +412,7 @@ def claim_projection(facts: DocFacts, wage: WageCalc | None, risks: list[Risk], 
                 label=L10n(en="Recruitment costs to be taken from wages", bn="বেতন থেকে কেটে নেওয়া হবে এমন নিয়োগ খরচ"),
                 amount=taken, currency=wage.currency, citation_id=v.claim.citation_id, risk_id=risk.id,
                 basis="projected", months=ded_months, source="deductions on paper"))
-    return ClaimProjection(lines=lines, projected_total=round(sum(x.amount for x in lines), 2), currency=wage.currency if wage else None, label=CLAIM_LABEL)
+    return ClaimProjection(lines=lines, term=term, projected_total=round(sum(x.amount for x in lines), 2), currency=wage.currency if wage else None, label=CLAIM_LABEL)
 
 
 def promise_gap(facts: DocFacts, promises: Promises | None) -> PromiseGap | None:
@@ -369,13 +452,16 @@ def break_even(wage: WageCalc | None, promises: Promises | None, contract_months
     if promises is None or promises.recruitment_cost_paid is None:
         return None
     if wage is None:
-        return BreakEven(note="The contract gives no take-home pay to compare the cost with.")
+        return BreakEven(note=L10n(en="The contract gives no take-home pay to compare the cost with.",
+                                   bn="খরচের সঙ্গে তুলনা করার মতো হাতে-পাওয়া বেতন চুক্তিতে নেই।"))
     frm = promises.recruitment_cost_currency or wage.currency
     cost = convert(promises.recruitment_cost_paid, frm, wage.currency, promises.exchange_rate)
     steps = net_steps(wage.promised, wage.deductions)
     base = dict(monthly_net=wage.net, currency=wage.currency, steps=steps, horizon_months=contract_months, assumption=BREAK_EVEN_ASSUMPTION)
     if cost is None:
-        return BreakEven(**base, note=f"The cost is in {_cur(frm)} and the pay in {wage.currency}: enter an exchange rate to compute this. Ain uses no rate of its own.")
+        return BreakEven(**base, note=L10n(
+            en=f"The cost is in {_cur(frm)} and the pay in {wage.currency}: enter an exchange rate to compute this. Ain uses no rate of its own.",
+            bn=f"খরচ {_cur(frm)}-এ, বেতন {wage.currency}-এ: হিসাব করতে একটি বিনিময় হার লিখুন। আইন কপাইলট নিজে কোনো হার ব্যবহার করে না।"))
     used = promises.exchange_rate if _cur(frm) != _cur(wage.currency) else None
     base.update(cost=round(cost, 2), rate=used)
     # "once" deductions are taken from the first month's pay
@@ -389,15 +475,19 @@ def break_even(wage: WageCalc | None, promises: Promises | None, contract_months
         keep = max(0.0, s.net)  # a month whose deductions exceed the pay earns nothing back
         if keep > 0 and (last is None or (cost - earned) / keep <= last - s.from_month + 1):
             months = s.from_month - 1 + (cost - earned) / keep
-            return BreakEven(**base, months=round(max(months, 0.0), 1),
-                             note="At least this many months of take-home pay on paper to earn back what was paid to get the job.")
+            return BreakEven(**base, months=round(max(months, 0.0), 1), note=L10n(
+                en="At least this many months of take-home pay on paper to earn back what was paid to get the job.",
+                bn="চাকরি পেতে যা খরচ হয়েছে তা তুলতে কাগজে লেখা হাতে-পাওয়া বেতনের অন্তত এত মাস লাগবে।"))
         if last is None:  # open-ended and nothing kept: never earned back
             break
         earned += keep * (last - s.from_month + 1)
     if contract_months is not None:
-        return BreakEven(**base, earned_back=round(max(earned, 0.0), 2),
-                         note=f"Not earned back within the {contract_months}-month contract: {_money(max(earned, 0.0), wage.currency)} of {_money(cost, wage.currency)}, even if all of it is sent home.")
-    return BreakEven(**base, note="The contract leaves no take-home pay to earn the cost back.")
+        got, total = _money(max(earned, 0.0), wage.currency), _money(cost, wage.currency)
+        return BreakEven(**base, earned_back=round(max(earned, 0.0), 2), note=L10n(
+            en=f"Not earned back within the {contract_months}-month contract: {got} of {total}, even if all of it is sent home.",
+            bn=f"{_bn(contract_months)} মাসের চুক্তিতে খরচ ওঠে না: পুরো বেতন দেশে পাঠালেও {total}-এর মধ্যে ওঠে {got}।"))
+    return BreakEven(**base, note=L10n(en="The contract leaves no take-home pay to earn the cost back.",
+                                       bn="খরচ তোলার মতো হাতে-পাওয়া বেতন চুক্তিতে থাকে না।"))
 
 
 def _risk_status(risk: Risk, ledger: list[Verification], pending: list[Risk]) -> str:
@@ -417,16 +507,16 @@ def build(facts: DocFacts, wage: WageCalc | None, clauses: list[Clause], risks: 
           pending_risks: list[Risk] | None = None, pending_claims: list[Claim] | None = None) -> FourLedgers:
     """`pending_risks`: a promise-gap risk raised with no model call. It shows as `not_verified_yet` and adds nothing
     to severity, law cells or the projection until its claims have been through the 4 gates."""
-    pending = pending_risks or []
+    pending, pclaims = pending_risks or [], pending_claims or []
     promise_risk = next((r for r in [*risks, *pending] if r.rule_id == PROMISE_RULE), None)
-    rows = [row for t in TERMS if (row := _row(t, facts, wage, clauses, risks, ledger, promises, promise_risk, pending))]
+    rows = [row for t in TERMS if (row := _row(t, facts, wage, clauses, risks, ledger, promises, promise_risk, pending, pclaims))]
     months, _ = _months(facts, promises)
     return FourLedgers(
         promises=promises,
         rows=rows,
         claim_projection=claim_projection(facts, wage, risks, ledger, promises),
         pending_risks=pending,
-        pending_claims=pending_claims or [],
+        pending_claims=pclaims,
         promise_gap=promise_gap(facts, promises),
         break_even=break_even(wage, promises, months),
         memo_includes_promises=memo_includes_promises and promises is not None,

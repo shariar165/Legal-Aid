@@ -1,6 +1,7 @@
 """Four Ledgers (told · paper · paid · law), offline: docs/specs/2026-11-14-19-four-ledgers.md."""
 
 import json
+import re
 import time
 
 import pytest
@@ -67,7 +68,7 @@ async def test_malaysia_with_promises_gives_the_expected_rows(docs, ledger_on):
     assert (rows["salary"].said.amount, rows["salary"].paper.amount) == (1800, 1200)
     assert _types(rows["deductions"]) == ["said_vs_paper", "paper_vs_law"]
     assert "MY-EA-1955-s24" in rows["deductions"].law.citation_ids
-    assert "RM 400 a month after month 12" in rows["deductions"].paper.value  # the recruitment deduction ends
+    assert "RM 400 a month after month 12" in rows["deductions"].paper.value.en  # the recruitment deduction ends
     assert _types(rows["recruitment_cost"]) == ["paper_vs_law"] and rows["recruitment_cost"].paper.amount == 3000
     assert _types(rows["hours_per_day"]) == ["said_vs_paper"] and rows["hours_per_day"].law.status == "none"
     # the travel clause's risk is about the trip home: its law is shown, but it makes no paper_vs_law on the ticket out
@@ -117,7 +118,7 @@ def test_break_even_not_reached_within_the_contract():
     # RM 50 a month for 12 months (600), then RM 900: 8,400 more takes 9.3 months; the 24-month contract earns 11,400 in all
     assert be.months == 21.3
     never = ledger.break_even(w, Promises(recruitment_cost_paid=20000, recruitment_cost_currency="RM"), contract_months=24)
-    assert never.months is None and never.earned_back == 11400 and "24-month contract" in never.note
+    assert never.months is None and never.earned_back == 11400 and "24-month contract" in never.note.en
 
 
 async def test_no_promises_gives_paper_and_law_only(docs, ledger_on):
@@ -159,7 +160,7 @@ async def test_a_promise_gap_the_gates_refused_is_not_verified(docs, ledger_on):
 async def test_no_rate_gives_no_break_even(docs, ledger_on):
     r = await _run(docs)
     four = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger, _promises(exchange_rate=None), False)
-    assert four.break_even.months is None and four.break_even.rate is None and "exchange rate" in four.break_even.note
+    assert four.break_even.months is None and four.break_even.rate is None and "exchange rate" in four.break_even.note.en
     assert four.promise_gap.total == 21600 and four.promise_gap.currency == "RM"  # same currency: no rate needed
     # a cost in the pay's own currency needs no rate either: RM 5,500 at RM 550 a month
     same = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger,
@@ -269,6 +270,7 @@ def test_flag_off_refuses_promises_and_adds_nothing(docs):
         assert not any(k["rule_id"] == "PB-PROMISE-GAP" for k in r["risks"])
         assert client.post(f"/api/jobs/{job}/promises", json={"salary_amount": 1800}).status_code == 404
         assert client.post(f"/api/jobs/{job}/promises/verify").status_code == 404
+        assert client.post(f"/api/jobs/{job}/term", json={"months": 24}).status_code == 404
 
 
 def test_the_promise_rule_is_in_no_prompt_while_the_flag_is_off(monkeypatch):
@@ -285,3 +287,97 @@ def test_invalid_promises_are_rejected(ledger_on):
     with TestClient(api.app) as client:
         bad = client.post("/api/analyze", data={"sample_id": "control", "promises": json.dumps({"ticket_paid_by": "nobody"})})
         assert bad.status_code == 422
+
+
+# ---------------------------------------------------------------- spec 20, backend round
+
+LATIN_WORD = re.compile(r"[A-Za-z]{2,}")
+CURRENCY = re.compile(r"\b(?:RM|MYR|BDT|SAR|AED|QAR|OMR|KWD|BHD|SGD|USD|Tk)\b")
+
+
+def _latin(bn: str) -> list[str]:
+    return LATIN_WORD.findall(CURRENCY.sub("", bn))
+
+
+async def test_every_bangla_string_is_bangla(docs, ledger_on):
+    r = await _run(docs, _promises())
+    no_rate = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger, _promises(exchange_rate=None), False)
+    texts = []
+    for four in (r.four_ledgers, no_rate):
+        for row in four.rows:
+            texts += [c.value.bn for c in (row.said, row.paper) if c]
+            texts += [m.detail.bn for m in row.mismatches] + [t.bn for t in (row.law.title, *(m.title for m in row.mismatches)) if t]
+        cp = four.claim_projection
+        texts += [x.label.bn for x in cp.lines] + [cp.term.label.bn, four.break_even.note.bn]
+    assert not [t for t in texts if _latin(t)], [t for t in texts if _latin(t)]
+
+    rows = _rows(r.four_ledgers)
+    assert (rows["ticket"].said.value.bn, rows["ticket"].paper.value.bn) == ("মালিক দেবে", "কর্মী দেবে")
+    assert (rows["ticket"].said.party, rows["ticket"].paper.party) == ("employer", "worker")
+    assert rows["hours_per_day"].paper.value.bn == "দিনে ১২ ঘণ্টা" and rows["contract_months"].paper.value.bn == "৩৬ মাস"
+    assert _said(rows["salary"]).detail.bn == "বলা হয়েছিল মাসে RM 1,800, কিন্তু চুক্তিতে লেখা মাসে RM 1,200।"
+    assert rows["salary"].said.value.en == "RM 1,800 a month" and rows["ticket"].paper.value.en == "the worker pays"
+
+
+def test_an_older_saved_cell_loads_as_english():
+    from ain.models import LedgerCell
+
+    old = LedgerCell.model_validate({"value": "RM 1,200 a month", "amount": 1200, "currency": "RM", "source": "contract"})
+    assert (old.value.en, old.value.bn) == ("RM 1,200 a month", "RM 1,200 a month")
+
+
+async def test_law_cells_have_a_short_title_and_mismatches_carry_their_status(docs, ledger_on):
+    r = await _run(docs, _promises())
+    rows = _rows(r.four_ledgers)
+    assert rows["salary"].law.title.en == "Minimum wage" and rows["salary"].law.title.bn == "ন্যূনতম মজুরি"
+    law = next(m for m in rows["salary"].mismatches if m.type == "paper_vs_law")
+    assert (law.risk_status, law.title.en) == ("verified", "Minimum wage")
+    # the promise gap rests on the worker's account: it "may fall under" the section, never a proven offence
+    gap = _said(rows["salary"])
+    assert gap.title.en.lower().startswith("may fall under") and "offence" not in gap.title.en.lower()
+    assert gap.citation_ids == ["BD-OEMA-2013-s31"]
+    assert _said(rows["hours_per_day"]).title is None  # hours are not pay or benefits: no law of their own
+    # every cited section has a name in both languages, built from the corpus record
+    names = r.model_dump()["citation_names"]
+    assert "ন্যূনতম মজুরি আদেশ" in names["MY-MWO-2024-p3"]["bn"] and "Minimum Wages Order" in names["MY-MWO-2024-p3"]["en"]
+
+
+async def test_the_projection_says_where_its_term_came_from(docs, ledger_on):
+    r = await _run(docs, _promises())
+    term = r.four_ledgers.claim_projection.term
+    assert (term.months, term.source, term.clause_id, term.label.en) == (36, "contract", "C2", "Term read from the contract")
+    r.facts.contract_months = None  # nothing on paper: the term the worker was told, marked as such
+    told = ledger.build(r.facts, r.wage, r.document.clauses, r.risks, r.ledger, _promises(), False).claim_projection.term
+    assert (told.months, told.source) == (36, "worker") and "none on paper" in told.label.en
+
+
+def test_the_contract_term_can_be_confirmed_with_no_model_call(docs, ledger_on, monkeypatch):
+    with TestClient(api.app) as client:
+        job = client.post("/api/analyze", data={"sample_id": "migrant_text"}).json()["job_id"]
+        assert _wait(client, job)["status"] == "done"
+        before = client.get(f"/api/jobs/{job}/result").json()
+
+        async def no_model(*a, **k):
+            raise AssertionError("a model was called")
+
+        monkeypatch.setattr(LLM, "json", no_model)
+        resp = client.post(f"/api/jobs/{job}/term", json={"months": 24})
+        assert resp.status_code == 200, resp.text
+        f = resp.json()
+        cp = f["claim_projection"]
+        assert (cp["term"]["months"], cp["term"]["source"], cp["term"]["label"]["en"]) == (24, "user", "Term confirmed by user")
+        assert cp["lines"][0]["months"] == 24 and cp["lines"][0]["amount"] == 12000  # RM 500 short a month × 24
+        assert f["promise_gap"]["total"] == 14400 and f["break_even"]["horizon_months"] == 24
+        rows = {row["term"]: row for row in f["rows"]}
+        paper = rows["contract_months"]["paper"]
+        assert (paper["amount"], paper["confirmed_by_user"]) == (24, True)
+        assert "said_vs_paper" in [m["type"] for m in rows["contract_months"]["mismatches"]]  # told 36, the paper says 24
+
+        after = client.get(f"/api/jobs/{job}/result").json()
+        assert (after["facts"]["contract_months"], after["facts"]["contract_months_confirmed"]) == (24, True)
+        assert len(after["privacy"]["outbound_calls"]) == len(before["privacy"]["outbound_calls"])
+        # a later change to the promises keeps the confirmed term
+        again = client.post(f"/api/jobs/{job}/promises", json=json.loads(FIXTURE.read_text(encoding="utf-8"))).json()
+        assert again["claim_projection"]["term"]["source"] == "user"
+        for bad in (0, 300):
+            assert client.post(f"/api/jobs/{job}/term", json={"months": bad}).status_code == 422
