@@ -27,6 +27,8 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
   const [countries, setCountries] = useState<Destination[]>([]);
   const [country, setCountry] = useState("");
   const [policy, setPolicy] = useState<File | null>(null);
+  // the country and the policy are optional: they wait under "More options" (spec 20, phase 2)
+  const [moreOpen, setMoreOpen] = useState(false);
   const [offline, setOffline] = useState(false);
   const { me } = useSession();
 
@@ -46,6 +48,8 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
   const policyInput = useRef<HTMLInputElement>(null);
   const heading = useScreenFocus<HTMLHeadingElement>();
   const howToPlaying = speech.playingId === HOW_TO_ID;
+
+  const chosen = [countries.find((c) => c.code === country)?.name[lang], policy?.name].filter(Boolean).join(" · ");
 
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,20 +83,6 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           </h1>
           <p className={styles.lead}>{T.lead[lang]}</p>
         </div>
-
-        {countries.length > 0 && (
-          <label className={styles.countryPick}>
-            <span className={styles.countryPickLabel}>{T.countryLabel[lang]}</span>
-            <select className={styles.countrySelect} value={country} onChange={(e) => setCountry(e.target.value)}>
-              <option value="">{T.countryAuto[lang]}</option>
-              {countries.map((c) => (
-                <option key={c.code} value={c.code ?? ""}>
-                  {c.name[lang]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
 
         <button type="button" className={styles.cameraBtn} onClick={() => cameraInput.current?.click()}>
           <Icon name="camera" size={64} strokeWidth={1.75} className={styles.cameraIcon} />
@@ -128,36 +118,69 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           onChange={pick}
         />
 
-        {policy ? (
-          <p className={styles.policyChosen}>
-            <span>
-              {T.policyChosen[lang]} <b>{policy.name}</b>
+        <div className={styles.more}>
+          <button
+            type="button"
+            className={styles.moreBtn}
+            aria-expanded={moreOpen}
+            aria-controls="home-more"
+            onClick={() => setMoreOpen((o) => !o)}
+          >
+            <span className={styles.moreText}>
+              <span>{T.more[lang]}</span>
+              <span className={styles.uploadSub}>{chosen || T.moreSub[lang]}</span>
             </span>
-            <button type="button" className={styles.policyRemove} onClick={() => setPolicy(null)}>
-              {T.policyRemove[lang]}
-            </button>
-          </p>
-        ) : (
-          <button type="button" className={styles.policyBtn} onClick={() => policyInput.current?.click()}>
-            <span className={styles.withIcon}>
-              <Icon name="plus" size={18} strokeWidth={2.25} />
-              {T.policyAdd[lang]}
-            </span>
-            <span className={styles.uploadSub}>{T.policySub[lang]}</span>
+            <Icon name={moreOpen ? "chevronDown" : "chevronRight"} size={20} strokeWidth={2.25} />
           </button>
-        )}
-        <input
-          ref={policyInput}
-          type="file"
-          accept="image/*,application/pdf,.docx,.txt"
-          className={styles.visuallyHidden}
-          tabIndex={-1}
-          aria-hidden="true"
-          onChange={(e) => {
-            setPolicy(e.target.files?.[0] ?? null);
-            e.target.value = "";
-          }}
-        />
+          {moreOpen && (
+            <div id="home-more" className={styles.moreBody}>
+              {countries.length > 0 && (
+                <label className={styles.countryPick}>
+                  <span className={styles.countryPickLabel}>{T.countryLabel[lang]}</span>
+                  <select className={styles.countrySelect} value={country} onChange={(e) => setCountry(e.target.value)}>
+                    <option value="">{T.countryAuto[lang]}</option>
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.code ?? ""}>
+                        {c.name[lang]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {policy ? (
+                <p className={styles.policyChosen}>
+                  <span>
+                    {T.policyChosen[lang]} <b>{policy.name}</b>
+                  </span>
+                  <button type="button" className={styles.policyRemove} onClick={() => setPolicy(null)}>
+                    {T.policyRemove[lang]}
+                  </button>
+                </p>
+              ) : (
+                <button type="button" className={styles.policyBtn} onClick={() => policyInput.current?.click()}>
+                  <span className={styles.withIcon}>
+                    <Icon name="plus" size={18} strokeWidth={2.25} />
+                    {T.policyAdd[lang]}
+                  </span>
+                  <span className={styles.uploadSub}>{T.policySub[lang]}</span>
+                </button>
+              )}
+              <input
+                ref={policyInput}
+                type="file"
+                accept="image/*,application/pdf,.docx,.txt"
+                className={styles.visuallyHidden}
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(e) => {
+                  setPolicy(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          )}
+        </div>
 
         <button
           type="button"

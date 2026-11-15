@@ -32,9 +32,15 @@ interface Props {
   /** under the bars: the projection strip, or the button to add what was said */
   children?: ReactNode;
   headingId?: string;
+  /** "worker" speaks to the worker (Citizen): "you were told"; "counsel" speaks about them */
+  voice?: "counsel" | "worker";
+  /** the headline when there is no wage to draw, e.g. Citizen's danger count */
+  fallback?: ReactNode;
+  /** h1 on the Case Desk; h2 under Citizen's own screen title */
+  level?: 1 | 2;
 }
 
-export function MoneyHero({ result, lang, layout, corner, chips, children, headingId }: Props) {
+export function MoneyHero({ result, lang, layout, corner, chips, children, headingId, voice = "counsel", fallback, level = 1 }: Props) {
   const T = DESK.hero;
   const w = result.wage;
   const four = result.four_ledgers;
@@ -43,17 +49,18 @@ export function MoneyHero({ result, lang, layout, corner, chips, children, headi
   const termMonths = four?.rows.find((r) => r.term === "contract_months")?.paper?.amount ?? four?.claim_projection.term?.months ?? null;
   const live = result.risks.filter((r) => r.status !== "dropped").length;
 
+  const told = voice === "worker" ? T.toldLessYou : T.toldLess;
   let headline: ReactNode;
   if (w && saidComparable && said?.amount != null) {
     const less = said.amount - w.net;
     headline = less > 0 ? (
       <>
-        {T.toldLess[lang][0]}
+        {told[lang][0]}
         <span className={styles.amount}>{money(w.currency, less)}</span>
-        {T.toldLess[lang][1]}
+        {told[lang][1]}
       </>
     ) : (
-      T.toldMet[lang]
+      (voice === "worker" ? T.toldMetYou : T.toldMet)[lang]
     );
   } else if (w) {
     headline =
@@ -67,7 +74,7 @@ export function MoneyHero({ result, lang, layout, corner, chips, children, headi
         T.nothingDeducted[lang]
       );
   } else {
-    headline = T.risks(live, lang);
+    headline = fallback ?? T.risks(live, lang);
   }
 
   const bars: Bar[] = [];
@@ -99,6 +106,7 @@ export function MoneyHero({ result, lang, layout, corner, chips, children, headi
   }
   const steps = four?.break_even?.steps ?? [];
 
+  const Heading = level === 1 ? "h1" : "h2";
   const eyebrow = [result.destination?.name[lang], termMonths ? T.term(termMonths, lang) : null].filter(Boolean).join(" · ");
 
   return (
@@ -108,9 +116,9 @@ export function MoneyHero({ result, lang, layout, corner, chips, children, headi
           {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
           {corner}
         </div>
-        <h1 id={headingId} className={styles.headline}>
+        <Heading id={headingId} className={styles.headline}>
           {headline}
-        </h1>
+        </Heading>
         {chips && <div className={styles.chips}>{chips}</div>}
       </div>
 

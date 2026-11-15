@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { AnalysisResult, CardKind } from "@/lib/api";
 import { bannerTitle, countryCheckLine, formatNumber, SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { Icon } from "@/components/shared/Icons";
+import { HeroChip, MoneyHero } from "@/components/shared/MoneyHero";
+import { PromiseStep } from "./PromiseStep";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
 
@@ -20,9 +22,11 @@ interface Props {
   result: AnalysisResult;
   speech: ReturnType<typeof useSpeech>;
   onBack: () => void;
+  /** refetch the result after the worker adds what the agent said */
+  reload: () => Promise<void>;
 }
 
-export function ResultScreen({ lang, result, speech, onBack }: Props) {
+export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
   const [open, setOpen] = useState<Partial<Record<CardKind, boolean>>>({});
   const [helpTapped, setHelpTapped] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -30,6 +34,7 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
   const { citizen, destination } = result;
   const letter = citizen.letter[lang];
   const letterPlaying = speech.playingId === LETTER_ID;
+  const saidGaps = (result.four_ledgers?.rows ?? []).filter((r) => r.mismatches.some((m) => m.type === "said_vs_paper")).length;
 
   const helpContent = (
     <>
@@ -74,10 +79,27 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
       </header>
 
       <div className={styles.resultScroll}>
-        <div className={styles.banner} data-safe={citizen.dangerCount === 0} role="alert">
-          <p className={styles.bannerTitle}>{bannerTitle(citizen.dangerCount, lang)}</p>
-          <p className={styles.bannerBody}>{T.bannerBody[lang]}</p>
+        {/* the money first; with no wage on the paper the danger count is the headline */}
+        <div className={styles.heroWrap}>
+          <MoneyHero
+            result={result}
+            lang={lang}
+            layout="phone"
+            voice="worker"
+            level={2}
+            headingId="money-title"
+            fallback={bannerTitle(citizen.dangerCount, lang)}
+            chips={
+              <>
+                {result.wage && <HeroChip n={citizen.dangerCount} label={T.dangers[lang]} lang={lang} tone={citizen.dangerCount > 0 ? "bad" : undefined} />}
+                {saidGaps > 0 && <HeroChip n={saidGaps} label={T.mismatches[lang]} lang={lang} />}
+              </>
+            }
+          >
+            {citizen.dangerCount > 0 && <p className={styles.heroNote}>{T.bannerBody[lang]}</p>}
+          </MoneyHero>
         </div>
+
 
         {destination && (
           <section className={styles.countryCard} data-supported={destination.supported} aria-label={T.workIn[lang]}>
@@ -99,7 +121,9 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
           </section>
         )}
 
-        {citizen.cards.map((card) => {
+        {citizen.cards.map((card, i) => {
+          // the step comes right after the dangers (and the employer-policy card), before pay, what to do and deadlines
+          const stepHere = i === citizen.cards.findLastIndex((c) => c.kind === "danger" || c.kind === "policy");
           const playing = speech.playingId === card.kind;
           const isOpen = !!open[card.kind];
           const detailsId = `cits-${card.kind}`;
@@ -107,73 +131,76 @@ export function ResultScreen({ lang, result, speech, onBack }: Props) {
             .filter(Boolean)
             .join("। ");
           return (
-            <section key={card.kind} className={styles.card} data-kind={card.kind} aria-labelledby={`title-${card.kind}`}>
-              <div className={styles.cardHead}>
-                <h2 id={`title-${card.kind}`} className={styles.cardTitle}>
-                  {card.title[lang]}
-                </h2>
-                <button
-                  type="button"
-                  className={styles.playBtn}
-                  aria-label={playing ? T.pauseAria[lang] : T.playAria[lang]}
-                  aria-pressed={playing}
-                  onClick={() => speech.toggle(card.kind, spoken, SPEECH_LANG[lang])}
-                >
-                  <Icon name={playing ? "pause" : "play"} size={18} strokeWidth={2.5} /> {playing ? T.stop[lang] : T.listen[lang]}
-                </button>
-              </div>
-              {playing && (
-                <div className={styles.playTrack}>
-                  <div className={styles.playFill} style={{ width: `${speech.pct}%` }} />
-                </div>
-              )}
-
-              <div className={styles.cardBody}>
-                {card.big && <span className={styles.big}>{card.big[lang]}</span>}
-                <ul className={styles.lines}>
-                  {card.lines.map((line, i) => (
-                    <li key={i} className={styles.line}>
-                      <span className={styles.lineMark} aria-hidden="true">
-                        {card.lines.length > 1 ? `${formatNumber(i + 1, lang)}.` : <span className={styles.lineDot} />}
-                      </span>
-                      <span>{line[lang]}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {card.citations.length > 0 && (
-                <>
+            <Fragment key={card.kind}>
+              <section className={styles.card} data-kind={card.kind} aria-labelledby={`title-${card.kind}`}>
+                <div className={styles.cardHead}>
+                  <h2 id={`title-${card.kind}`} className={styles.cardTitle}>
+                    {card.title[lang]}
+                  </h2>
                   <button
                     type="button"
-                    className={styles.detailsBtn}
-                    aria-expanded={isOpen}
-                    aria-controls={detailsId}
-                    onClick={() => setOpen((p) => ({ ...p, [card.kind]: !p[card.kind] }))}
+                    className={styles.playBtn}
+                    aria-label={playing ? T.pauseAria[lang] : T.playAria[lang]}
+                    aria-pressed={playing}
+                    onClick={() => speech.toggle(card.kind, spoken, SPEECH_LANG[lang])}
                   >
-                    {T.details[lang]} <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={18} strokeWidth={2.25} />
+                    <Icon name={playing ? "pause" : "play"} size={18} strokeWidth={2.5} /> {playing ? T.stop[lang] : T.listen[lang]}
                   </button>
-                  {isOpen && (
-                    <div id={detailsId} className={styles.cits}>
-                      <p className={styles.citsLabel}>{T.basis[lang]}</p>
-                      <ul className={styles.citList}>
-                        {card.citations.map((cit) => (
-                          <li key={cit.citation_id} className={styles.cit} data-status={cit.status}>
-                            <span className={styles.citSym} aria-hidden="true">
-                              <Icon name={cit.status === "verified" ? "check" : "alert"} size={15} strokeWidth={2.5} />
-                            </span>
-                            <a className={styles.citName} href={cit.url || undefined} target="_blank" rel="noreferrer" title={cit.url ? T.openSource[lang] : undefined}>
-                              {cit.name[lang]}
-                            </a>
-                            <span className={styles.citStatus}>{cit.status === "verified" ? T.verified[lang] : T.partial[lang]}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-            </section>
+                </div>
+                {playing && (
+                  <div className={styles.playTrack}>
+                    <div className={styles.playFill} style={{ width: `${speech.pct}%` }} />
+                  </div>
+                )}
+
+                <div className={styles.cardBody}>
+                  {card.big && <span className={styles.big}>{card.big[lang]}</span>}
+                  <ul className={styles.lines}>
+                    {card.lines.map((line, i) => (
+                      <li key={i} className={styles.line}>
+                        <span className={styles.lineMark} aria-hidden="true">
+                          {card.lines.length > 1 ? `${formatNumber(i + 1, lang)}.` : <span className={styles.lineDot} />}
+                        </span>
+                        <span>{line[lang]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {card.citations.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.detailsBtn}
+                      aria-expanded={isOpen}
+                      aria-controls={detailsId}
+                      onClick={() => setOpen((p) => ({ ...p, [card.kind]: !p[card.kind] }))}
+                    >
+                      {T.details[lang]} <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={18} strokeWidth={2.25} />
+                    </button>
+                    {isOpen && (
+                      <div id={detailsId} className={styles.cits}>
+                        <p className={styles.citsLabel}>{T.basis[lang]}</p>
+                        <ul className={styles.citList}>
+                          {card.citations.map((cit) => (
+                            <li key={cit.citation_id} className={styles.cit} data-status={cit.status}>
+                              <span className={styles.citSym} aria-hidden="true">
+                                <Icon name={cit.status === "verified" ? "check" : "alert"} size={15} strokeWidth={2.5} />
+                              </span>
+                              <a className={styles.citName} href={cit.url || undefined} target="_blank" rel="noreferrer" title={cit.url ? T.openSource[lang] : undefined}>
+                                {cit.name[lang]}
+                              </a>
+                              <span className={styles.citStatus}>{cit.status === "verified" ? T.verified[lang] : T.partial[lang]}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+              {stepHere && <PromiseStep lang={lang} result={result} reload={reload} />}
+            </Fragment>
           );
         })}
 

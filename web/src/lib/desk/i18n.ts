@@ -40,6 +40,8 @@ export const DESK = {
     term: (n: number, lang: Lang) => (lang === "bn" ? `${num(n, "bn")} মাসের চুক্তি` : `${n}-month contract`),
     toldLess: { bn: ["কাগজ অনুযায়ী হাতে আসে মাসে ", " কম, যা বলা হয়েছিল তার চেয়ে"], en: ["On paper, take-home is ", " a month less than the worker was told"] },
     toldMet: { bn: "কাগজ অনুযায়ী হাতে আসে যা বলা হয়েছিল তার সমান বা বেশি", en: "On paper, take-home is at least what the worker was told" },
+    toldLessYou: { bn: ["কাগজ অনুযায়ী হাতে আসবে মাসে ", " কম, যা আপনাকে বলা হয়েছিল তার চেয়ে"], en: ["On paper, you take home ", " a month less than you were told"] },
+    toldMetYou: { bn: "কাগজ অনুযায়ী হাতে আসবে যা আপনাকে বলা হয়েছিল তার সমান বা বেশি", en: "On paper, you take home at least what you were told" },
     deducted: { bn: ["কাগজের বেতন থেকে মাসে ", " কেটে নেওয়া হবে"], en: ["", " a month is taken from the salary on paper"] },
     nothingDeducted: { bn: "কাগজের বেতন থেকে কিছু কাটা হবে না", en: "Nothing is taken from the salary on paper" },
     risks: (n: number, lang: Lang) => (lang === "bn" ? `চুক্তিতে ${num(n, "bn")}টি ঝুঁকি` : `${n} ${n === 1 ? "risk" : "risks"} in the contract`),

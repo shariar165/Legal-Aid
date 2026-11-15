@@ -66,6 +66,7 @@ export function CitizenApp() {
           lang={lang}
           result={analysis.result}
           speech={speech}
+          reload={analysis.reload}
           onBack={() => {
             analysis.reset();
             go("home");

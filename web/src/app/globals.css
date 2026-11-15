@@ -103,30 +103,6 @@
   --shadow-1: 0 1px 2px rgba(18, 26, 22, 0.06);
   --shadow-2: 0 1px 2px rgba(18, 26, 22, 0.06), 0 4px 12px rgba(18, 26, 22, 0.05);
   --shadow-3: 0 1px 2px rgba(18, 26, 22, 0.06), 0 18px 44px rgba(18, 26, 22, 0.1);
-
-  /* Citizen's earlier names, kept as aliases until spec 20 phase 2 moves citizen.module.css to the names above */
-  --font-sans: var(--sans);
-  --font-serif: var(--serif-bn);
-  --backdrop: var(--line);
-  --surface: var(--bg);
-  --muted-2: var(--muted);
-  --line-soft: var(--subtle);
-  --track: var(--line-strong);
-  --details-bg: var(--subtle);
-  --wait-border: var(--line-strong);
-  --green: var(--accent);
-  --green-dark: var(--accent-hover);
-  --green-tint: var(--accent-tint);
-  --green-sub: #d3e2da;
-  --red: var(--bad);
-  --red-ink: var(--bad-ink);
-  --red-tint: var(--bad-tint);
-  --amber: var(--warn);
-  --amber-ink: var(--warn-ink);
-  --amber-2: var(--warn-ink);
-  --amber-btn: #8a5a00;
-  --amber-tint: var(--warn-tint);
-  --ocr-hl: var(--highlight);
 }
 
 *,
@@ -139,7 +115,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--backdrop);
+  background: var(--line); /* the ground around Citizen's phone frame */
   color: var(--ink);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
