@@ -1,0 +1,24 @@
+# Ain Copilot backend, lite deployment (Railway, 0.5 GB RAM). Same pins as ../requirements.txt, minus:
+#   sentence-transformers / torch  -> run with AIN_DENSE=0 (BM25 only, bilingual queries)
+#   easyocr                        -> only pre-cached photos (demo/ocr_cache) can be read; others get OcrUnavailable
+#   pytest*                        -> tests run locally
+# Measured locally: ~125 MB resident after the corpus loads.
+argon2-cffi==25.1.0
+cryptography==50.0.2
+diskcache==5.6.3
+fastapi==0.143.2
+httpx==0.28.1
+mcp==2.3.0
+numpy==2.5.2
+pillow==12.3.0
+pydantic==2.14.1
+pymupdf==1.28.2
+python-docx==1.2.0
+python-dotenv==1.2.4
+python-multipart==0.0.32
+PyYAML==6.0.3
+rank-bm25==0.2.2
+RapidFuzz==3.14.6
+sse-starlette==3.5.0
+tenacity==9.2.1
+uvicorn==0.54.0

@@ -49,10 +49,19 @@ class Extracted:
 # ------------------------------------------------------------------ text extraction
 
 
+class OcrUnavailable(RuntimeError):
+    """The lite deployment (requirements-lite.txt) ships without EasyOCR: only pre-cached photos can be read."""
+
+
 def _ocr_reader():
     global _reader
     if _reader is None:
-        import easyocr
+        try:
+            import easyocr
+        except ImportError:
+            raise OcrUnavailable(
+                "Photo reading (OCR) is not installed on this server. Upload the contract as PDF, Word or text, or try a sample."
+            ) from None
 
         _reader = easyocr.Reader(["bn", "en"], gpu=False, verbose=False)
     return _reader

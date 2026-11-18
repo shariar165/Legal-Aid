@@ -181,8 +181,16 @@ Add `GROQ_API_KEY`, `OPENROUTER_API_KEY` and `AIN_DATA_KEY` (a Fernet key: `pyth
 `--prod` or `vercel promote`) to `https://ain-copilot.vercel.app`. Its build env sets `NEXT_PUBLIC_API_URL=""`, so
 the browser calls only its own origin. Set `AIN_INTERNAL_API` to the backend's public URL and Vercel rewrites
 `/api/*` there, which keeps the session cookie first-party. That variable is read at build time, so changing it needs
-a redeploy, and the backend's `AIN_CORS` must list the Vercel origin. Until `AIN_INTERNAL_API` is set, the pages load
-and `/api/*` returns 404 (the UI shows "server not reachable"). Spec: `docs/specs/2026-11-18-21-vercel-deploy.md`.
+a redeploy, and the backend's `AIN_CORS` must list the Vercel origin. Spec: `docs/specs/2026-11-18-21-vercel-deploy.md`.
+
+**Railway (backend, lite)**: `cd backend && bash scripts/railway_up.sh --service backend` copies exactly what the
+server reads (code, corpus, demo files, the warmed LLM cache; never `.data`, `runs/` or `.env`) into a temp folder and
+runs `railway up` on it. `Dockerfile.lite` installs `requirements-lite.txt` (no torch, sentence-transformers or
+EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`, trusting `X-Forwarded-For` so
+per-IP limits see real clients. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
+Service variables: `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `AIN_DATA_KEY`, `AIN_CORS=https://ain-copilot.vercel.app`,
+`AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, with a volume mounted at `/data` so accounts survive restarts. Point
+Vercel's `AIN_INTERNAL_API` at the service's public URL and redeploy.
 
 ### Local development
 
@@ -332,6 +340,9 @@ The tests cover:
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
+- The hosted demo (Vercel + Railway lite) has no EasyOCR and no dense retrieval, to fit 0.5 GB of RAM: the demo photo
+  reads from the OCR cache, a new photo or scanned page is refused with a clear message, and search is BM25 only.
+  Railway's Serverless mode sleeps the backend when idle, so the first request after a pause waits for a cold start.
 - Country coverage is the 8 main destinations. For any other country only Bangladesh law and ILO standards are checked, and the UI says so. Qatar's 2020 minimum wage and Kuwait's minimum wage have no official English text in the corpus yet, so the calculator shows no minimum for them.
 - The company database starts small (two companies). The format is designed for growth, but each entry needs a published document from the company itself.
 - Council members can discuss only what the analysis already verified; they cannot research new law. Deliberation adds four model calls per question (three responses and the ruling).
