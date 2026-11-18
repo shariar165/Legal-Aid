@@ -28,6 +28,9 @@ def test_non_epz_domestic_employment_uses_labour_act():
 def test_document_outside_the_niche_gets_a_scope_note():
     route = decide(DocFacts(doc_type="commercial"), "mutual non-disclosure agreement between two software companies")
     assert route.scope_note and "employment" in route.scope_note.en and route.scope_note.bn
+    # spec 22: the note names the product by its new name
+    assert route.scope_note.en.startswith("Jukti ") and route.scope_note.bn.startswith("যুক্তি ")
+    assert "Ain" not in route.scope_note.en and "কপাইলট" not in route.scope_note.bn
 
 
 @pytest.mark.parametrize("name", ["migrant_my_contract.txt", "migrant_sa_contract.txt", "rmg_dhaka_epz.txt", "long_migrant_msa.txt"])

@@ -12,6 +12,7 @@ import { AblationPanel, LedgerPanel, PrivacyPanel, TracePanel } from "./Panels";
 import { RiskCard } from "./RiskCard";
 import { CaseDesk } from "./desk/CaseDesk";
 import styles from "./counsel.module.css";
+import { Logo } from "@/components/brand/Logo";
 
 /* Case Desk is the default; the Contract tab folded into its left pane (spec 20). */
 type View = "desk" | "memo" | "council" | "checks";
@@ -69,10 +70,10 @@ export function CounselApp({ jobId }: { jobId: string }) {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/counsel" className={styles.brand} aria-label="Ain Copilot, start a new analysis">
-            <span className={styles.brandMark}>আ</span>
+          <Link href="/counsel" className={styles.brand} aria-label="যুক্তি · Jukti, start a new analysis">
+            <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
-              Ain Copilot <span>Counsel</span>
+              যুক্তি · Jukti <span>Counsel</span>
             </span>
           </Link>
           {result && (
@@ -401,7 +402,7 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
             <p className={styles.destLine}>
               <span className={styles.chip} data-tone="warn">
                 <Icon name="globe" size={13} />
-                Outside Ain&apos;s focus
+                Outside Jukti&apos;s focus
               </span>
               <span>{result.route.scope_note.en}</span>
             </p>

@@ -1,6 +1,6 @@
 ---
 name: rebuild-corpus
-description: Rebuild Ain Copilot's law corpus and embeddings after a source, excerpt marker, country or company entry changes. Use when corpus.jsonl must be regenerated or a corpus test fails after editing corpus/ or countries.yaml.
+description: Rebuild Jukti's (formerly Ain Copilot) law corpus and embeddings after a source, excerpt marker, country or company entry changes. Use when corpus.jsonl must be regenerated or a corpus test fails after editing corpus/ or countries.yaml.
 ---
 
 # Rebuild the law corpus

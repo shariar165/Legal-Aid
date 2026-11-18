@@ -1,6 +1,6 @@
 ---
 name: warm-cache
-description: Warm Ain Copilot's LLM replay cache with live Groq/OpenRouter calls after prompts, model ids or hero documents change, staying inside the free quota. Use before a demo or a Docker/HF Spaces build.
+description: Warm Jukti's (formerly Ain Copilot) LLM replay cache with live Groq/OpenRouter calls after prompts, model ids or hero documents change, staying inside the free quota. Use before a demo or a Docker/HF Spaces build.
 ---
 
 # Warm the LLM replay cache

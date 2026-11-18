@@ -1,9 +1,11 @@
 """HTTP flow: analyze -> SSE trace -> (human salary check) -> result -> DOCX -> ablation."""
 
+import io
 import json
 import time
 
 import pytest
+from docx import Document as Docx
 from fastapi.testclient import TestClient
 
 from ain import api, config
@@ -51,6 +53,10 @@ def test_sample_run_streams_trace_and_returns_result(client):
     assert len(r["risks"]) >= 3 and r["memo"]["issues"]
     docx = client.get(f"/api/jobs/{job['job_id']}/memo.docx")
     assert docx.status_code == 200 and docx.content[:2] == b"PK"
+    # spec 22: the product is যুক্তি · Jukti; internal ids keep `ain`
+    assert 'filename="jukti-memo-' in docx.headers["content-disposition"]
+    text = " ".join(par.text for par in Docx(io.BytesIO(docx.content)).paragraphs)
+    assert "Jukti" in text and "Ain Copilot" not in text
     ab = client.post(f"/api/jobs/{job['job_id']}/ablation").json()
     assert ab["citations_found"] > 0 and ab["supported"] < ab["citations_found"]
     assert ab["ain_verified"] > 0

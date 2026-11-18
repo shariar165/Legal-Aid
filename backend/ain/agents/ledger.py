@@ -460,8 +460,8 @@ def break_even(wage: WageCalc | None, promises: Promises | None, contract_months
     base = dict(monthly_net=wage.net, currency=wage.currency, steps=steps, horizon_months=contract_months, assumption=BREAK_EVEN_ASSUMPTION)
     if cost is None:
         return BreakEven(**base, note=L10n(
-            en=f"The cost is in {_cur(frm)} and the pay in {wage.currency}: enter an exchange rate to compute this. Ain uses no rate of its own.",
-            bn=f"খরচ {_cur(frm)}-এ, বেতন {wage.currency}-এ: হিসাব করতে একটি বিনিময় হার লিখুন। আইন কপাইলট নিজে কোনো হার ব্যবহার করে না।"))
+            en=f"The cost is in {_cur(frm)} and the pay in {wage.currency}: enter an exchange rate to compute this. Jukti uses no rate of its own.",
+            bn=f"খরচ {_cur(frm)}-এ, বেতন {wage.currency}-এ: হিসাব করতে একটি বিনিময় হার লিখুন। যুক্তি নিজে কোনো হার ব্যবহার করে না।"))
     used = promises.exchange_rate if _cur(frm) != _cur(wage.currency) else None
     base.update(cost=round(cost, 2), rate=used)
     # "once" deductions are taken from the first month's pay

@@ -195,8 +195,8 @@ export const DESK = {
     noteHint: { bn: "নাম ও ফোন নম্বর সংরক্ষণের আগে লুকানো হয়।", en: "Names and phone numbers are hidden before it is stored." },
     rate: { bn: "বিনিময় হার (ঐচ্ছিক)", en: "Exchange rate (optional)" },
     rateHint: {
-      bn: "দুই মুদ্রার অঙ্ক মেলাতে কেবল এই হার ব্যবহার হয়; আইন কপাইলটের নিজের কোনো হার নেই।",
-      en: "Amounts in two currencies are compared only through this rate; Ain has no rate of its own.",
+      bn: "দুই মুদ্রার অঙ্ক মেলাতে কেবল এই হার ব্যবহার হয়; যুক্তির নিজের কোনো হার নেই।",
+      en: "Amounts in two currencies are compared only through this rate; Jukti has no rate of its own.",
     },
     rateOne: { bn: "১", en: "1" },
     save: { bn: "সংরক্ষণ করুন", en: "Save" },

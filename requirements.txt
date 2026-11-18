@@ -1,4 +1,4 @@
-# Ain Copilot backend - install into the project venv:
+# Jukti backend - install into the project venv:
 #   .venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 #   .venv\Scripts\python -m pip install -r requirements.txt
 argon2-cffi==25.1.0

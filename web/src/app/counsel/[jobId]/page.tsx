@@ -4,7 +4,7 @@ import { AccountGate } from "@/components/counsel/Account";
 import { CounselApp } from "@/components/counsel/CounselApp";
 
 export const metadata: Metadata = {
-  title: "Legal memo · Ain Copilot",
+  title: "Legal memo · Jukti",
   description: "Verified legal risk memorandum with citation ledger, Virtual Bench and agent trace.",
 };
 

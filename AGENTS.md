@@ -1,4 +1,8 @@
-# AGENTS.md — working on Ain Copilot
+# AGENTS.md — working on যুক্তি · Jukti
+
+The product was renamed from Ain Copilot (spec 22). Rename **brand only**: user-visible text says যুক্তি / Jukti;
+internal ids keep `ain` (Python package, `AIN_*` env vars, `ain-copilot` MCP id and Vercel project, `ain://` URIs).
+The logo is generated: edit `web/scripts/build-logo.py`, never the path data by hand.
 
 Instructions for any coding agent (Claude Code, Cursor, Codex…) and for people. Read this before you change code.
 `README.md` explains what the product does; this file explains how we build it.

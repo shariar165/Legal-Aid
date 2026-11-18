@@ -429,7 +429,7 @@ class LLM:
             if route.fallbacks:
                 body["models"] = [model, *route.fallbacks]
             body["provider"] = {"data_collection": "deny"}
-            headers.update({"HTTP-Referer": "https://github.com/ain-copilot", "X-Title": "Ain Copilot"})
+            headers.update({"HTTP-Referer": "https://github.com/ain-copilot", "X-Title": "Jukti"})
         if prov.reasoning:
             body["reasoning"] = prov.reasoning
         if prov.name == "groq" and model.startswith("qwen/"):

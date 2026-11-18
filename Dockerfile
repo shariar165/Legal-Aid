@@ -1,4 +1,4 @@
-# Ain Copilot in one container: FastAPI backend (port 8000, internal) + Next.js frontend (port 7860, public).
+# Jukti (যুক্তি, formerly Ain Copilot) in one container: FastAPI backend (port 8000, internal) + Next.js frontend (port 7860, public).
 # The browser only talks to Next, which proxies /api to the backend, so the session cookie is first-party.
 #
 #   docker build -t ain-copilot .

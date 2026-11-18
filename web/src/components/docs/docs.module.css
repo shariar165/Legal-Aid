@@ -107,6 +107,9 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   color: var(--d-ink);
   text-decoration: none;

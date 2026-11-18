@@ -1,4 +1,4 @@
-/** Typed client for the Ain Copilot backend (FastAPI, see backend/ain/api.py). */
+/** Typed client for the Jukti backend (FastAPI, see backend/ain/api.py). */
 
 import type { L10n } from "./citizen/i18n";
 
@@ -468,7 +468,7 @@ export interface AnalysisResult {
   facts: Record<string, unknown>;
   /** absent on results saved before destination countries existed */
   destination?: Destination | null;
-  /** scope_note: set when the document is outside Ain's niche (no employment or migration terms) */
+  /** scope_note: set when the document is outside Jukti's niche (no employment or migration terms) */
   route: { packs: PackDecision[]; excluded: PackDecision[]; scope_note?: L10n | null };
   risks: Risk[];
   ledger: Verification[];

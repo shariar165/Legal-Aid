@@ -1,4 +1,4 @@
-# Ain Copilot backend only, lite (Railway): BM25 retrieval, no torch / EasyOCR, fits 0.5 GB RAM.
+# Jukti backend only, lite (Railway): BM25 retrieval, no torch / EasyOCR, fits 0.5 GB RAM.
 # The UI runs on Vercel and rewrites /api/* here (AIN_INTERNAL_API), so the session cookie stays first-party.
 # Build context = the folder made by scripts/railway_up.sh (code, corpus, demo files and the warmed LLM cache;
 # never .data, runs/ or .env). The full one-container image for HF Spaces is ../Dockerfile.

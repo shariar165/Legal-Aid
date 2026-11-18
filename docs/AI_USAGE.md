@@ -182,7 +182,7 @@ blocks any payload that still holds an identifier (HTTP 422 in chat; MCP tools r
 OpenRouter calls send `data_collection: deny` and use free endpoints only (enforced at config load). Hallucination
 control: agents may cite only retrieved citation_ids; 4 verification gates; the drafter and council strip any
 unverified id, including from the prose. Output validation with Pydantic schemas. Out-of-scope documents get an
-"outside Ain's focus" label instead of a pretend review. Accounts: argon2id, hashed HttpOnly session tokens,
+"outside Jukti's focus" label instead of a pretend review. Accounts: argon2id, hashed HttpOnly session tokens,
 Origin-checked CSRF, rate limits, owner-only access (404), Fernet encryption at rest, and user erasure.
 
 ## Frontend AI / visual app builders

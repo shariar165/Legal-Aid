@@ -3,7 +3,7 @@ import { AccountGate } from "@/components/counsel/Account";
 import { CounselStart } from "@/components/counsel/CounselStart";
 
 export const metadata: Metadata = {
-  title: "Counsel mode · Ain Copilot",
+  title: "Counsel mode · Jukti",
   description: "Verified legal risk memorandum with citation ledger, Virtual Bench and agent trace.",
 };
 

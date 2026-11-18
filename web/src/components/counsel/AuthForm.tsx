@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { safeNext, useSession } from "@/lib/useSession";
 import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
+import { Logo } from "@/components/brand/Logo";
 
 const COPY = {
   login: {
@@ -62,9 +63,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/" className={styles.brand} aria-label="Ain Copilot home">
-            <span className={styles.brandMark}>আ</span>
-            <span className={styles.brandText}>Ain Copilot</span>
+          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti home">
+            <Logo size={36} className={styles.brandMark} />
+            <span className={styles.brandText}>যুক্তি · Jukti</span>
           </Link>
         </div>
       </header>

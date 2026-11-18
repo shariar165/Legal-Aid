@@ -87,11 +87,11 @@ def decide(facts: DocFacts, text_lower: str) -> RouteDecision:
     return RouteDecision(packs=packs, excluded=excluded, scope_note=note)
 
 
-# Ain is built for one niche: employment and migrant-worker contracts (and the supply contracts that bind factories).
+# Jukti is built for one niche: employment and migrant-worker contracts (and the supply contracts that bind factories).
 SCOPE_NOTE = L10n(
-    en="Ain Copilot is built for employment and migrant-worker contracts. This document has no employment terms, so only "
+    en="Jukti is built for employment and migrant-worker contracts. This document has no employment terms, so only "
     "general checks ran (Contract Act, foreign exchange, data transfer). A commercial NDA, MSA or lease still needs a lawyer's full review.",
-    bn="আইন কপাইলট চাকরি ও প্রবাসী কর্মীর চুক্তির জন্য তৈরি। এই দলিলে চাকরির শর্ত নেই, তাই শুধু সাধারণ যাচাই হয়েছে "
+    bn="যুক্তি চাকরি ও প্রবাসী কর্মীর চুক্তির জন্য তৈরি। এই দলিলে চাকরির শর্ত নেই, তাই শুধু সাধারণ যাচাই হয়েছে "
     "(চুক্তি আইন, বৈদেশিক মুদ্রা, তথ্য স্থানান্তর)। বাণিজ্যিক চুক্তি বা ভাড়ার চুক্তি একজন আইনজীবীকে দিয়ে পুরোটা দেখিয়ে নিন।",
 )
 

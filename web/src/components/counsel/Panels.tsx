@@ -200,7 +200,7 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
           <span className={styles.judgeModel}>{data.plain_model}</span>
         </div>
         <div className={styles.vsCol} data-side="ain">
-          <span className={styles.vsLabel}>Ain Copilot · memo</span>
+          <span className={styles.vsLabel}>Jukti · memo</span>
           <span className={styles.vsBig}>100%</span>
           <span className={styles.vsSub}>
             of memo citations passed all gates ({data.ain_verified} of {data.ain_citations} proposed claims kept, {ainPct}%)
