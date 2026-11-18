@@ -29,6 +29,9 @@ npm run build && npm start   # production build; lighter on memory than dev
 | `AIN_INTERNAL_API` | build time | When set (the Docker image uses `http://127.0.0.1:8000`), `next.config.ts` rewrites `/api/*` to the backend and turns gzip off, so server-sent events stream. The browser then sees one origin, so the HttpOnly session cookie stays first-party. |
 | `NEXT_PUBLIC_HELPDESK_PHONE` | build time | Optional number for the citizen "call for help" button. |
 
+On Vercel (`ain-copilot` project, CLI deploys from this folder) the build env is `NEXT_PUBLIC_API_URL=""`, plus
+`AIN_INTERNAL_API` once a public backend exists; both are build-time, so redeploy after changing them.
+
 The backend's `AIN_CORS` must list the origin the browser uses: `http://localhost:3000` in development, or the public URL of a deployment. Its CSRF check rejects other origins.
 
 ## Notes for contributors

@@ -177,6 +177,13 @@ app_port: 7860
 
 Add `GROQ_API_KEY`, `OPENROUTER_API_KEY` and `AIN_DATA_KEY` (a Fernet key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) as Space **secrets**. The container reads `SPACE_HOST` and allows that origin itself. Share the direct `https://<user>-<space>.hf.space` link, not the huggingface.co page: that page shows the app in a cross-site iframe, where the session cookie is not sent (and the app refuses to be framed). Without persistent storage, accounts and saved analyses are lost when the Space restarts. The image ships the warmed LLM cache, so the hero documents answer instantly and without spending free-tier quota.
 
+**Vercel (frontend only)**: the Next.js app is deployed from `web/` with the Vercel CLI (`vercel deploy`, then
+`--prod` or `vercel promote`) to `https://ain-copilot.vercel.app`. Its build env sets `NEXT_PUBLIC_API_URL=""`, so
+the browser calls only its own origin. Set `AIN_INTERNAL_API` to the backend's public URL and Vercel rewrites
+`/api/*` there, which keeps the session cookie first-party. That variable is read at build time, so changing it needs
+a redeploy, and the backend's `AIN_CORS` must list the Vercel origin. Until `AIN_INTERNAL_API` is set, the pages load
+and `/api/*` returns 404 (the UI shows "server not reachable"). Spec: `docs/specs/2026-11-18-21-vercel-deploy.md`.
+
 ### Local development
 
 Prerequisites: Python 3.13 and Node 22. Use the same commands on Windows, macOS and Linux; only creating and activating the venv differs.
