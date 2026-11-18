@@ -57,17 +57,11 @@
 }
 
 .brandMark {
+  /* the <Logo /> svg (spec 22): its tile carries its own colour and corners */
   width: 36px;
   height: 36px;
-  border-radius: var(--r-sm);
-  background: var(--accent);
-  color: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--serif-bn);
-  font-weight: 700;
-  font-size: var(--fs-20);
+  flex: none;
+  display: block;
 }
 
 .brandName {

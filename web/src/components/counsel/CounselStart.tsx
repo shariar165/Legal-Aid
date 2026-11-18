@@ -7,6 +7,7 @@ import { api, type Destination, type Health, type Sample } from "@/lib/api";
 import { AccountMenu } from "./Account";
 import { Icon, type IconName } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
+import { Logo } from "@/components/brand/Logo";
 
 const TRUST: { icon: IconName; text: string }[] = [
   { icon: "shieldCheck", text: "Every citation checked against the statute book" },
@@ -66,10 +67,10 @@ export function CounselStart() {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/" className={styles.brand} aria-label="Ain Copilot home">
-            <span className={styles.brandMark}>আ</span>
+          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti home">
+            <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
-              Ain Copilot <span>Counsel</span>
+              যুক্তি · Jukti <span>Counsel</span>
             </span>
           </Link>
           {health && health.llm_mode !== "live" && (

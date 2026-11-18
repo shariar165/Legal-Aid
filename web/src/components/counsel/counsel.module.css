@@ -124,17 +124,14 @@
 }
 
 .brandMark {
+  /* the <Logo /> svg (spec 22): its tile carries its own colour and corners */
   width: 36px;
   height: 36px;
-  border-radius: var(--r);
-  background: var(--gold);
-  color: var(--gold-ink);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-noto-serif-bengali), serif;
-  font-size: var(--fs-20);
-  font-weight: 700;
-  line-height: 1;
+  flex: none;
+  display: block;
+  /* the tile is the same green as the bar: a faint ring keeps its edge (22% = the svg's 112/512 corner) */
+  border-radius: 22%;
+  box-shadow: 0 0 0 1px rgba(255, 253, 248, 0.22);
 }
 
 .brandText {

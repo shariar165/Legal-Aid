@@ -151,7 +151,7 @@ class PackDecision(BaseModel):
 class RouteDecision(BaseModel):
     packs: list[PackDecision]
     excluded: list[PackDecision] = Field(default_factory=list)
-    # set when the document is outside Ain's niche (no employment or migration terms): only general checks ran
+    # set when the document is outside Jukti's niche (no employment or migration terms): only general checks ran
     scope_note: L10n | None = None
 
     @property
@@ -268,7 +268,7 @@ Party = Literal["worker", "employer", "agency"]
 
 
 class ExchangeRate(BaseModel):
-    """1 `per` = `value` `currency`, e.g. 1 RM = 27.5 BDT. Only ever typed by the user: Ain has no rate of its own."""
+    """1 `per` = `value` `currency`, e.g. 1 RM = 27.5 BDT. Only ever typed by the user: Jukti has no rate of its own."""
 
     currency: str = Field(min_length=1, max_length=8)
     per: str = Field(min_length=1, max_length=8)

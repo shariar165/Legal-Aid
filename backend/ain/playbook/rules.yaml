@@ -1,4 +1,4 @@
-# Ain Copilot risk playbook.
+# Jukti (যুক্তি) risk playbook.
 # Every anchor `citation_id` must exist in the corpus and every `quote` must be a verbatim
 # substring of that section (tests/test_corpus.py enforces both). Section numbers here were
 # taken from the scraped text, never typed from memory.

@@ -9,6 +9,7 @@ import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
+import { Logo } from "@/components/brand/Logo";
 
 const T = STRINGS.home;
 const HOW_TO_ID = "how-to";
@@ -61,9 +62,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
     <div className={styles.screen}>
       <header className={styles.topBar}>
         <div className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            {STRINGS.brandMark[lang]}
-          </span>
+          <Logo size={36} className={styles.brandMark} />
           <span className={styles.brandName}>{STRINGS.brand[lang]}</span>
         </div>
         <div className={styles.langToggle} role="group" aria-label={STRINGS.langSwitch[lang]}>

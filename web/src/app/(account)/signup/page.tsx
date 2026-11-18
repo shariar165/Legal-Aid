@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AuthForm } from "@/components/counsel/AuthForm";
 
 export const metadata: Metadata = {
-  title: "Create account · Ain Copilot",
+  title: "Create account · Jukti",
   description: "Create an account to keep your contract analyses private and available on any device.",
 };
 

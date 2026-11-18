@@ -1,4 +1,4 @@
-"""HTTP API for the Ain Copilot UI.
+"""HTTP API for the Jukti (যুক্তি) UI.
 
     uvicorn ain.api:app --port 8000        (from backend/)
 """
@@ -94,7 +94,7 @@ SAMPLES = [
 
 PURGE_EVERY_S = 3600
 
-app = FastAPI(title="Ain Copilot API", version="1.0")
+app = FastAPI(title="Jukti API", version="1.0")
 # added first so CORS stays outermost: preflights are answered and a 403 still carries CORS headers
 app.add_middleware(auth.SecurityMiddleware, origins=config.cors_origins())
 app.add_middleware(
@@ -480,7 +480,7 @@ def memo(job_id: str) -> Response:
     return Response(
         memo_docx(r),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="ain-copilot-memo-{job_id}.docx"'},
+        headers={"Content-Disposition": f'attachment; filename="jukti-memo-{job_id}.docx"'},
     )
 
 

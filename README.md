@@ -1,4 +1,10 @@
-# আইন কপাইলট · Ain Copilot
+<img src="web/src/app/icon.svg" width="72" alt="যুক্তি logo: the matra of যু is the beam of a balance">
+
+# যুক্তি · Jukti
+
+*যুক্তি* (jukti) is Bangla for reasoning, the argued case. The logo's balance beam is the *matra*, the headline that every Bangla letter hangs from: the contract is weighed against the law, and both sides are shown.
+
+*Formerly Ain Copilot. Internal identifiers keep the old name so deploys and MCP configs keep working: the `ain` Python package, `AIN_*` env vars, the `ain-copilot` MCP server id, `ain://` resource URIs, the Docker tag and the `ain-copilot` Vercel project.*
 
 **A multi-agent legal copilot for Bangladesh.** It reads a raw contract (PDF, DOCX, text, or a phone photo in Bangla or English) and finds non-obvious compliance risks. It then writes a memorandum in which **every legal claim has been verified against official statute text**. One engine serves two views:
 
@@ -13,9 +19,9 @@
 
 ### Scope: a focused niche, on purpose
 
-Ain is built for one kind of document: **employment and migrant-worker contracts**, plus the buyer–supplier agreements that bind Bangladeshi factories (RMG, EPZ). About a million Bangladeshis go abroad for work each year, and most sign an English contract they cannot read. Garment workers' rights depend on whether the factory is inside an EPZ. Its playbook, corpus and verifier cover exactly that ground: labour, migration, trafficking, wage, FX and data law of Bangladesh, the ILO conventions and the law of the 8 main destination countries.
+Jukti is built for one kind of document: **employment and migrant-worker contracts**, plus the buyer–supplier agreements that bind Bangladeshi factories (RMG, EPZ). About a million Bangladeshis go abroad for work each year, and most sign an English contract they cannot read. Garment workers' rights depend on whether the factory is inside an EPZ. Its playbook, corpus and verifier cover exactly that ground: labour, migration, trafficking, wage, FX and data law of Bangladesh, the ILO conventions and the law of the 8 main destination countries.
 
-A general commercial document (NDA, MSA, lease) still runs, but only the general checks apply: Contract Act, foreign exchange and data transfer. The Router marks it **"Outside Ain's focus"** in both views instead of pretending to a full review.
+A general commercial document (NDA, MSA, lease) still runs, but only the general checks apply: Contract Act, foreign exchange and data transfer. The Router marks it **"Outside Jukti's focus"** in both views instead of pretending to a full review.
 
 ---
 
@@ -169,7 +175,7 @@ docker run -p 7860:7860 --env-file .env ain-copilot     # http://localhost:7860 
 
 ```yaml
 ---
-title: Ain Copilot
+title: Jukti
 sdk: docker
 app_port: 7860
 ---
@@ -250,7 +256,7 @@ Every `/api/jobs/{id}/…` route answers only the job's owner; anyone else gets 
 
 ### MCP server (`backend/ain/mcp_server.py`)
 
-Ain is also a [Model Context Protocol](https://modelcontextprotocol.io) server, so any MCP client (Claude Desktop, Claude Code, Cursor…) can use the verified-law engine as tools. It is built on the official `mcp` Python SDK (v2, `MCPServer`) and reuses the engine as it is: the same retrieval, gates and PII refusal.
+Jukti is also a [Model Context Protocol](https://modelcontextprotocol.io) server, so any MCP client (Claude Desktop, Claude Code, Cursor…) can use the verified-law engine as tools. It is built on the official `mcp` Python SDK (v2, `MCPServer`) and reuses the engine as it is: the same retrieval, gates and PII refusal.
 
 | Kind | Name | What it does |
 |---|---|---|
@@ -315,7 +321,7 @@ The tests cover:
 - end-to-end runs on both hero documents: ≥3 risks, 100% of memo citations verified, ≥1 claim dropped, ≥1 off-playbook risk;
 - off-playbook depth: every hero document (Malaysia, Saudi Arabia, Dhaka EPZ) yields ≥3 Adversary risks that the duplicate filter accepts, and restated playbook findings are dropped;
 - long documents: the ~25-page sample segments into clauses no longer than 2,500 characters; every Adversary part call stays within its budget; the reduce step hears from every part, splits into a tree when the parts do not fit one call, and finds the cross-part passport + absconding trap, verified; a part or reduce call that fails on every route is skipped and shown in the trace instead of failing the analysis; PDF page furniture is stripped; the token bucket paces and re-syncs;
-- scope: a document without employment terms gets the "outside Ain's focus" note, and niche documents do not;
+- scope: a document without employment terms gets the "outside Jukti's focus" note, and niche documents do not;
 - ILO supervisory comments: verbatim, free of the source PDF's page furniture, labelled interpretive, and passing G4 as "not binding";
 - the full HTTP flow including SSE, the human salary check and the council endpoints.
 
@@ -333,7 +339,7 @@ The tests cover:
 3. **Proof, 30 s.** Open **Verification → Compare with a plain chatbot**: the plain prompt's citations mostly fail (invented sections, repealed Acts, the wrong regime), while the memo's citations are 100% verified. Download the DOCX.
 
 ## Honest limitations
-- **Narrow by design.** The playbook covers employment, migration and factory supply contracts. A commercial NDA, MSA or lease gets only the general Contract Act, FX and data checks, and is labelled as outside Ain's focus. The Adversary still runs on it, but over a corpus built for labour law.
+- **Narrow by design.** The playbook covers employment, migration and factory supply contracts. A commercial NDA, MSA or lease gets only the general Contract Act, FX and data checks, and is labelled as outside Jukti's focus. The Adversary still runs on it, but over a corpus built for labour law.
 - **No case law yet.** The corpus has statutes, regulations, voluntary standards and three ILO supervisory (CEACR) observations. It has no court judgments: no Bangladesh High Court or Appellate Division rulings, and no CourtListener or Caselaw Access Project data. Adding judgments needs verbatim official text and a citation format, and is the next corpus step.
 - **Long documents on the free tier are slow, not broken.** The ~25-page sample needs about 10 Adversary part calls plus a reduce step, and Groq's free tier allows ~8,000 tokens a minute per model. The run therefore queues for several minutes; it does not fail. The sample contract is fictional and generated by `scripts/make_long_sample.py`.
 - The 2026 Labour Act amendments are read from bdlaws' consolidated text. The Bangla text is authoritative, and English propositions are checked against it by the judge models.
@@ -354,7 +360,7 @@ The tests cover:
 - The Virtual Bench's own peer review has no evidence gate yet: this one covers the council's deliberation only.
 - **Four Ledgers is off by default.** With the flag on, the Counsel Case Desk shows it (spec 20); with the flag off, the desk shows only paper and law. What the worker was told is typed in as structured fields: nothing reads chats, voice notes or the free-text note, which is only redacted and stored. The টাকা ledger (what was actually paid, from payslips) is in the data model but always empty until the payslip spec: the Case Desk's paid cells are an empty state, and its third bar is take-home **on paper**, not pay received. Citizen's money hero uses the same three bars, and its "What did the agent tell you?" step asks four typed questions (salary, no deductions, ticket, passport) and shows the backend's mismatches as given; a promise gap stays *not verified yet* there, because Citizen has no Verify button (verifying makes model calls).
 - Four Ledgers links a law cell to a term through a fixed playbook rule (minimum wage, deduction cap, recruitment fee, passport). Hours, ticket and contract-length rows show law only when a verified risk sits on that clause, and even then they raise no `paper_vs_law` mismatch: a risk on the same clause can be about another part of it.
-- The claim projection is arithmetic under the cited law: a projection over the contract term at the rate on paper. It is not money owed, and not a forecast of what a court, BMET or an employer would pay. It counts the minimum-wage shortfall over the contract term and the recruitment costs to be taken from wages, and drops any line whose risk is not verified. Every line is `projected`: an `accrued` figure (months actually worked) needs payslips, so `accrued_total` is always empty. Break-even is a minimum: it counts the take-home pay on paper month by month, as if all of it were sent home. Ain has no exchange rate of its own: amounts in two currencies are compared only through a rate the user types.
+- The claim projection is arithmetic under the cited law: a projection over the contract term at the rate on paper. It is not money owed, and not a forecast of what a court, BMET or an employer would pay. It counts the minimum-wage shortfall over the contract term and the recruitment costs to be taken from wages, and drops any line whose risk is not verified. Every line is `projected`: an `accrued` figure (months actually worked) needs payslips, so `accrued_total` is always empty. Break-even is a minimum: it counts the take-home pay on paper month by month, as if all of it were sent home. Jukti has no exchange rate of its own: amounts in two currencies are compared only through a rate the user types.
 - The paper facts the Four Ledgers compare (contract length, hours a day, who pays the ticket out, who keeps the passport) are read by regular expressions, clause by clause and sentence by sentence, in English and a few Bangla words. They skip probation and notice periods, overtime limits, Ramadan hours and return tickets, and give no value at all when two readings disagree. They do not understand sentences: unusual wording can still be misread or missed, and a missed fact leaves that row's paper cell empty. Each fact names the clause it came from, so it can be checked. The contract length drives every projected amount, so the user can confirm or correct it (`POST /api/jobs/{id}/term`, no model call), and the projection says whether its term was confirmed by the user, read from the contract, or taken from what the worker was told.
 - Adding or changing promises later (`POST /api/jobs/{id}/promises`) updates the ledger, the risk list and the stats but does not redraft the memo, because that would need a model call (`memo_includes_promises` says so). No gate runs on that path, so a new `PB-PROMISE-GAP` risk stays out of the risk list as `not_verified_yet`. It adds no severity until `POST /api/jobs/{id}/promises/verify` runs the 4 gates on it, which takes one judge call (the Virtual Bench as well, if its severity calls for one).
 - The pressure trap scores each seat on its Groq backup model by default, like the rest of `eval/bench_quality.py`. The `--pressure-routing config` run uses the seats' own routing, but upstream rate limits on the free models sent many calls to the backup anyway: of 18 answers each, Sunny gave 0 on Gemma, Grey 7 on Xing 4.0 and Regal 15 on dots.3. Only Regal's row is mostly its own model.

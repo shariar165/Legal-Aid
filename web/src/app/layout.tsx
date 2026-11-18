@@ -16,7 +16,7 @@ const notoSerifBengali = Noto_Serif_Bengali({
 });
 
 export const metadata: Metadata = {
-  title: "আইন কপাইলট · Ain Copilot",
+  title: "যুক্তি · Jukti",
   description: "চুক্তির ছবি তুলুন — সহজ ভাষায় জানুন কোথায় বিপদ আছে। Contract safety check for migrant workers.",
 };
 

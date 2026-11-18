@@ -1,4 +1,4 @@
-# Ain Copilot backend, lite deployment (Railway, 0.5 GB RAM). Same pins as ../requirements.txt, minus:
+# Jukti backend, lite deployment (Railway, 0.5 GB RAM). Same pins as ../requirements.txt, minus:
 #   sentence-transformers / torch  -> run with AIN_DENSE=0 (BM25 only, bilingual queries)
 #   easyocr                        -> only pre-cached photos (demo/ocr_cache) can be read; others get OcrUnavailable
 #   pytest*                        -> tests run locally

@@ -12,8 +12,7 @@ export function formatNumber(n: number, lang: Lang): string {
 }
 
 export const STRINGS = {
-  brand: { bn: "আইন কপাইলট", en: "Ain Copilot" },
-  brandMark: { bn: "আ", en: "আ" },
+  brand: { bn: "যুক্তি", en: "Jukti" },
   langSwitch: { bn: "ভাষা", en: "Language" },
 
   home: {

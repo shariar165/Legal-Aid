@@ -3,7 +3,7 @@
 The plain model gets the (redacted) contract and one instruction - list the risks and cite the
 statutes. No retrieval, no playbook, no verification. Its citations are then resolved against the
 corpus and passed through existence, currency and entailment. The split screen in the UI shows
-how many of its citations survive versus Ain Copilot's.
+how many of its citations survive versus Jukti's.
 """
 
 from __future__ import annotations

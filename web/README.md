@@ -1,6 +1,6 @@
-# Ain Copilot web app
+# যুক্তি · Jukti web app
 
-The Next.js 16 front end of Ain Copilot (App Router, Cache Components on). It has two modes over one backend:
+The Next.js 16 front end of Jukti, formerly Ain Copilot (App Router, Cache Components on). It has two modes over one backend:
 
 | Route | Who | What |
 |---|---|---|

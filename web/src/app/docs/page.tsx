@@ -3,10 +3,11 @@ import Link from "next/link";
 import { LiveStatus } from "@/components/docs/LiveStatus";
 import s from "@/components/docs/docs.module.css";
 import { inter, sourceSerif } from "@/lib/fonts";
+import { Logo } from "@/components/brand/Logo";
 
 export const metadata: Metadata = {
-  title: "Docs · Ain Copilot",
-  description: "How Ain Copilot works: architecture, AI stack, MCP server, evaluation, safety, and the live system status.",
+  title: "Docs · Jukti",
+  description: "How Jukti works: architecture, AI stack, MCP server, evaluation, safety, and the live system status.",
 };
 
 const NAV = [
@@ -37,7 +38,8 @@ export default function DocsPage() {
       <header className={s.top}>
         <div className={s.topInner}>
           <Link href="/" className={s.brand}>
-            আইন Ain Copilot
+            <Logo size={28} />
+            যুক্তি · Jukti
           </Link>
           <nav className={s.nav} aria-label="On this page">
             {NAV.map(([id, label]) => (
@@ -54,7 +56,7 @@ export default function DocsPage() {
           <p className={s.eyebrow}>Docs · pitch · system status</p>
           <h1>A legal copilot whose citations can&apos;t be made up.</h1>
           <p className={s.lede}>
-            About a million Bangladeshis go abroad for work each year, and most sign an English contract they cannot read. Ain reads the contract (a PDF, a Word file or a phone photo, in Bangla or
+            About a million Bangladeshis go abroad for work each year, and most sign an English contract they cannot read. Jukti (যুক্তি, Bangla for “reasoning”) reads the contract (a PDF, a Word file or a phone photo, in Bangla or
             English), finds the non-obvious risks, and writes a memo in which every legal claim has been checked against official statute text by four gates and a three-judge AI bench.
           </p>
           <div className={s.ctas}>
@@ -154,7 +156,7 @@ export default function DocsPage() {
         <section id="mcp" className={s.section}>
           <h2>MCP server</h2>
           <p className={s.sub}>
-            Ain is a Model Context Protocol server too, so Claude Desktop, Claude Code, Cursor or any MCP client can use the verified-law engine as tools. It is built on the official Python SDK and reuses the
+            Jukti is a Model Context Protocol server too, so Claude Desktop, Claude Code, Cursor or any MCP client can use the verified-law engine as tools. It is built on the official Python SDK and reuses the
             engine as it is.
           </p>
           <div className={s.grid2}>
@@ -279,7 +281,7 @@ Authorization: Bearer $AIN_MCP_TOKEN`}</pre>
           <h2>Honest limitations</h2>
           <div className={s.card}>
             <ul>
-              <li>Narrow by design: employment, migration and factory supply contracts. Other documents get only general checks and are labelled as outside Ain&apos;s focus.</li>
+              <li>Narrow by design: employment, migration and factory supply contracts. Other documents get only general checks and are labelled as outside Jukti&apos;s focus.</li>
               <li>No court judgments yet: statutes, regulations, voluntary standards and three ILO CEACR observations.</li>
               <li>Free-tier limits make long documents slow (minutes), not broken.</li>
               <li>The gold set covers our own seeded demo documents: a regression check, not a benchmark.</li>

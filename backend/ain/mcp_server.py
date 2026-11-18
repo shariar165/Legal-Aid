@@ -1,4 +1,4 @@
-"""Ain Copilot as an MCP server: the verified-law tools, for any MCP client (Claude Desktop, Claude Code, Cursor…).
+"""Jukti (যুক্তি, formerly Ain Copilot) as an MCP server: the verified-law tools, for any MCP client (Claude Desktop, Claude Code, Cursor…).
 
     python -m ain.mcp_server               stdio (local: register it in .mcp.json / claude_desktop_config.json)
     POST /api/mcp                          streamable HTTP, mounted in ain/api.py (needs AIN_MCP_TOKEN)
@@ -31,7 +31,7 @@ MAX_CONTRACT_CHARS = 200_000
 
 server = MCPServer(
     name="ain-copilot",
-    title="Ain Copilot: verified Bangladesh labour and migration law",
+    title="Jukti: verified Bangladesh labour and migration law",
     version="1.0",
     instructions=(
         "Statutes, ILO standards and destination-country labour law for Bangladeshi workers, as verbatim official "
@@ -45,7 +45,7 @@ def _refuse_pii(**fields: str | None) -> None:
     for name, text in fields.items():
         if text and (hits := find_pii(text)):
             kinds = ", ".join(sorted({k for k, _ in hits}))
-            raise ToolError(f"`{name}` contains personal data ({kinds}). Redact it first; Ain never sends identifiers to a model.")
+            raise ToolError(f"`{name}` contains personal data ({kinds}). Redact it first; Jukti never sends identifiers to a model.")
 
 
 def _brief(s: Section, score: float | None = None) -> dict:
@@ -71,7 +71,7 @@ def _route_for(packs: list[str], reason: str) -> RouteDecision:
 
 @server.tool()
 def search_law(query: str, packs: list[str] | None = None, k: int = 5, include_repealed: bool = False) -> list[dict]:
-    """Hybrid search (BM25 + multilingual dense, RRF fusion) over Ain's corpus of verbatim official law.
+    """Hybrid search (BM25 + multilingual dense, RRF fusion) over Jukti's corpus of verbatim official law.
 
     Works in English or Bangla; for the best recall ask in both. `packs` narrows the search, e.g. ["bd_labour"],
     ["bd_epz"] (factories inside an EPZ), ["bd_migration"], ["my_employment"], ["sa_labour"], ["ilo"],
@@ -104,7 +104,7 @@ def get_section(citation_id: str) -> dict:
 
 @server.tool()
 async def verify_citation(citation_id: str, proposition: str, quote: str | None = None) -> dict:
-    """Check one legal claim with Ain's verifier: G1 the section exists, G2 the quote is verbatim (fuzzy, if given),
+    """Check one legal claim with Jukti's verifier: G1 the section exists, G2 the quote is verbatim (fuzzy, if given),
     G3 a judge model decides from the section text alone whether it supports the proposition, G4 the law is still in
     force. Verdict: verified / partial / dropped. Whether the section applies to a particular document (e.g. the
     Labour Act inside an EPZ) is decided by analyze_contract, which knows the document."""
@@ -138,7 +138,7 @@ def wage_truth(salary: float, country: str, deductions: list[dict] | None = None
 
 @server.tool()
 async def analyze_contract(text: str, country: str | None = None) -> dict:
-    """Run the whole Ain pipeline on a contract: ingestion, PII Shield, jurisdiction router, playbook + adversarial
+    """Run the whole Jukti pipeline on a contract: ingestion, PII Shield, jurisdiction router, playbook + adversarial
     counsel, wage check, 4-gate verifier with the Virtual Bench, critic and memo. Personal data is redacted before
     any model call. Returns the risks with only their verified citations, the routed law packs and the wage check.
     On free-tier keys a long contract takes minutes."""
@@ -196,13 +196,13 @@ def section_text(citation_id: str) -> str:
 
 @server.resource("ain://playbook/rules", name="risk-playbook", mime_type="application/yaml")
 def playbook_rules() -> str:
-    """Ain's YAML risk playbook: each rule's trigger, severity and anchored citations."""
+    """Jukti's YAML risk playbook: each rule's trigger, severity and anchored citations."""
     return "\n---\n".join(p.read_text(encoding="utf-8") for p in sorted(config.PLAYBOOK_DIR.glob("*.yaml")))
 
 
 @server.prompt()
 def review_contract(contract_excerpt: str) -> str:
-    """Review a clause or contract with Ain's tools, citing only verified law."""
+    """Review a clause or contract with Jukti's tools, citing only verified law."""
     return (
         "Review this contract text for the worker's risks under Bangladesh law, the ILO standards and the law of the "
         "country of work. Use search_law (ask in English and Bangla), read each candidate with get_section, and run "
