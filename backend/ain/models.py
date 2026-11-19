@@ -88,9 +88,10 @@ class DocFacts(BaseModel):
     # paper terms the Four Ledgers compare with what the worker was told (regex only, see ingestion.extract_facts)
     contract_months: int | None = None
     hours_per_day: int | None = None
+    hours_per_week: int | None = None  # only when the contract states it; never days × hours
     ticket_paid_by: Literal["worker", "employer"] | None = None
     passport_held_by: Literal["worker", "employer"] | None = None
-    # fact name (contract_months | hours_per_day | ticket | passport) -> the clause it was read from
+    # fact name (contract_months | hours_per_day | hours_per_week | ticket | passport) -> the clause it was read from
     fact_clauses: dict[str, str] = Field(default_factory=dict)
     contract_months_confirmed: bool = False  # the user confirmed or corrected the term (POST /term), like the OCR salary
 

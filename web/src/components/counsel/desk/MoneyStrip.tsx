@@ -1,40 +1,70 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { api, type AnalysisResult } from "@/lib/api";
 import { DESK, num, type Lang } from "@/lib/desk/i18n";
 import { Icon } from "@/components/shared/Icons";
 import { citeName, money } from "./util";
 import s from "./desk.module.css";
 
-/* Under the hero: the projected claim with the contract term it runs over (confirm or correct it, no model call),
-   the promise gap and the break-even. Every figure and label is the backend's own. */
+/* Under the hero, one compact row: each figure with a short tag (projection, worker's account, minimum), the contract
+   term with its confirm control, then "details" for the full explanations. Every figure and label is the backend's
+   own. (The button for what was said sits with the hero's chips, in CaseDesk.) */
 
 interface Props {
   result: AnalysisResult;
   lang: Lang;
   reload: () => Promise<void>;
-  onAddSaid: () => void;
-  formOpen: boolean;
 }
 
-export function MoneyStrip({ result, lang, reload, onAddSaid, formOpen }: Props) {
+export function MoneyStrip({ result, lang, reload }: Props) {
   const T = DESK.money;
   const four = result.four_ledgers!;
   const cp = four.claim_projection;
   const gap = four.promise_gap;
   const be = four.break_even;
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
 
   return (
     <div className={s.strip}>
-      <div className={s.stripCard} data-wide="true">
-        <div className={s.stripHead}>
-          <span className={s.stripTitle}>{T.projected[lang]}</span>
+      <div className={s.stripRow}>
+        <span className={s.fig}>
+          <span className={s.figLabel}>{T.claimShort[lang]}</span>
+          <b className={s.figNum}>{cp.lines.length > 0 ? money(cp.currency ?? "", cp.projected_total) : "–"}</b>
           <span className={s.tag}>{T.projection[lang]}</span>
-        </div>
-        {cp.lines.length > 0 ? (
-          <>
-            <span className={s.stripNum}>{money(cp.currency ?? "", cp.projected_total)}</span>
+        </span>
+
+        {gap && (
+          <span className={s.fig}>
+            <span className={s.figLabel}>{T.gap[lang]}</span>
+            <b className={s.figNum}>{money(gap.currency, gap.total)}</b>
+            <span className={s.tag} data-tone="quiet">
+              {T.account[lang]}
+            </span>
+          </span>
+        )}
+
+        {be && (
+          <span className={s.fig}>
+            <span className={s.figLabel}>{T.breakEvenShort[lang]}</span>
+            <b className={s.figNum}>{be.months !== null ? T.atLeast(be.months, lang) : T.notWithin[lang]}</b>
+            {be.is_minimum && be.months !== null && <span className={s.tag}>{T.minimum[lang]}</span>}
+          </span>
+        )}
+
+        <TermControl result={result} lang={lang} reload={reload} />
+
+        <button type="button" className={`${s.btnOnDeepQuiet} ${s.detailsBtn}`} aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen((o) => !o)}>
+          {open ? T.detailsHide[lang] : T.details[lang]}
+          <Icon name="chevronDown" size={16} strokeWidth={2.5} className={s.chev} />
+        </button>
+      </div>
+
+      <div id={detailsId} className={s.stripDetails} hidden={!open}>
+        <div className={s.detail}>
+          <span className={s.figLabel}>{T.projected[lang]}</span>
+          {cp.lines.length > 0 ? (
             <ul className={s.stripLines}>
               {cp.lines.map((l) => (
                 <li key={`${l.risk_id}-${l.citation_id}`}>
@@ -45,52 +75,37 @@ export function MoneyStrip({ result, lang, reload, onAddSaid, formOpen }: Props)
                 </li>
               ))}
             </ul>
-          </>
-        ) : (
-          <p className={s.stripNote}>{T.noLines[lang]}</p>
-        )}
-        <p className={s.stripNote}>{cp.label[lang]}</p>
-        <TermControl result={result} lang={lang} reload={reload} />
-      </div>
-
-      {gap && (
-        <div className={s.stripCard}>
-          <div className={s.stripHead}>
-            <span className={s.stripTitle}>{T.gap[lang]}</span>
-          </div>
-          <span className={s.stripNum}>{money(gap.currency, gap.total)}</span>
-          <p className={s.stripNote}>{gap.label[lang]}</p>
-        </div>
-      )}
-
-      {be && (
-        <div className={s.stripCard}>
-          <div className={s.stripHead}>
-            <span className={s.stripTitle}>{T.breakEven[lang]}</span>
-            {be.is_minimum && be.months !== null && <span className={s.tag}>{T.minimum[lang]}</span>}
-          </div>
-          <span className={s.stripNum}>{be.months !== null ? T.atLeast(be.months, lang) : T.notWithin[lang]}</span>
-          {be.rate && (
-            <span className={s.tag} data-tone="rate">
-              {T.rate[lang]}: 1 {be.rate.per} = {be.rate.value} {be.rate.currency}
-            </span>
+          ) : (
+            <p className={s.stripNote}>{T.noLines[lang]}</p>
           )}
-          {be.note && <p className={s.stripNote}>{be.note[lang]}</p>}
-          {be.assumption && <p className={s.stripNote}>{be.assumption[lang]}</p>}
+          <p className={s.stripNote}>{cp.label[lang]}</p>
+          {cp.term && <p className={s.stripNote}>{cp.term.label[lang]}</p>}
         </div>
-      )}
-
-      {!formOpen && (
-        <button type="button" className={s.addSaid} onClick={onAddSaid}>
-          <Icon name={four.promises ? "repeat" : "plus"} size={18} strokeWidth={2.25} />
-          {four.promises ? DESK.hero.editSaid[lang] : DESK.hero.addSaid[lang]}
-        </button>
-      )}
+        {gap && (
+          <div className={s.detail}>
+            <span className={s.figLabel}>{T.gap[lang]}</span>
+            <p className={s.stripNote}>{gap.label[lang]}</p>
+          </div>
+        )}
+        {be && (
+          <div className={s.detail}>
+            <span className={s.figLabel}>{T.breakEven[lang]}</span>
+            {be.rate && (
+              <span className={s.tag} data-tone="rate">
+                {T.rate[lang]}: 1 {be.rate.per} = {be.rate.value} {be.rate.currency}
+              </span>
+            )}
+            {be.note && <p className={s.stripNote}>{be.note[lang]}</p>}
+            {be.assumption && <p className={s.stripNote}>{be.assumption[lang]}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/* The term the projection runs over, with where it came from; confirm or correct it like the OCR salary. */
+/* The term the projection runs over; confirm or correct it like the OCR salary. Stays visible in the compact row;
+   where the months came from is in the details. */
 function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: Lang; reload: () => Promise<void> }) {
   const T = DESK.money;
   const term = result.four_ledgers!.claim_projection.term ?? null;
@@ -120,28 +135,23 @@ function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: L
   };
 
   return (
-    <div className={s.term}>
-      <span className={s.termLabel}>{T.term[lang]}</span>
+    <span className={s.term}>
+      <span className={s.figLabel}>{T.term[lang]}</span>
       {!editing && term ? (
         <>
           <span className={s.termValue}>
             {num(term.months, lang)} {T.months[lang]}
-            <span className={s.termSource} data-source={term.source}>
-              {term.source === "user" && <Icon name="check" size={14} strokeWidth={2.75} />}
-              {term.label[lang]}
-            </span>
+            {term.source === "user" && <Icon name="check" size={16} strokeWidth={2.75} label={term.label[lang]} />}
           </span>
-          <span className={s.termActions}>
-            {term.source !== "user" && (
-              <button type="button" className={s.btnOnDeep} disabled={busy} onClick={() => void send(term.months)}>
-                <Icon name="check" size={16} strokeWidth={2.5} />
-                {T.confirm[lang]}
-              </button>
-            )}
-            <button type="button" className={s.btnOnDeepQuiet} disabled={busy} onClick={() => setEditing(true)}>
-              {T.change[lang]}
+          {term.source !== "user" && (
+            <button type="button" className={s.btnOnDeep} disabled={busy} onClick={() => void send(term.months)} title={term.label[lang]}>
+              <Icon name="check" size={16} strokeWidth={2.5} />
+              {T.confirm[lang]}
             </button>
-          </span>
+          )}
+          <button type="button" className={s.btnOnDeepQuiet} disabled={busy} onClick={() => setEditing(true)}>
+            {T.change[lang]}
+          </button>
         </>
       ) : (
         <form className={s.termForm} onSubmit={submit}>
@@ -162,10 +172,10 @@ function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: L
         </form>
       )}
       {error && (
-        <p className={s.stripError} role="alert">
+        <span className={s.stripError} role="alert">
           {error}
-        </p>
+        </span>
       )}
-    </div>
+    </span>
   );
 }

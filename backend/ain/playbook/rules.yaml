@@ -174,6 +174,26 @@
   action: {bn: "মোট কর্তন লিখিতভাবে কমাতে বলুন।", en: "Ask in writing for the total deductions to be reduced."}
   mitigation: "Total deductions in any month shall not exceed {cap}% of the wages earned in that month, and shall be limited to deductions permitted by the labour law of {country}."
 
+- id: PB-HOURS
+  category: labour_standard
+  severity: high
+  # only the countries with an `hours_limit` in ain/countries.yaml (the figures a test checks against the section)
+  packs: [my_employment]
+  flag: ledger.enabled  # the hours row's law cell (ledger.RULE_FOR); off: in no prompt, so cache keys stay as they were
+  title: {en: "Normal working hours exceed {country_of} legal limit", bn: "স্বাভাবিক কাজের সময় {country_of} আইনের সীমা ছাড়িয়ে যায়"}
+  trigger:
+    fact: hours_over_limit
+  question: Does the contract require more normal hours of work a day or a week than the law allows?
+  pack_anchors:
+    my_employment:
+      - citation_id: MY-EA-1955-s60A
+        proposition: Under the Malaysian Employment Act 1955 s.60A(1), an employee shall not be required under his contract of service to work more than eight hours in one day or more than forty-five hours in one week, except as the section provides.
+        quote: "more than eight hours in one day; (c) in excess of a spread over period of ten hours in one day; (d) more than forty-five hours in one week"
+  why_non_obvious: Long days written as the "normal working hours" look agreed when the worker signs; the Act limits what a contract of service may require, so the hours beyond it are overtime, not the normal day.
+  citizen_line: {bn: "চুক্তিতে লেখা স্বাভাবিক কাজের সময় {country_of} আইনের সীমার চেয়ে বেশি।", en: "The normal working hours in the contract are longer than {country_of} law allows."}
+  action: {bn: "স্বাভাবিক কাজের সময় আইনের সীমার মধ্যে লিখে দিতে বলুন; বাড়তি সময় ওভারটাইম হিসেবে, মজুরিসহ লিখতে বলুন।", en: "Ask for normal hours within the legal limit in writing, with any extra time written as paid overtime."}
+  mitigation: "The Worker's normal hours of work shall not exceed the limits set by the labour law of {country}. Any work beyond the normal hours is overtime, recorded and paid at the overtime rate that law prescribes."
+
 - id: PB-CLAIM-WAIVER
   category: access_to_justice
   severity: high

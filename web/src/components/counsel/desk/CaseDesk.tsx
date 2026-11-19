@@ -102,18 +102,18 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
             <>
               <HeroChip n={four.rows.length} label={DESK.hero.terms[lang]} lang={lang} />
               <HeroChip n={mismatches} label={DESK.hero.mismatches[lang]} lang={lang} />
+              {!formOpen && (
+                <button type="button" className={s.saidBtn} onClick={() => setFormOpen(true)}>
+                  <Icon name={four.promises ? "repeat" : "plus"} size={16} strokeWidth={2.25} />
+                  {four.promises ? DESK.hero.editSaid[lang] : DESK.hero.addSaid[lang]}
+                </button>
+              )}
             </>
           )
         }
       >
-        {four ? (
-          <MoneyStrip result={result} lang={lang} reload={reload} onAddSaid={() => setFormOpen(true)} formOpen={formOpen} />
-        ) : (
-          <p className={s.flagOff}>
-            <Icon name="info" size={16} />
-            {DESK.hero.flagOff[lang]}
-          </p>
-        )}
+        {/* flag off or an older result: nothing about the ledgers at all */}
+        {four && <MoneyStrip result={result} lang={lang} reload={reload} />}
       </MoneyHero>
 
       {four && formOpen && (

@@ -43,6 +43,7 @@
   label: Malaysia Employment Act 1955 · Minimum Wages Order 2024
   min_wage: {amount: 1700, citation_id: MY-MWO-2024-p3}
   deduction_cap: {pct: 50, citation_id: MY-EA-1955-s24}
+  hours_limit: {day: 8, week: 45, citation_id: MY-EA-1955-s60A}  # s.60A(1)(b) and (d); PB-HOURS
   help: {en: "Labour Wing, Bangladesh High Commission in Kuala Lumpur", bn: "শ্রম উইং, বাংলাদেশ হাইকমিশন কুয়ালালামপুর"}
 
 - code: QA

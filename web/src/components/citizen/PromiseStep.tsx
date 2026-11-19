@@ -131,9 +131,10 @@ export function PromiseStep({ lang, result, reload }: Props) {
               />
             </div>
           </div>
+          {/* "yes" = told nothing would be taken (no_deductions true); "no" = told some would be */}
           {choice("noDed", T.noDeductions[lang], [
-            { v: "yes", label: T.yes[lang] },
-            { v: "no", label: T.no[lang] },
+            { v: "yes", label: T.dedNone[lang] },
+            { v: "no", label: T.dedSome[lang] },
             { v: "", label: T.unsure[lang] },
           ])}
           {choice("ticket", T.ticket[lang], parties)}

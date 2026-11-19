@@ -47,6 +47,7 @@ class Country:
     min_wage: dict | None
     deduction_cap: dict | None
     help: dict
+    hours_limit: dict | None = None  # {day, week, citation_id}: the most a contract of service may require
 
     @property
     def pattern(self) -> re.Pattern[str]:

@@ -13,6 +13,7 @@ from ain.models import Deduction, DocFacts, PackDecision, RouteDecision
 
 # how each statute words the cap or floor the registry claims it states
 FIGURE_WORDING = {50: ("50%", "half", "fifty"), 25: ("25 per cent", "one-fourth", "25%")}
+HOURS_WORDS = {8: "eight", 45: "forty-five"}
 
 
 def _route(*packs):
@@ -37,6 +38,11 @@ def test_registry_figures_are_stated_in_the_cited_sections(corpus):
             sec = corpus.get(c.min_wage["citation_id"])
             assert sec is not None and c.pack in sec.packs, c.code
             assert f"{c.min_wage['amount']:,}" in sec.text, c.code
+        if c.hours_limit:
+            sec = corpus.get(c.hours_limit["citation_id"])
+            assert sec is not None and c.pack in sec.packs, c.code
+            day, week = (HOURS_WORDS[c.hours_limit[k]] for k in ("day", "week"))
+            assert f"more than {day} hours in one day" in sec.text and f"more than {week} hours in one week" in sec.text, c.code
 
 
 def test_every_country_has_its_own_law_in_the_playbook(corpus):

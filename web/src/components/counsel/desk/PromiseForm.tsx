@@ -108,7 +108,7 @@ export function PromiseForm({ result, lang, onClose, onSaved }: Props) {
             {(["yes", "no", ""] as const).map((v) => (
               <label key={v || "none"}>
                 <input type="radio" name="noDed" value={v} checked={f.noDed === v} onChange={set("noDed")} />
-                <span>{v === "yes" ? T.yes[lang] : v === "no" ? T.no[lang] : T.unknown[lang]}</span>
+                <span>{v === "yes" ? T.dedNone[lang] : v === "no" ? T.dedSome[lang] : T.unknown[lang]}</span>
               </label>
             ))}
           </div>
