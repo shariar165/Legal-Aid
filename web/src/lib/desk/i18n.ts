@@ -83,7 +83,7 @@ export const DESK = {
     rate: { bn: "ব্যবহারকারীর দেওয়া হার", en: "User-entered rate" },
     account: { bn: "কর্মীর কথা", en: "worker's account" },
     // short labels for the compact row; the full ones head the details
-    claimShort: { bn: "দাবি", en: "Claim" },
+    claimShort: { bn: "প্রক্ষেপিত ক্ষতি", en: "Projected loss" },
     breakEvenShort: { bn: "খরচ উঠতে", en: "Break-even" },
     details: { bn: "বিস্তারিত", en: "Details" },
     detailsHide: { bn: "বিস্তারিত লুকান", en: "Hide details" },
