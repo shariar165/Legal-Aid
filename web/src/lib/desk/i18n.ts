@@ -64,7 +64,6 @@ export const DESK = {
   },
 
   money: {
-    projection: { bn: "প্রক্ষেপণ", en: "Projection" },
     projected: { bn: "প্রক্ষেপিত দাবি", en: "Projected claim" },
     noLines: { bn: "যাচাই করা আইনের ওপর দাঁড়ানো কোনো প্রক্ষেপিত লাইন নেই।", en: "No projected line rests on verified law." },
     term: { bn: "মেয়াদ", en: "Term" },

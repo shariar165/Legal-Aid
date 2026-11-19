@@ -7,7 +7,7 @@ import { Icon } from "@/components/shared/Icons";
 import { citeName, money } from "./util";
 import s from "./desk.module.css";
 
-/* Under the hero, one compact row: each figure with a short tag (projection, worker's account, minimum), the contract
+/* Under the hero, one compact row: each figure, with a short tag where its label alone does not say what it is (worker's account, minimum), the contract
    term with its confirm control, then "details" for the full explanations. Every figure and label is the backend's
    own. (The button for what was said sits with the hero's chips, in CaseDesk.) */
 
@@ -32,7 +32,6 @@ export function MoneyStrip({ result, lang, reload }: Props) {
         <span className={s.fig}>
           <span className={s.figLabel}>{T.claimShort[lang]}</span>
           <b className={s.figNum}>{cp.lines.length > 0 ? money(cp.currency ?? "", cp.projected_total) : "–"}</b>
-          <span className={s.tag}>{T.projection[lang]}</span>
         </span>
 
         {gap && (
