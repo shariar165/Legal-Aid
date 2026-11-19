@@ -605,8 +605,14 @@ export function CouncilPanel({ result, nav }: { result: AnalysisResult; nav: Cou
                           </p>
                           <p>{o.reasoning}</p>
                           <code className={styles.judgeModel}>
-                            {o.model || (o.persona && model(o.persona))}
-                            {o.fallback && " · fallback"}
+                            {o.fallback && o.fallback_reason ? (
+                              `${o.fallback_reason}, fell back to ${o.model}`
+                            ) : (
+                              <>
+                                {o.model || (o.persona && model(o.persona))}
+                                {o.fallback && " · fallback"}
+                              </>
+                            )}
                           </code>
                         </div>
                       </div>

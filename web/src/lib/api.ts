@@ -24,6 +24,24 @@ export interface Health {
   corpus_sections: number;
   acts: number;
   dense_retrieval: boolean;
+  /** the Council seats' startup check (live mode only; empty until it has run) */
+  seats?: SeatHealth[];
+}
+
+export interface SeatHealth {
+  role: string;
+  name: string;
+  /** provider/model */
+  configured: string;
+  /** null: nothing in the seat's chain answers, so it gives no opinion */
+  using: string | null;
+  /** the configured model's ping: a rate limit or outage is "unknown" */
+  status?: "ok" | "gone" | "key_rejected" | "unknown";
+  gone: string[];
+  /** providers in the seat's chain that refused our key (401/403) */
+  key_rejected?: string[];
+  same_family_as: string[];
+  warning: string;
 }
 
 export interface RouteInfo {
@@ -102,6 +120,8 @@ export interface BenchOpinion {
   reasoning: string;
   revised: boolean;
   fallback?: boolean;
+  /** why the seat's configured model did not answer, e.g. "key rejected" */
+  fallback_reason?: string | null;
 }
 
 export interface BenchResult {
@@ -256,6 +276,8 @@ export interface OutboundCall {
   cached: boolean;
   /** answered by a backup provider or a fallback model, not the configured primary */
   fallback?: boolean;
+  /** why: "key rejected", "model gone", "rate limited", "daily quota used up"… */
+  fallback_reason?: string | null;
 }
 
 export interface PrivacyReceipt {

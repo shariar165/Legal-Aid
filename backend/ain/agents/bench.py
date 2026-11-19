@@ -815,6 +815,7 @@ def _clean(p: Persona, model: str, op: dict, info: dict | None = None) -> BenchO
     return BenchOpinion(
         seat=p.seat, model=model, persona=p.id, name=p.name, lens=p.lens_label, verdict=verdict, severity=sev,
         reasoning=clip(str(op.get("reasoning", "")), REASONING_CHARS), fallback=bool((info or {}).get("fallback")),
+        fallback_reason=(info or {}).get("fallback_reason") if (info or {}).get("fallback") else None,
     )
 
 
