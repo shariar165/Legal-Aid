@@ -129,6 +129,7 @@ class OutboundCall(BaseModel):
     chars: int
     cached: bool = False
     fallback: bool = False  # answered by a backup provider or a fallback model, not the configured primary
+    fallback_reason: str | None = None  # why: "key rejected", "model gone", "rate limited", "daily quota used up"…
 
 
 class PrivacyReceipt(BaseModel):
@@ -193,6 +194,7 @@ class BenchOpinion(BaseModel):
     reasoning: str
     revised: bool = False
     fallback: bool = False  # answered by a fallback or backup model, not the seat's configured one
+    fallback_reason: str | None = None  # why the configured model did not answer, e.g. "key rejected"
 
 
 class BenchResult(BaseModel):

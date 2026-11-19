@@ -145,3 +145,92 @@ async def test_an_answer_from_a_promoted_fallback_is_still_marked_as_one(checkin
     await call(llm, role="bench_a", user="A claim for Sunny.")
     assert [b["model"] for _, b in seen[before:]] == [fallback] and "models" not in seen[-1][1]
     assert llm.calls[-1].model == fallback and llm.calls[-1].fallback, "not Sunny's configured model, so the trace says so"
+
+
+# ------------------------------------------------------------------ a rejected key (401 / 403)
+
+SECRET = "sk-or-v1-echoed-back"  # a provider reply may echo request details: none of it may reach a log or a report
+SUNNY_BACKUP = config.role("bench_a").backup.model
+REGAL_BACKUP = config.role("bench_b").backup.model
+
+
+def refused(status=401):
+    """OpenRouter refuses our key for every model, as it did with the revoked key in November 2026; Groq answers."""
+
+    def handler(req, body):
+        if req.url.host == "openrouter.ai":
+            return httpx.Response(status, json={"error": {"message": f"User not found for key {SECRET}", "code": status}})
+        return answer(body["model"])
+
+    return handler
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_a_rejected_key_marks_the_seat_key_rejected_and_moves_it(checking, monkeypatch, caplog, status):
+    seen = serve(monkeypatch, refused(status))
+    with caplog.at_level(logging.DEBUG):
+        report = {h.name: h for h in await seat_health.check_seats()}
+    sunny, regal, grey = report["Sunny"], report["Regal"], report["Grey"]
+    assert sunny.status == "key_rejected" and sunny.key_rejected == ["openrouter"] and sunny.gone == []
+    assert sunny.using == f"groq/{SUNNY_BACKUP}" and regal.using == f"groq/{REGAL_BACKUP}"
+    assert sunny.warning.startswith(f"Sunny's openrouter key was rejected; Sunny now answers on groq/{SUNNY_BACKUP}")
+    assert grey.status == "ok" and grey.using == grey.configured and not grey.warning
+    assert not any(llm_mod.is_gone("openrouter", m) for _, b in seen for m in [b["model"]]), "the key, not the model"
+    or_pings = [b["model"] for host, b in seen if host == "openrouter.ai" and b["messages"] == seat_health.PING]
+    # one refusal speaks for the provider: no OpenRouter fallback model is pinged, only the seats' own models
+    assert or_pings and set(or_pings) <= {config.role("bench_a").model, config.role("bench_b").model}
+
+    from ain import api
+
+    seats = {s["name"]: s for s in api.health()["seats"]}
+    assert seats["Sunny"]["status"] == "key_rejected" and seats["Grey"]["status"] == "ok"
+    assert SECRET not in caplog.text and SECRET not in repr(api.health()) and "test-or" not in caplog.text
+
+    # Sunny's calls go straight to Groq, and the answer says why it is a fallback
+    before = len(seen)
+    llm = LLM(mode="live")
+    await call(llm, role="bench_a", user="A claim for Sunny.")
+    assert [b["model"] for _, b in seen[before:]] == [SUNNY_BACKUP]
+    assert llm.calls[-1].fallback and llm.calls[-1].fallback_reason == "key rejected"
+
+
+async def test_a_rejected_key_on_an_ordinary_call_falls_back_and_says_why(live, monkeypatch, caplog):  # noqa: F811
+    seen = serve(monkeypatch, refused())
+    llm = LLM(mode="live")
+    info: dict = {}
+    with caplog.at_level(logging.DEBUG):
+        await llm.json(role="bench_a", system="Reply in JSON.", user="A claim.", task="t", agent="Test", info=info)
+    assert [h for h, _ in seen] == ["openrouter.ai", "api.groq.com"]
+    assert info["fallback"] and info["fallback_reason"] == "key rejected" and info["model"] == SUNNY_BACKUP
+    assert "openrouter key rejected (401)" in caplog.text and SECRET not in caplog.text
+    assert not llm_mod.is_gone("openrouter", config.role("bench_a").model)
+
+
+async def test_every_route_refused_fails_without_quoting_the_reply(live, monkeypatch):  # noqa: F811
+    serve(monkeypatch, lambda req, body: httpx.Response(401, json={"error": {"message": f"bad key {SECRET}"}}))
+    with pytest.raises(llm_mod.LLMError) as e:
+        await call(LLM(mode="live"), role="bench_a")
+    assert "key rejected (401)" in str(e.value) and SECRET not in str(e.value)
+
+
+async def test_a_replaced_key_is_seen_at_the_next_start(checking, monkeypatch):
+    now = {"handler": refused()}
+    seen = serve(monkeypatch, lambda req, body: now["handler"](req, body))
+    await seat_health.check_seats()
+    llm_mod.reset_breakers()  # a restart with the new key, within six hours of the last check
+    now["handler"] = gone()
+    seen.clear()
+    sunny = next(h for h in await seat_health.check_seats() if h.name == "Sunny")
+    assert sunny.status == "ok" and sunny.using == sunny.configured and not sunny.key_rejected
+    assert config.role("bench_a").model in pings(seen), "a rejected ping is not kept: the new key gets pinged"
+    assert llm_mod.plan("bench_a") == llm_mod.all_routes("bench_a")
+
+
+def test_a_judge_opinion_carries_the_fallback_reason():
+    from ain.agents import bench
+
+    p = bench.BY_ID["happy"]
+    op = {"verdict": "supports", "severity": "high", "reasoning": "r"}
+    fell = bench._clean(p, SUNNY_BACKUP, op, {"fallback": True, "fallback_reason": "key rejected"})
+    assert fell.fallback and fell.fallback_reason == "key rejected"
+    assert bench._clean(p, "m", op, {"fallback": False, "fallback_reason": "key rejected"}).fallback_reason is None

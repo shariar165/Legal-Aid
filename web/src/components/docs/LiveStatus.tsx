@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { api, type Health, type Metrics } from "@/lib/api";
+import { api, type Health, type Metrics, type SeatHealth } from "@/lib/api";
 import s from "./docs.module.css";
 
 // Recharts measures the DOM, so the charts render on the client only
@@ -14,6 +14,13 @@ const MODE_LABEL: Record<Health["llm_mode"], string> = {
   live: "Live models",
   replay: "Replay cache",
   fake: "Offline demo",
+};
+
+const SEAT_STATUS: Record<NonNullable<SeatHealth["status"]>, string> = {
+  ok: "answering",
+  gone: "model gone",
+  key_rejected: "key rejected",
+  unknown: "not confirmed (rate limit or outage)",
 };
 
 const pct = (x: number | null) => (x === null ? "–" : `${Math.round(x * 100)}%`);
@@ -45,13 +52,17 @@ export function LiveStatus() {
     );
   }
   const keys = Object.entries(health.providers);
+  const seats = health.seats ?? [];
+  // a key can be set and still refused: the seat check is the only call that finds out without a job
+  const refused = new Set(seats.flatMap((h) => h.key_rejected ?? []));
+  const keyNote = (p: string, set: boolean) => `${p} ${!set ? "no key" : refused.has(p) ? "key rejected" : "key set"}`;
   return (
     <>
       <div className={s.liveHead} aria-live="polite">
         <i className={s.dot} aria-hidden /> Live from <code>/api/health</code> and <code>/api/metrics</code>, read at {at?.toLocaleTimeString()}
       </div>
       <div className={s.tiles}>
-        <Tile label="Model mode" value={MODE_LABEL[health.llm_mode]} note={keys.map(([p, ok]) => `${p} ${ok ? "key set" : "no key"}`).join(" · ")} />
+        <Tile label="Model mode" value={MODE_LABEL[health.llm_mode]} note={keys.map(([p, ok]) => keyNote(p, ok)).join(" · ")} />
         <Tile label="Law sections" value={health.corpus_sections.toLocaleString()} note={`${health.acts} acts and documents`} />
         <Tile label="Countries of work" value={String(metrics.corpus.countries)} note="+ Bangladesh law and ILO standards" />
         <Tile label="Retrieval" value={health.dense_retrieval ? "Hybrid" : "BM25"} note={health.dense_retrieval ? "BM25 + e5 dense, RRF fusion" : "dense search off on this server"} />
@@ -60,6 +71,8 @@ export function LiveStatus() {
         <Tile label="Binding-law sections" value={(metrics.corpus.by_kind.law ?? 0).toLocaleString()} note={`${metrics.corpus.by_kind.standard ?? 0} standards · ${metrics.corpus.by_kind.company_policy ?? 0} company policy · ${metrics.corpus.by_kind.supervisory ?? 0} ILO comments`} />
         <Tile label="Model roles" value={String(metrics.llm.roles.length)} note="each with a cross-provider backup" />
       </div>
+
+      {seats.length > 0 && <SeatTable seats={seats} />}
 
       <div className={s.grid2}>
         <CorpusChart corpus={metrics.corpus} />
@@ -139,6 +152,37 @@ function EvalBlock({ metrics }: { metrics: Metrics }) {
                 <td className={s.num}>{pct(r.precision)}</td>
                 <td className={s.num}>{pct(r.citation_validity)}</td>
                 <td className={s.num}>{r.ablation_plain_supported ?? "–"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SeatTable({ seats }: { seats: SeatHealth[] }) {
+  return (
+    <div className={s.chartCard} style={{ marginBottom: 14 }}>
+      <h3>Council seats</h3>
+      <p className={s.chartSub}>One ping per judge model at startup. A seat whose model is gone or whose key is rejected moves to the next model in its chain.</p>
+      <div className={s.tableWrap}>
+        <table className={s.table}>
+          <thead>
+            <tr>
+              <th>Seat</th>
+              <th>Configured</th>
+              <th>Status</th>
+              <th>Answering on</th>
+            </tr>
+          </thead>
+          <tbody>
+            {seats.map((h) => (
+              <tr key={h.role} title={h.warning || undefined}>
+                <td className={s.nowrap}>{h.name}</td>
+                <td className={s.mono}>{h.configured}</td>
+                <td className={s.nowrap}>{h.status ? SEAT_STATUS[h.status] : "–"}</td>
+                <td className={`${s.mono} ${h.using === h.configured ? s.muted : ""}`}>{h.using ?? "no opinion"}</td>
               </tr>
             ))}
           </tbody>

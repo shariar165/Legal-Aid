@@ -59,16 +59,35 @@ class QuotaHalt(LLMError):
 
 
 class _RouteFailed(LLMError):
-    """This route cannot answer; try the next one."""
+    """This route cannot answer; try the next one. `reason` is the short why that a fallback answer carries."""
+
+    reason = "unavailable"
+
+    def __init__(self, message: str, reason: str | None = None) -> None:
+        super().__init__(message)
+        if reason:
+            self.reason = reason
 
 
 class _Malformed(_RouteFailed):
     """This route answered with something other than a JSON object, even after retries."""
 
+    reason = "unusable answer"
+
 
 class _Gone(_RouteFailed):
     """404: the provider does not serve this model (withdrawn, or no endpoint meets our data policy). Not a blip: the
     model is skipped for GONE_TTL_S instead of being asked again on every call."""
+
+    reason = "model gone"
+
+
+class _KeyRejected(_RouteFailed):
+    """401 or 403: the provider refused our API key (revoked, expired or mistyped). The model is not gone: every model on
+    that provider fails the same way until the key is replaced. The message never quotes the provider's reply, so
+    nothing about the key can reach a log or a trace."""
+
+    reason = "key rejected"
 
 
 @dataclass(frozen=True)
@@ -153,6 +172,7 @@ _buckets: dict[tuple[str, str], _TokenBucket] = {}
 _tripped: dict[str, float] = {}  # provider -> wall-clock time its daily quota resets
 _gone: dict[tuple[str, str], float] = {}  # (provider, model) -> when to try it again
 _picks: dict[str, tuple[str, str]] = {}  # role -> (provider, model) the seat health check chose to answer first
+_pick_why: dict[str, str] = {}  # role -> why its configured model was passed over ("model gone", "key rejected")
 GONE_TTL_S = 6 * 3600
 _halt_on: set[str] = set()  # providers whose daily quota stops every new call (evals only: empty in the app)
 _halted: list[str] = []
@@ -210,9 +230,12 @@ def is_gone(provider: str, model: str) -> bool:
     return until is not None
 
 
-def pick(role: str, provider: str, model: str) -> None:
-    """The seat health check's choice for a role whose primary is gone: it answers first, ahead of the configured order."""
+def pick(role: str, provider: str, model: str, why: str | None = None) -> None:
+    """The seat health check's choice for a role whose primary is gone or whose key was rejected: it answers first, ahead
+    of the configured order. `why` goes on every fallback answer this pick gives."""
     _picks[role] = (provider, model)
+    if why:
+        _pick_why[role] = why
 
 
 def plan(role: str) -> list[Route]:
@@ -236,6 +259,7 @@ def reset_breakers() -> None:
     _tripped.clear()
     _gone.clear()
     _picks.clear()
+    _pick_why.clear()
     _halt_on.clear()
     _halted.clear()
     _pacers.clear()
@@ -366,7 +390,7 @@ class LLM:
                 data, used = _unwrap(hit, r.model)
                 if not isinstance(data, dict):  # saved before answers were checked: ask again rather than crash on it
                     continue
-                self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, cached=True, fallback=_is_fallback(r, used)))
+                self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, cached=True, fallback=_is_fallback(r, used), fallback_reason=_fallback_why(role, r, used, None)))
                 return data
         if self.mode == "replay":
             if fake is not None:
@@ -377,6 +401,7 @@ class LLM:
         routes = self.routes(role)
         errors: list[str] = []
         malformed = False
+        failed: str | None = None  # why the first route that failed did: what a fallback answer says
         for i, r in enumerate(routes):
             try:
                 async with self._sem, self._model_slot(r):
@@ -387,9 +412,10 @@ class LLM:
                 log.warning("%s: %s", agent, e)
                 errors.append(str(e))
                 malformed = malformed or isinstance(e, _Malformed)
+                failed = failed or e.reason
                 continue
             cache[key(r)] = {"__ain__": 1, "data": data, "model": used}
-            self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, fallback=_is_fallback(r, used)))
+            self._record(info, OutboundCall(agent=agent, role=role, provider=r.prov.name, model=used, chars=chars, fallback=_is_fallback(r, used), fallback_reason=_fallback_why(role, r, used, failed)))
             return data
         raise (MalformedAnswer if malformed else LLMError)(f"{agent}: every route for role '{role}' failed: " + " | ".join(errors))
 
@@ -410,7 +436,7 @@ class LLM:
 
     def _record(self, info: dict | None, call: OutboundCall) -> None:
         if info is not None:
-            info.update(provider=call.provider, model=call.model, fallback=call.fallback, cached=call.cached)
+            info.update(provider=call.provider, model=call.model, fallback=call.fallback, fallback_reason=call.fallback_reason, cached=call.cached)
         self.calls.append(call)
         if self._on_call:
             self._on_call(call)
@@ -469,15 +495,15 @@ class LLM:
                     raise _RouteFailed(f"{where}: request too large for the per-minute token limit: {r.text[:200]}")
                 if r.status_code == 429 and "per-day" in r.text:
                     trip(prov.name, _quota_reset(r))
-                    raise _RouteFailed(f"{where}: daily free quota exhausted")
+                    raise _RouteFailed(f"{where}: daily free quota exhausted", "daily quota used up")
                 if r.status_code == 429 and "per day" in r.text:
                     # one model's daily token/request limit (Groq: "tokens per day (TPD)"); its siblings still work
-                    raise _RouteFailed(f"{where}: daily limit for this model reached")
+                    raise _RouteFailed(f"{where}: daily limit for this model reached", "daily limit reached")
                 if r.status_code == 429 or r.status_code >= 500:
                     wait = float(r.headers.get("retry-after") or 0) or min(30, 2 ** attempt)
                     last_err = LLMError(f"{r.status_code}: {r.text[:200]}")
                     if wait > 60 and not last:
-                        raise _RouteFailed(f"{where}: rate limited for {wait:.0f}s")
+                        raise _RouteFailed(f"{where}: rate limited for {wait:.0f}s", "rate limited")
                     if r.status_code == 429 or r.headers.get("retry-after"):
                         self._rate_wait(wait, prov, model)
                     await asyncio.sleep(wait)
@@ -487,9 +513,11 @@ class LLM:
                     continue
                 if r.status_code == 404:
                     raise _Gone(f"{where}: {r.status_code} {r.text[:200]}")
+                if r.status_code in (401, 403):
+                    raise _KeyRejected(f"{where}: {prov.name} key rejected ({r.status_code})")  # never the reply body
                 if r.status_code >= 400:
-                    # bad key, no endpoint for our data policy, model gone: this route cannot answer
-                    raise _RouteFailed(f"{where}: {r.status_code} {r.text[:200]}")
+                    # no endpoint for our data policy, a bad request: this route cannot answer
+                    raise _RouteFailed(f"{where}: {r.status_code} {r.text[:200]}", f"error {r.status_code}")
                 payload = r.json()
                 content = (payload.get("choices") or [{}])[0].get("message", {}).get("content") or ""
                 used = payload.get("model") or model
@@ -512,6 +540,18 @@ def _unwrap(hit: Any, model: str) -> tuple[dict, str]:
     if isinstance(hit, dict) and hit.get("__ain__") == 1:
         return hit["data"], hit.get("model") or model
     return hit, model
+
+
+def _fallback_why(role: str, route: Route, used: str, failed: str | None) -> str | None:
+    """Why a fallback answered: the first route that failed on this call, else the seat health check's reason for
+    putting this model first. None when it was not a fallback, or when OpenRouter's own `models` list switched."""
+    if not _is_fallback(route, used):
+        return None
+    if failed:
+        return failed
+    if _picks.get(role) == (route.prov.name, route.model):
+        return _pick_why.get(role)
+    return None
 
 
 def _is_fallback(route: Route, used: str) -> bool:

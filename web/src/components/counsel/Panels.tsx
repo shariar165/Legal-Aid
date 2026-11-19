@@ -232,11 +232,12 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
 export function PrivacyPanel({ result }: { result: AnalysisResult }) {
   const p = result.privacy;
   const byModel = useMemo(() => {
-    const m = new Map<string, { calls: number; chars: number; cached: number; fallback: number }>();
+    const m = new Map<string, { calls: number; chars: number; cached: number; fallback: number; why: Set<string> }>();
     for (const c of p.outbound_calls) {
       const key = `${c.provider} · ${c.model}`;
-      const cur = m.get(key) ?? { calls: 0, chars: 0, cached: 0, fallback: 0 };
+      const cur = m.get(key) ?? { calls: 0, chars: 0, cached: 0, fallback: 0, why: new Set<string>() };
       cur.fallback += c.fallback ? 1 : 0;
+      if (c.fallback && c.fallback_reason) cur.why.add(c.fallback_reason);
       cur.calls++;
       cur.chars += c.chars;
       cur.cached += c.cached ? 1 : 0;
@@ -288,9 +289,10 @@ export function PrivacyPanel({ result }: { result: AnalysisResult }) {
                     className={styles.chip}
                     data-tone="warn"
                     style={{ marginLeft: 8 }}
-                    title={`${v.fallback} of ${v.calls} calls: the configured model was unavailable (quota or rate limit), so this model answered as the backup`}
+                    title={`${v.fallback} of ${v.calls} calls: the configured model did not answer (${v.why.size ? [...v.why].join(", ") : "unavailable"}), so this model answered as the backup`}
                   >
                     {v.fallback === v.calls ? "fallback" : `${v.fallback} as fallback`}
+                    {v.why.size === 1 && ` · ${[...v.why][0]}`}
                   </span>
                 )}
               </td>
