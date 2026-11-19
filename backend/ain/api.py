@@ -120,6 +120,7 @@ def _delete_job_files(job_ids: list[str]) -> None:
 
 @app.on_event("startup")
 async def warm() -> None:
+    config.ledger_enabled()  # a bad AIN_LEDGER stops the start here, not at the first request
     async def _warm():
         corpus = await asyncio.to_thread(get_corpus)
         if corpus.dense_ready:
@@ -237,6 +238,7 @@ def health() -> dict:
         "corpus_sections": len(corpus.sections),
         "acts": len({s.act_key for s in corpus.sections}),
         "dense_retrieval": corpus.dense_ready,
+        "four_ledgers": config.ledger_enabled(),
         "seats": [h.model_dump() for h in seat_health.last()],  # empty until the live startup check has run
     }
 
@@ -366,7 +368,7 @@ async def analyze(
 
 def _parse_promises(raw: str) -> Promises:
     if not config.ledger_enabled():
-        raise HTTPException(400, "Promises need the Four Ledgers feature, which is off (ledger.enabled in config.yaml).")
+        raise HTTPException(400, "Promises need the Four Ledgers feature, which is off (ledger.enabled in config.yaml, or AIN_LEDGER).")
     try:
         return Promises.model_validate_json(raw)
     except ValidationError as e:
