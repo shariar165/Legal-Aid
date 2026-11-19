@@ -413,3 +413,24 @@ def test_the_contract_term_can_be_confirmed_with_no_model_call(docs, ledger_on, 
         assert again["claim_projection"]["term"]["source"] == "user"
         for bad in (0, 300):
             assert client.post(f"/api/jobs/{job}/term", json={"months": bad}).status_code == 422
+
+
+async def test_an_adversary_risk_on_a_term_with_no_rule_raises_no_paper_vs_law(docs, ledger_on):
+    """Live run, 2026-11-19: the Adversary's annual-leave risk sat on the contract-length clause and the row read
+    "The contract says 36 months, against the cited law", rated high. A term with no playbook rule shows the law the
+    risk rests on, but the paper is not said to break it."""
+    r = await _run(docs, _promises())
+    rows = _rows(r.four_ledgers)
+    src = next(k for k in r.risks if k.rule_id == "PB-PASSPORT")
+    risks, ledger_rows = list(r.risks), list(r.ledger)
+    for n, term in enumerate(("contract_months", "ticket")):
+        rid = f"RX{n}"
+        risks.append(src.model_copy(update={"id": rid, "rule_id": None, "origin": "adversary", "clause_ids": [rows[term].paper.clause_id]}))
+        ledger_rows += [v.model_copy(update={"claim": v.claim.model_copy(update={"risk_id": rid})}) for v in r.ledger if v.claim.risk_id == src.id]
+    risks = [k for k in risks if k.rule_id != "PB-RETURN-COST"]  # leave the Adversary risk as the ticket clause's only one
+    four = ledger.build(r.facts, r.wage, r.document.clauses, risks, ledger_rows, r.four_ledgers.promises, memo_includes_promises=False)
+    after = _rows(four)
+    assert after["contract_months"].law.status == "verified"  # the law is still shown
+    assert _types(after["contract_months"]) == [] and after["contract_months"].severity is None
+    assert "paper_vs_law" not in _types(after["ticket"])
+    assert _types(after["passport"]) == ["said_vs_paper", "paper_vs_law"]  # a term's own rule still counts

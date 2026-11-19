@@ -371,7 +371,10 @@ def _row(term: str, facts: DocFacts, wage: WageCalc | None, clauses: list[Clause
         # the risk's severity counts only once the gates have passed it; with no verified law the row has none
         if promise_risk and status in ("verified", "partial"):
             sevs.append(promise_risk.severity)
-    if paper and risk is not None and risk.rule_id == RULE_FOR.get(term) and risk.status != "dropped" and law.status in ("verified", "partial"):
+    # only the term's own playbook rule says the paper breaks the law; a term with no rule (ticket out, contract length)
+    # never does, even when an Adversary risk (no rule id) sits on its clause: None == None must not count
+    rule = RULE_FOR.get(term)
+    if paper and risk is not None and rule is not None and risk.rule_id == rule and risk.status != "dropped" and law.status in ("verified", "partial"):
         mismatches.append(Mismatch(type="paper_vs_law", risk_id=risk.id, risk_status=law.status, title=law.title,
                                    citation_ids=law.citation_ids, detail=_against_law(term, paper, wage, facts)))
         sevs.append(risk.severity)

@@ -532,7 +532,10 @@ class LLM:
                     self.json_retries += 1
                     last_err = e
                     await asyncio.sleep(min(20, 2 ** attempt))
-        raise (_Malformed if isinstance(last_err, ValueError) else _RouteFailed)(f"{where} failed after retries: {last_err}")
+        # keep the last status as the reason a fallback gives: an upstream 429 is "rate limited", not "unavailable"
+        status = re.match(r"(\d{3}):", str(last_err)) if isinstance(last_err, LLMError) else None
+        why = None if status is None else "rate limited" if status.group(1) == "429" else f"error {status.group(1)}"
+        raise (_Malformed if isinstance(last_err, ValueError) else _RouteFailed)(f"{where} failed after retries: {last_err}", why)
 
 
 def _unwrap(hit: Any, model: str) -> tuple[dict, str]:

@@ -347,3 +347,21 @@ async def test_a_cached_answer_that_is_not_an_object_is_asked_again(live, monkey
         cache[k] = {"__ain__": 1, "data": ["a plain string"], "model": "m"}
     assert await call(LLM(mode="live"), role="fast") == {"ok": True}
     assert len(seen) == 2
+
+
+@pytest.mark.parametrize("status, reason", [(429, "rate limited"), (503, "error 503")])
+async def test_retries_used_up_on_a_busy_upstream_say_why_on_the_fallback(live, monkeypatch, status, reason):
+    """Live run, 2026-11-19: gemma's upstream host answered 429 "temporarily rate-limited" on every retry; the ruling
+    said only "unavailable"."""
+    def handler(req, body):
+        if req.url.host == "openrouter.ai":
+            return httpx.Response(status, json={"error": {"message": "Provider returned error", "code": status}})
+        return answer(body["model"])
+
+    serve(monkeypatch, handler)
+    llm = LLM(mode="live")
+    info: dict = {}
+    await llm.json(role="bench_a", system="Reply in JSON.", user="Statute text and proposition.", task="t", agent="Test", info=info)
+    assert llm.calls[-1].provider == "groq" and llm.calls[-1].fallback
+    assert llm.calls[-1].fallback_reason == info["fallback_reason"] == reason
+    assert not llm_mod.is_tripped("openrouter")  # a busy upstream is not the daily quota
