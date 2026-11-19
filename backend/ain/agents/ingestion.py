@@ -374,6 +374,20 @@ def _hours_in(s: str) -> list[int]:
     return out
 
 
+WEEK_HOURS_RE = re.compile(r"\(?(\d{1,2})\)?\s*hours?\s*(?:per|a|each|in\s+(?:a|one|each))\s*week", re.I)
+
+
+def _week_hours_in(s: str) -> list[int]:
+    """Normal hours a week, only where the contract states them: never days × hours. Same exclusions as a day."""
+    out = []
+    for m in WEEK_HOURS_RE.finditer(s):
+        if NOT_WORKDAY.search(s[max(0, m.start() - 40) : m.start()]) or re.match(r"\s*(?:during|in)\s+ramadan|\s+of\s+overtime", s[m.end() :], re.I):
+            continue
+        if 0 < (n := int(m.group(1))) <= 168:
+            out.append(n)
+    return out
+
+
 TICKET_RE = re.compile(r"\b(worker|employee|employer|company)\s+shall\s+(?:bear|pay|provide|meet)([^.]{0,60}?)\b(?:air\s*)?ticket", re.I)
 
 
@@ -402,8 +416,9 @@ def _passport_in(s: str) -> list[str]:
     return [who for who, pats in (("employer", EMPLOYER_HOLDS), ("worker", WORKER_HOLDS)) if any(p.search(s) for p in pats)]
 
 
-PAPER_TERMS = {"contract_months": _term_in, "hours_per_day": _hours_in, "ticket": _ticket_in, "passport": _passport_in}
-FACT_FIELD = {"contract_months": "contract_months", "hours_per_day": "hours_per_day", "ticket": "ticket_paid_by", "passport": "passport_held_by"}
+PAPER_TERMS = {"contract_months": _term_in, "hours_per_day": _hours_in, "hours_per_week": _week_hours_in, "ticket": _ticket_in, "passport": _passport_in}
+FACT_FIELD = {"contract_months": "contract_months", "hours_per_day": "hours_per_day", "hours_per_week": "hours_per_week", "ticket": "ticket_paid_by",
+              "passport": "passport_held_by"}
 
 
 def build_document(data: bytes, filename: str, source_kind: str | None = None) -> tuple[Document, DocFacts, Extracted]:

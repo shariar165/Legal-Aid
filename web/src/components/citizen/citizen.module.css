@@ -1201,7 +1201,9 @@ a.citName {
   gap: 8px;
 }
 
-/* four answers sit 2 × 2 rather than 3 + 1 */
+/* four answers sit 2 × 2 rather than 3 + 1; three ("nothing" / "some" / "not sure") sit 2 + 1, so the longer
+   Bangla answers keep to one line at 390px */
+.choices[data-n="3"],
 .choices[data-n="4"] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

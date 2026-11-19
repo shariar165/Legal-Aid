@@ -70,7 +70,9 @@ async def test_malaysia_with_promises_gives_the_expected_rows(docs, ledger_on):
     assert "MY-EA-1955-s24" in rows["deductions"].law.citation_ids
     assert "RM 400 a month after month 12" in rows["deductions"].paper.value.en  # the recruitment deduction ends
     assert _types(rows["recruitment_cost"]) == ["paper_vs_law"] and rows["recruitment_cost"].paper.amount == 3000
-    assert _types(rows["hours_per_day"]) == ["said_vs_paper"] and rows["hours_per_day"].law.status == "none"
+    # 12 hours a day on paper: PB-HOURS fills the hours row's law cell (Employment Act 1955 s.60A)
+    assert _types(rows["hours_per_day"]) == ["said_vs_paper", "paper_vs_law"] and rows["hours_per_day"].law.status == "verified"
+    assert rows["hours_per_day"].law.citation_ids == ["MY-EA-1955-s60A"] and rows["hours_per_day"].severity == "high"
     # the travel clause's risk is about the trip home: its law is shown, but it makes no paper_vs_law on the ticket out
     assert _types(rows["ticket"]) == ["said_vs_paper"]
     assert _types(rows["passport"]) == ["said_vs_paper", "paper_vs_law"] and "BD-OEMA-2013-s31" in rows["passport"].law.citation_ids
@@ -273,14 +275,44 @@ def test_flag_off_refuses_promises_and_adds_nothing(docs):
         assert client.post(f"/api/jobs/{job}/term", json={"months": 24}).status_code == 404
 
 
-def test_the_promise_rule_is_in_no_prompt_while_the_flag_is_off(monkeypatch):
+@pytest.mark.parametrize("rule_id, pack", [("PB-PROMISE-GAP", "bd_migration"), ("PB-HOURS", "my_employment")])
+def test_the_ledger_rules_are_in_no_prompt_while_the_flag_is_off(monkeypatch, rule_id, pack):
     """The Adversary's prompt lists every active rule: an always-active rule would change its cache key with the flag off."""
     from ain.agents.risk_analyst import load_rules
 
-    rule = next(r for r in load_rules() if r.id == "PB-PROMISE-GAP")
-    assert not rule.active({"bd_migration"})
+    rule = next(r for r in load_rules() if r.id == rule_id)
+    assert not rule.active({pack})
     monkeypatch.setattr(config, "ledger_enabled", lambda: True)
-    assert rule.active({"bd_migration"}) and not rule.active({"bd_labour"})
+    assert rule.active({pack}) and not rule.active({"bd_labour"})
+
+
+async def test_hours_over_the_limit_read_as_a_sentence_in_both_languages(docs, ledger_on):
+    r = await _run(docs)
+    hours = next(k for k in r.risks if k.rule_id == "PB-HOURS")
+    assert hours.finding == "The contract sets normal working hours of 12 hours a day (the limit is 8)."
+    assert [(v.claim.citation_id, v.verdict) for v in r.ledger if v.claim.risk_id == hours.id] == [("MY-EA-1955-s60A", "verified")]
+    law = next(m for m in _rows(r.four_ledgers)["hours_per_day"].mismatches if m.type == "paper_vs_law")
+    assert law.detail.en == "The contract sets 12 hours a day; the cited law limits a day to 8 hours."
+    assert law.detail.bn == "চুক্তিতে দিনে ১২ ঘণ্টা কাজ, অথচ উল্লেখিত আইনে দিনে সর্বোচ্চ ৮ ঘণ্টা।"
+    assert law.title.en == "Limit on working hours"
+
+
+def test_hours_within_the_limit_or_stated_only_weekly():
+    from ain.agents.risk_analyst import run_fact_check
+    from ain.models import DocFacts
+
+    my = {"my_employment"}
+    assert run_fact_check("hours_over_limit", DocFacts(hours_per_day=8, hours_per_week=45), None, my) is None
+    assert run_fact_check("hours_over_limit", DocFacts(hours_per_day=8, hours_per_week=48), None, my) == (
+        "The contract sets normal working hours of 48 hours a week (the limit is 45).")
+    assert run_fact_check("hours_over_limit", DocFacts(hours_per_day=12), None, {"sa_labour"}) is None  # no limit on file
+
+
+async def test_a_mismatch_with_no_verified_law_gives_the_row_no_severity(docs, ledger_on):
+    r = await _run(docs, _promises(contract_months=24))  # told 24 months, the paper says 36: no law of its own
+    months = _rows(r.four_ledgers)["contract_months"]
+    assert _types(months) == ["said_vs_paper"] and months.law.status == "none"
+    assert months.severity is None
 
 
 def test_invalid_promises_are_rejected(ledger_on):

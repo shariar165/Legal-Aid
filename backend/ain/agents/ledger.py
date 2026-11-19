@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 
+from ain import countries
 from ain.agents.ingestion import _cur
 from ain.models import (
     SEVERITY_ORDER,
@@ -44,7 +45,8 @@ PROMISE_RULE = "PB-PROMISE-GAP"
 # the playbook rule whose verified claims fill each term's law cell, and the only risks that can make a paper_vs_law
 # mismatch. Other terms show the law of a live risk on their clause, without a mismatch: a risk on the same clause
 # can be about another part of it (the travel clause's risk is about the trip home, not the ticket out).
-RULE_FOR = {"salary": "PB-MIN-WAGE", "deductions": "PB-DEDUCTION-CAP", "recruitment_cost": "PB-RECRUIT-FEE", "passport": "PB-PASSPORT"}
+RULE_FOR = {"salary": "PB-MIN-WAGE", "deductions": "PB-DEDUCTION-CAP", "recruitment_cost": "PB-RECRUIT-FEE", "hours_per_day": "PB-HOURS",
+            "passport": "PB-PASSPORT"}
 PAY_BENEFIT_TERMS = ("salary", "deductions", "ticket")  # a said_vs_paper gap on these is the PB-PROMISE-GAP risk
 TERMS = ("salary", "deductions", "recruitment_cost", "hours_per_day", "ticket", "passport", "contract_months")
 # where the paper cell's clause is found when ingestion did not record one (fact_clauses covers the four regex facts)
@@ -77,6 +79,7 @@ LAW_TITLE = {
     "PB-DEDUCTION-CAP": L10n(en="Limit on deductions", bn="কর্তনের আইনি সীমা"),
     "PB-RECRUIT-FEE": L10n(en="Recruitment costs", bn="নিয়োগের খরচ"),
     "PB-PASSPORT": L10n(en="Keeping the worker's passport", bn="কর্মীর পাসপোর্ট আটকে রাখা"),
+    "PB-HOURS": L10n(en="Limit on working hours", bn="কাজের সময়ের আইনি সীমা"),
     "PB-RETURN-COST": L10n(en="The trip home", bn="দেশে ফেরার খরচ"),
     "PB-RETURN-TICKET": L10n(en="The trip home", bn="দেশে ফেরার খরচ"),
     "PB-CLAIM-WAIVER": L10n(en="The right to complain or sue", bn="অভিযোগ ও মামলার অধিকার"),
@@ -283,7 +286,12 @@ def _linked_risk(term: str, risks: list[Risk], clause_id: str | None) -> Risk | 
     return None
 
 
-def _against_law(term: str, paper: LedgerCell, wage: WageCalc | None) -> L10n:
+def _hours_limit(facts: DocFacts) -> dict | None:
+    country = countries.by_name(facts.destination_country)
+    return country.hours_limit if country else None
+
+
+def _against_law(term: str, paper: LedgerCell, wage: WageCalc | None, facts: DocFacts) -> L10n:
     """The paper_vs_law sentence, written per term so the Bangla reads as a sentence, not a template."""
     if term == "salary" and wage and wage.minimum_wage is not None:
         m = _money(wage.minimum_wage, wage.currency)
@@ -297,6 +305,14 @@ def _against_law(term: str, paper: LedgerCell, wage: WageCalc | None) -> L10n:
         m = _money(paper.amount, paper.currency or "")
         return L10n(en=f"The contract takes {m} of recruitment costs from wages, against the cited law.",
                     bn=f"চুক্তি অনুযায়ী বেতন থেকে {m} নিয়োগের খরচ কাটা হবে, যা উল্লেখিত আইনের পরিপন্থী।")
+    if term == "hours_per_day" and (limit := _hours_limit(facts)):
+        if paper.amount is not None and paper.amount > limit["day"]:
+            return L10n(en=f"The contract sets {paper.value.en}; the cited law limits a day to {limit['day']} hours.",
+                        bn=f"চুক্তিতে {paper.value.bn} কাজ, অথচ উল্লেখিত আইনে দিনে সর্বোচ্চ {_bn(limit['day'])} ঘণ্টা।")
+        if facts.hours_per_week is not None and facts.hours_per_week > limit["week"]:
+            w = facts.hours_per_week
+            return L10n(en=f"The contract sets {w} hours a week; the cited law limits a week to {limit['week']} hours.",
+                        bn=f"চুক্তিতে সপ্তাহে {_bn(w)} ঘণ্টা কাজ, অথচ উল্লেখিত আইনে সপ্তাহে সর্বোচ্চ {_bn(limit['week'])} ঘণ্টা।")
     if term == "passport":
         return L10n(en=f"Under the contract {paper.value.en}, against the cited law.",
                     bn=f"চুক্তি অনুযায়ী পাসপোর্ট {paper.value.bn}, যা উল্লেখিত আইনের পরিপন্থী।")
@@ -352,11 +368,12 @@ def _row(term: str, facts: DocFacts, wage: WageCalc | None, clauses: list[Clause
             title, cites = PROMISE_TITLE, _promise_citations(promise_risk, ledger, pending_claims)
         mismatches.append(Mismatch(type="said_vs_paper", risk_id=rid, risk_status=status, title=title, citation_ids=cites, detail=L10n(
             en=f"Told {said.value.en}; the contract says {paper.value.en}.", bn=f"বলা হয়েছিল {said.value.bn}, কিন্তু চুক্তিতে লেখা {paper.value.bn}।")))
-        # the risk's severity counts only once the gates have passed it
-        sevs.append(promise_risk.severity if promise_risk and status in ("verified", "partial") else "low")
+        # the risk's severity counts only once the gates have passed it; with no verified law the row has none
+        if promise_risk and status in ("verified", "partial"):
+            sevs.append(promise_risk.severity)
     if paper and risk is not None and risk.rule_id == RULE_FOR.get(term) and risk.status != "dropped" and law.status in ("verified", "partial"):
         mismatches.append(Mismatch(type="paper_vs_law", risk_id=risk.id, risk_status=law.status, title=law.title,
-                                   citation_ids=law.citation_ids, detail=_against_law(term, paper, wage)))
+                                   citation_ids=law.citation_ids, detail=_against_law(term, paper, wage, facts)))
         sevs.append(risk.severity)
     return LedgerRow(
         term=term, said=said, paper=paper, law=law, mismatches=mismatches,

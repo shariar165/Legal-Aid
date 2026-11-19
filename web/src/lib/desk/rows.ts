@@ -100,7 +100,8 @@ function termRow(row: LedgerRow, result: AnalysisResult): DeskRow {
     kind: "term",
     term: row.term,
     title: TERM_NAME[row.term] ?? { bn: row.term, en: row.term },
-    severity: row.severity,
+    // a row whose mismatches rest on no verified law has no severity (older results saved "low" for it)
+    severity: row.mismatches.some((m) => m.risk_status === "verified" || m.risk_status === "partial") ? row.severity : null,
     pending,
     said: row.said,
     paper: row.paper,

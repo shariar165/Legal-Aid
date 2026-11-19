@@ -169,6 +169,14 @@
   color: var(--gold-ink);
 }
 
+.docPill .chip {
+  flex: none;
+}
+
+.showSm {
+  display: none;
+}
+
 .docName {
   min-width: 0;
   max-width: 320px;
@@ -4581,6 +4589,10 @@ button.clause:hover {
   .actions .primaryBtn span,
   .hideSm {
     display: none;
+  }
+
+  .showSm {
+    display: inline;
   }
 
   .docPill {

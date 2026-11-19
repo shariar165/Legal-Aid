@@ -38,10 +38,11 @@ export const DESK = {
   hero: {
     region: { bn: "চার খাতার সারাংশ", en: "Four Ledgers summary" },
     term: (n: number, lang: Lang) => (lang === "bn" ? `${num(n, "bn")} মাসের চুক্তি` : `${n}-month contract`),
-    toldLess: { bn: ["কাগজ অনুযায়ী হাতে আসে মাসে ", " কম, যা বলা হয়েছিল তার চেয়ে"], en: ["On paper, take-home is ", " a month less than the worker was told"] },
-    toldMet: { bn: "কাগজ অনুযায়ী হাতে আসে যা বলা হয়েছিল তার সমান বা বেশি", en: "On paper, take-home is at least what the worker was told" },
-    toldLessYou: { bn: ["কাগজ অনুযায়ী হাতে আসবে মাসে ", " কম, যা আপনাকে বলা হয়েছিল তার চেয়ে"], en: ["On paper, you take home ", " a month less than you were told"] },
-    toldMetYou: { bn: "কাগজ অনুযায়ী হাতে আসবে যা আপনাকে বলা হয়েছিল তার সমান বা বেশি", en: "On paper, you take home at least what you were told" },
+    // Bangla puts the verb last: "what was said ... RM 1,250 less ... comes to hand", not the English clause order
+    toldLess: { bn: ["যা বলা হয়েছিল তার চেয়ে মাসে ", " কম হাতে আসবে"], en: ["On paper, take-home is ", " a month less than the worker was told"] },
+    toldMet: { bn: "যা বলা হয়েছিল তার সমান বা বেশি হাতে আসবে", en: "On paper, take-home is at least what the worker was told" },
+    toldLessYou: { bn: ["আপনাকে যা বলা হয়েছিল তার চেয়ে মাসে ", " কম হাতে আসবে"], en: ["On paper, you take home ", " a month less than you were told"] },
+    toldMetYou: { bn: "আপনাকে যা বলা হয়েছিল তার সমান বা বেশি হাতে আসবে", en: "On paper, you take home at least what you were told" },
     deducted: { bn: ["কাগজের বেতন থেকে মাসে ", " কেটে নেওয়া হবে"], en: ["", " a month is taken from the salary on paper"] },
     nothingDeducted: { bn: "কাগজের বেতন থেকে কিছু কাটা হবে না", en: "Nothing is taken from the salary on paper" },
     risks: (n: number, lang: Lang) => (lang === "bn" ? `চুক্তিতে ${num(n, "bn")}টি ঝুঁকি` : `${n} ${n === 1 ? "risk" : "risks"} in the contract`),
@@ -60,17 +61,13 @@ export const DESK = {
       lang === "bn" ? (b ? `মাস ${num(a, "bn")}–${num(b, "bn")}` : `মাস ${num(a, "bn")} থেকে`) : b ? `months ${a}–${b}` : `from month ${a}`,
     addSaid: { bn: "যা বলা হয়েছিল যোগ করুন", en: "Add what was said" },
     editSaid: { bn: "যা বলা হয়েছিল বদলান", en: "Edit what was said" },
-    flagOff: {
-      bn: "চার খাতা চালু নেই, তাই এখানে কাগজ আর আইন দেখানো হচ্ছে; যা বলা হয়েছিল তা যোগ করা যায় না।",
-      en: "Four Ledgers is off, so this shows the paper and the law; what was said cannot be added.",
-    },
   },
 
   money: {
     projection: { bn: "প্রক্ষেপণ", en: "Projection" },
     projected: { bn: "প্রক্ষেপিত দাবি", en: "Projected claim" },
     noLines: { bn: "যাচাই করা আইনের ওপর দাঁড়ানো কোনো প্রক্ষেপিত লাইন নেই।", en: "No projected line rests on verified law." },
-    term: { bn: "মেয়াদ", en: "Contract term" },
+    term: { bn: "মেয়াদ", en: "Term" },
     months: { bn: "মাস", en: "months" },
     confirm: { bn: "ঠিক আছে", en: "Correct" },
     change: { bn: "বদলান", en: "Change" },
@@ -84,6 +81,12 @@ export const DESK = {
     atLeast: (n: number, lang: Lang) => (lang === "bn" ? `অন্তত ${num(n, "bn")} মাস` : `at least ${n} months`),
     notWithin: { bn: "মেয়াদের মধ্যে নয়", en: "Not within the term" },
     rate: { bn: "ব্যবহারকারীর দেওয়া হার", en: "User-entered rate" },
+    account: { bn: "কর্মীর কথা", en: "worker's account" },
+    // short labels for the compact row; the full ones head the details
+    claimShort: { bn: "প্রক্ষেপিত ক্ষতি", en: "Projected loss" },
+    breakEvenShort: { bn: "খরচ উঠতে", en: "Break-even" },
+    details: { bn: "বিস্তারিত", en: "Details" },
+    detailsHide: { bn: "বিস্তারিত লুকান", en: "Hide details" },
   },
 
   rows: {
@@ -181,9 +184,9 @@ export const DESK = {
     },
     salary: { bn: "মাসিক বেতন", en: "Monthly salary" },
     currency: { bn: "মুদ্রা", en: "Currency" },
-    noDeductions: { bn: "বলেছিল কোনো টাকা কাটা হবে না?", en: "Told nothing would be deducted?" },
-    yes: { bn: "হ্যাঁ", en: "Yes" },
-    no: { bn: "না", en: "No" },
+    noDeductions: { bn: "বেতন থেকে টাকা কাটার কথা কী বলেছিল?", en: "What was said about deductions from the salary?" },
+    dedNone: { bn: "কিছু কাটবে না", en: "Nothing would be deducted" },
+    dedSome: { bn: "কাটবে বলেছিল", en: "Deductions were mentioned" },
     unknown: { bn: "জানি না", en: "Don't know" },
     recruitment: { bn: "চাকরি পেতে আগেই কত দিয়েছেন", en: "Already paid to get the job" },
     hours: { bn: "দিনে কত ঘণ্টা কাজ", en: "Hours of work a day" },

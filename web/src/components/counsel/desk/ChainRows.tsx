@@ -75,19 +75,24 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
         <h2 id="chain-title" className={s.paneTitle}>
           {ledgerOn ? T.title[lang] : T.riskTitle[lang]}
         </h2>
-        <span className={s.legend} aria-hidden="true">
-          <NodeMark n="ne" lang={lang} size={22} /> {T.ne[lang]}
-        </span>
-        <span className={s.legend} aria-hidden="true">
-          <NodeMark n="eq" lang={lang} size={22} /> {T.eq[lang]}
-        </span>
+        {/* the ≠ / = marks sit between told and paper, so the legend goes with them */}
+        {ledgerOn && (
+          <>
+            <span className={s.legend} aria-hidden="true">
+              <NodeMark n="ne" lang={lang} size={22} /> {T.ne[lang]}
+            </span>
+            <span className={s.legend} aria-hidden="true">
+              <NodeMark n="eq" lang={lang} size={22} /> {T.eq[lang]}
+            </span>
+          </>
+        )}
       </div>
 
       {rows.length === 0 ? (
         <p className={s.muted}>{T.empty[lang]}</p>
       ) : (
         <div className={s.chainScroll}>
-          <ul className={s.chainList}>
+          <ul className={s.chainList} data-ledger={ledgerOn ? "on" : "off"}>
             {rows.map((r) => {
               const clause = r.kind === "risk" && r.clauseIds[0] ? clauseIndex.get(r.clauseIds[0]) : undefined;
               const lawName = r.law.citationIds[0] ? citeName(result, r.law.citationIds[0], lang) : null;
@@ -106,13 +111,14 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                       {r.pending && <span className={s.pendingPill}>{T.pending[lang]}</span>}
                       {r.mismatches.length > 0 && <span className={s.count}>{T.count(r.mismatches.length, lang)}</span>}
                     </span>
-                    <span className={s.cells}>
-                      {r.kind === "term" ? (
-                        <Cell k="said" label={T.said[lang]} cell={r.said} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
-                      ) : (
-                        <Cell k="said" label={T.said[lang]} cell={null} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
+                    {/* flag off or an older result: no told or paid cells, so paper and law get the width */}
+                    <span className={s.cells} data-ledger={ledgerOn ? "on" : "off"}>
+                      {ledgerOn && (
+                        <>
+                          <Cell k="said" label={T.said[lang]} cell={r.kind === "term" ? r.said : null} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
+                          <NodeMark n={r.saidPaper} lang={lang} />
+                        </>
                       )}
-                      <NodeMark n={r.saidPaper} lang={lang} />
                       {r.kind === "term" ? (
                         <Cell k="paper" label={T.paper[lang]} cell={r.paper} empty={T.notOnPaper[lang]} lang={lang} />
                       ) : (
@@ -128,8 +134,12 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                           )}
                         </span>
                       )}
-                      <NodeMark n="dash" lang={lang} />
-                      <Cell k="paid" label={T.paid[lang]} cell={null} empty={T.noPayslip[lang]} lang={lang} />
+                      {ledgerOn && (
+                        <>
+                          <NodeMark n="dash" lang={lang} />
+                          <Cell k="paid" label={T.paid[lang]} cell={null} empty={T.noPayslip[lang]} lang={lang} />
+                        </>
+                      )}
                       <span className={s.divider} aria-hidden="true" />
                       <span className={s.lawCell} data-empty={!r.law.badge && !lawName}>
                         <span className={s.lawText}>

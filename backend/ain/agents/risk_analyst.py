@@ -119,6 +119,25 @@ def _over_cap(facts: DocFacts, wage: WageCalc | None) -> str | None:
     return None
 
 
+def hours_limit(packs: set[str]) -> dict | None:
+    """The routed destination's limit on the hours a contract may require ({day, week, citation_id}), if we have one."""
+    country = next((c for c in countries.load_countries() if c.pack in packs and c.hours_limit), None)
+    return country.hours_limit if country else None
+
+
+def _hours_over(facts: DocFacts, wage: WageCalc | None, packs: set[str]) -> str | None:
+    """Normal hours on paper above the limit; weekly hours only where the contract states them (never days × hours)."""
+    limit = hours_limit(packs)
+    if limit is None:
+        return None
+    over = []
+    if facts.hours_per_day is not None and facts.hours_per_day > limit["day"]:
+        over.append(f"{facts.hours_per_day} hours a day (the limit is {limit['day']})")
+    if facts.hours_per_week is not None and facts.hours_per_week > limit["week"]:
+        over.append(f"{facts.hours_per_week} hours a week (the limit is {limit['week']})")
+    return f"The contract sets normal working hours of {' and '.join(over)}." if over else None
+
+
 def _promise_gap(facts: DocFacts, wage: WageCalc | None, promises: Promises | None) -> str | None:
     gaps = ledger.pay_benefit_gaps(facts, wage, promises)
     return " ".join(gaps) + " (What the worker was told comes from the worker's own account.)" if gaps else None
@@ -129,6 +148,8 @@ def run_fact_check(name: str, facts: DocFacts, wage: WageCalc | None, packs: set
         return _maternity_short(facts, wage, packs)
     if name == "promise_gap":
         return _promise_gap(facts, wage, promises)
+    if name == "hours_over_limit":
+        return _hours_over(facts, wage, packs)
     return {"notice_short": _notice_short, "payment_terms_long": _payment_long, "below_min_wage": _below_min, "deduction_over_cap": _over_cap}[name](facts, wage)
 
 
@@ -139,6 +160,7 @@ FACT_CLAUSE_HINTS = {
     "below_min_wage": r"salary|wage|বেতন",
     "deduction_over_cap": r"deduct",
     "promise_gap": r"salary|wage|deduct|ticket|বেতন",
+    "hours_over_limit": r"\bhours?\b[^.]{0,20}\b(?:per|a|each)\s+(?:day|week)",
 }
 
 

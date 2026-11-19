@@ -111,51 +111,48 @@
   outline-offset: -3px;
 }
 
-.flagOff {
+/* ---------------------------------------------------------------- money strip (inside the hero) */
+/* One compact row under the bars: figure, short tag, the term control, then details and "what was said". The full
+   explanations open below it, so the three panes start within the first screen at 1440 × 900. */
+
+.strip {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--deep-line);
+}
+
+.stripRow {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-14);
+  gap: 10px 16px;
+}
+
+.fig {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.figLabel {
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--on-deep-muted);
 }
 
-/* ---------------------------------------------------------------- money strip (inside the hero) */
-
-.strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.stripCard {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--deep-line);
-  border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.stripCard[data-wide="true"] {
-  grid-column: span 2;
-}
-
-.stripHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.stripTitle {
-  font-size: var(--fs-14);
+.figNum {
+  font-family: var(--serif);
+  font-size: var(--fs-20);
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .tag {
-  align-self: flex-start;
+  align-self: center;
   padding: 2px 10px;
   border-radius: var(--r-pill);
   background: var(--gold);
@@ -165,16 +162,75 @@
   white-space: nowrap;
 }
 
+.tag[data-tone="quiet"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--on-deep-muted);
+  color: var(--on-deep);
+}
+
 .tag[data-tone="rate"] {
+  align-self: flex-start;
   background: var(--lg-law-tint);
   color: var(--lg-law-ink);
 }
 
-.stripNum {
-  font-family: var(--serif);
-  font-size: var(--fs-28);
-  font-weight: 700;
-  line-height: 1.2;
+.detailsBtn {
+  margin-left: auto;
+}
+
+/* "Add / edit what was said": a small button beside the hero's count chips */
+.saidBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--deep-line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--on-deep);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.saidBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.saidBtn:focus-visible {
+  outline-color: var(--gold);
+}
+
+.chev {
+  transition: transform 0.15s ease;
+}
+
+[aria-expanded="true"] > .chev {
+  transform: rotate(180deg);
+}
+
+.stripDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 28px;
+  padding: 16px;
+  border: 1px solid var(--deep-line);
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.stripDetails[hidden] {
+  display: none;
+}
+
+.detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .stripLines {
@@ -215,54 +271,36 @@
 }
 
 .term {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  margin-top: 4px;
-  padding-top: 12px;
-  border-top: 1px solid var(--deep-line);
-}
-
-.termLabel {
-  font-size: var(--fs-12);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--on-deep-muted);
+  gap: 6px;
 }
 
 .termValue {
   display: inline-flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+  align-items: center;
+  gap: 4px;
   font-size: var(--fs-16);
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.termValue > svg {
+  color: var(--gold);
 }
 
 .termSource {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   font-size: var(--fs-12);
   font-weight: 600;
   color: var(--on-deep-muted);
 }
 
-.termSource[data-source="user"] {
-  color: var(--gold);
-}
-
-.termActions,
 .termForm {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-
-.termActions {
-  margin-left: auto;
 }
 
 .termInput {
@@ -293,6 +331,7 @@
   font: inherit;
   font-size: var(--fs-14);
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -308,32 +347,14 @@
   color: var(--on-deep);
 }
 
+.btnOnDeepQuiet:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .btnOnDeep:focus-visible,
 .btnOnDeepQuiet:focus-visible,
-.addSaid:focus-visible,
 .termInput input:focus-visible {
   outline-color: var(--gold);
-}
-
-.addSaid {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 0 18px;
-  border: 1px dashed var(--on-deep-muted);
-  border-radius: var(--r-lg);
-  background: transparent;
-  color: var(--on-deep);
-  font: inherit;
-  font-size: var(--fs-16);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.addSaid:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ---------------------------------------------------------------- banners and the form */
@@ -910,6 +931,21 @@ button.clause[data-on="true"]:hover {
   overflow: hidden;
 }
 
+/* flag off or an older result: no told or paid cells, so paper and law share the row and keep more of their text */
+.cells[data-ledger="off"] .cell[data-k="paper"] {
+  flex: 1.4 1 0;
+}
+
+.cells[data-ledger="off"] .cellClamp,
+.cells[data-ledger="off"] .lawText .cellValue {
+  -webkit-line-clamp: 3;
+}
+
+/* two cells need no sideways scroll (the 580px floor is for four) */
+.chainList[data-ledger="off"] {
+  min-width: 0;
+}
+
 .badge[data-b="violation"] {
   background: var(--bad);
   color: #fff;
@@ -1339,10 +1375,6 @@ button.clause[data-on="true"]:hover {
     overflow: visible;
     scroll-margin-top: calc(var(--header-h, 108px) + 12px);
   }
-
-  .stripCard[data-wide="true"] {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1370,11 +1402,20 @@ button.clause[data-on="true"]:hover {
     padding: 16px;
   }
 
-  .strip {
-    grid-template-columns: minmax(0, 1fr);
+  .stripRow {
+    gap: 10px 20px;
   }
 
-  .termActions {
+  .detailsBtn {
     margin-left: 0;
+  }
+
+  /* flag off on a phone: paper above law, each the full width */
+  .cells[data-ledger="off"] {
+    flex-direction: column;
+  }
+
+  .cells[data-ledger="off"] .divider {
+    display: none;
   }
 }

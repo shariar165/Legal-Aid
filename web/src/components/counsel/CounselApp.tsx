@@ -83,7 +83,15 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 <span className={styles.docName}>{result.document.name}</span>
                 {result.llm_mode !== "live" && (
                   <span className={styles.chip} data-tone="warn" title="Answers come from saved or offline model responses">
-                    {result.llm_mode === "fake" ? "Offline demo" : "Replay"}
+                    {result.llm_mode === "fake" ? (
+                      <>
+                        {/* a phone keeps room for the file name with the short word */}
+                        <span className={styles.hideSm}>Offline demo</span>
+                        <span className={styles.showSm}>Demo</span>
+                      </>
+                    ) : (
+                      "Replay"
+                    )}
                   </span>
                 )}
               </span>
