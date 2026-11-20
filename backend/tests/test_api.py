@@ -105,8 +105,8 @@ def test_countries_and_destination_override(client):
 def test_blurry_salary_waits_for_human_confirmation(client, docs, monkeypatch):
     real = ingestion.build_document
 
-    def blurry(data, filename, source_kind=None):
-        doc, facts, ex = real(data, filename, source_kind)
+    def blurry(data, filename, source_kind=None, ocr_lines=None):
+        doc, facts, ex = real(data, filename, source_kind, ocr_lines)
         doc.ocr_used = True
         facts.salary_confidence = 0.42
         return doc, facts, ex

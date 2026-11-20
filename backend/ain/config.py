@@ -144,6 +144,12 @@ def ledger_enabled() -> bool:
     return bool((_raw().get("ledger") or {}).get("enabled"))
 
 
+def ocr_confirm_floor(engine: str | None) -> float:
+    """Salary confidence under which the worker confirms the figure, per OCR engine (spec 28); 0.9 if unlisted."""
+    floors = ((_raw().get("ocr") or {}).get("confirm_floor") or {})
+    return float(floors.get(engine or "easyocr", 0.9))
+
+
 def quote_threshold() -> int:
     return int(_raw()["verifier"]["quote_fidelity_threshold"])
 

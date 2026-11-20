@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type AnalysisResult, type TraceEvent } from "./api";
+import { isImage, OcrError, readPhoto } from "./citizen/browserOcr";
 
 export type StepId = "read" | "redact" | "match" | "verify";
 export const STEP_ORDER: StepId[] = ["read", "redact", "match", "verify"];
@@ -25,6 +26,8 @@ export interface AnalysisState {
   confirmed: boolean;
   result: AnalysisResult | null;
   error: string | null;
+  /** 0..1 while the photo is being read on the device (spec 28); null otherwise */
+  deviceOcr: number | null;
 }
 
 const INITIAL: AnalysisState = {
@@ -37,7 +40,12 @@ const INITIAL: AnalysisState = {
   confirmed: false,
   result: null,
   error: null,
+  deviceOcr: null,
 };
+
+/** Whether the server reads new photos itself; asked once per page load. A failed check assumes it does. */
+let serverOcr: Promise<boolean> | null = null;
+const serverReadsPhotos = () => (serverOcr ??= api.health().then((h) => h.ocr !== false, () => true));
 
 /**
  * Runs one analysis job: starts it, follows the agent trace over SSE, surfaces the
@@ -112,13 +120,22 @@ export function useAnalysis(existingJobId?: string) {
       close();
       setState({ ...INITIAL, status: "starting", name: "file" in input ? input.file.name : input.sampleId });
       try {
-        const job = "file" in input ? await api.analyzeFile(input.file, input.destination, input.policy) : await api.analyzeSample(input.sampleId);
+        let job;
+        if ("file" in input && isImage(input.file) && !(await serverReadsPhotos())) {
+          // this server has no OCR: read the photo here and send only its lines (spec 28)
+          setState((s) => ({ ...s, deviceOcr: 0 }));
+          const lines = await readPhoto(input.file, (p) => setState((s) => ({ ...s, deviceOcr: p })));
+          setState((s) => ({ ...s, deviceOcr: null }));
+          job = await api.analyzeOcrLines(lines, input.file.name, input.destination, input.policy);
+        } else {
+          job = "file" in input ? await api.analyzeFile(input.file, input.destination, input.policy) : await api.analyzeSample(input.sampleId);
+        }
         setState((s) => ({ ...s, jobId: job.job_id, name: job.name, status: "running" }));
         follow(job.job_id);
         return job.job_id;
       } catch (e) {
-        const msg = (e as Error).message;
-        setState((s) => ({ ...s, status: "error", error: msg.includes("Failed to fetch") ? "offline" : msg }));
+        const msg = e instanceof OcrError ? e.code : (e as Error).message;
+        setState((s) => ({ ...s, status: "error", deviceOcr: null, error: msg.includes("Failed to fetch") ? "offline" : msg }));
         return null;
       }
     },

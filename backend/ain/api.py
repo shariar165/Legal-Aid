@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 from ain import auth, automation, config, countries, mcp_server, seat_health
-from ain.agents import ablation, council
+from ain.agents import ablation, council, ingestion
 from ain.auth import Principal, owned_job, require_account, require_principal
 from ain.export import memo_docx
 from ain.llm import LLM, LLMError, PIILeakError
@@ -237,6 +237,7 @@ def health() -> dict:
         "corpus_sections": len(corpus.sections),
         "acts": len({s.act_key for s in corpus.sections}),
         "dense_retrieval": corpus.dense_ready,
+        "ocr": ingestion.ocr_available(),  # false: the citizen app reads a new photo on the device instead (spec 28)
         "seats": [h.model_dump() for h in seat_health.last()],  # empty until the live startup check has run
     }
 
@@ -325,11 +326,22 @@ async def analyze(
     destination_country: str | None = Form(None),
     policy: UploadFile | None = File(None),  # the employer's own policy or handbook, checked against the contract
     promises: str | None = Form(None),  # Four Ledgers: what the worker was told, as JSON (see models.Promises)
+    ocr_lines: str | None = Form(None),  # a photo read on the device, as JSON [{text, conf}] (spec 28); no file then
+    ocr_name: str | None = Form(None),  # that photo's file name
     owner: Principal = Depends(require_principal),
 ) -> dict:
     policy_doc = None
     told = _parse_promises(promises) if promises else None
-    if file is not None:
+    lines = None
+    if ocr_lines is not None:
+        if file is not None or sample_id:
+            raise HTTPException(400, "Send ocr_lines instead of a file or sample_id, not with one.")
+        try:
+            lines = ingestion.parse_ocr_lines(ocr_lines)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        name, data, kind = os.path.basename(ocr_name or "photo.jpg")[:120] or "photo.jpg", b"", None
+    elif file is not None:
         name, data = await _read_upload(file)
         kind = None
     elif sample_id:
@@ -358,7 +370,7 @@ async def analyze(
     job = new_job(name)
     auth.record_job(owner.user_id, job.id, name)
     async def run_and_notify():
-        await automation.notify_job(await run_pipeline(job, data, name, kind, config.allowed_mode(llm_mode), destination=destination_country, policy=policy_doc, promises=told))
+        await automation.notify_job(await run_pipeline(job, data, name, kind, config.allowed_mode(llm_mode), destination=destination_country, policy=policy_doc, promises=told, ocr_lines=lines))
 
     task = asyncio.create_task(run_and_notify())
     _tasks.add(task)

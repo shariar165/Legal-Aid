@@ -24,6 +24,8 @@ export interface Health {
   corpus_sections: number;
   acts: number;
   dense_retrieval: boolean;
+  /** false: this server cannot read a new photo, so Citizen reads it on the device (spec 28) */
+  ocr?: boolean;
   /** the Council seats' startup check (live mode only; empty until it has run) */
   seats?: SeatHealth[];
 }
@@ -342,7 +344,15 @@ export interface DocumentInfo {
   clauses: Clause[];
   ocr_used: boolean;
   ocr_confidence: number | null;
+  /** "tesseract" = the photo was read on the device (spec 28) */
+  ocr_engine?: "easyocr" | "tesseract" | null;
   pages: number;
+}
+
+/** One line read from a photo, confidence 0..1 (the lowest word on the line). */
+export interface OcrLine {
+  text: string;
+  conf: number;
 }
 
 /* ---------------------------------------------------------------- Four Ledgers (backend/ain/models.py, spec 19 + 20) */
@@ -652,6 +662,15 @@ export const api = {
   analyzeFile(file: File, destination?: string | null, policy?: File | null) {
     const form = new FormData();
     form.append("file", file);
+    if (destination) form.append("destination_country", destination);
+    if (policy) form.append("policy", policy);
+    return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
+  },
+  /** A photo read on the device (spec 28): only its lines go to the server, never the image. */
+  analyzeOcrLines(lines: OcrLine[], name: string, destination?: string | null, policy?: File | null) {
+    const form = new FormData();
+    form.append("ocr_lines", JSON.stringify(lines));
+    form.append("ocr_name", name);
     if (destination) form.append("destination_country", destination);
     if (policy) form.append("policy", policy);
     return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
