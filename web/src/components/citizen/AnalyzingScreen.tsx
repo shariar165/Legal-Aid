@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
-  const { stepsDone, ocrCheck, events, status, name, error } = analysis;
+  const { stepsDone, ocrCheck, events, status, name, error, deviceOcr } = analysis;
   const [ocr, setOcr] = useState<OcrState>("pending");
   const [value, setValue] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -31,7 +31,8 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
   const current = STEPS.findIndex((s) => !stepsDone.includes(s.id));
   const done = status === "done";
   const stepIndex = current === -1 ? STEPS.length : current;
-  const pct = Math.round(((stepIndex + (done ? 0 : 0.5)) / STEPS.length) * 100);
+  // while the photo is read on the device, the bar fills the first step with that progress (spec 28)
+  const pct = Math.round(((stepIndex + (done ? 0 : deviceOcr !== null ? deviceOcr * 0.9 : 0.5)) / STEPS.length) * 100);
   const shown = value ?? ocrCheck?.value ?? "";
   const canContinue = done && (!ocrCheck || ocr === "confirmed");
 
@@ -66,7 +67,13 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
             <h1 ref={heading} tabIndex={-1} className={styles.h2}>
               {T.failed[lang]}
             </h1>
-            <p className={styles.subtle}>{error === "offline" ? STRINGS.home.offline[lang] : error}</p>
+            <p className={styles.subtle}>
+              {error === "offline"
+                ? STRINGS.home.offline[lang]
+                : error === "ocr_unreadable" || error === "ocr_empty" || error === "ocr_blurry" || error === "ocr_failed"
+                  ? T[error][lang]
+                  : error}
+            </p>
           </div>
           <div className={styles.nextArea}>
             <button type="button" className={styles.btnDark} onClick={onRetry}>
@@ -114,6 +121,16 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
             );
           })}
         </ol>
+
+        {deviceOcr !== null && (
+          <p className={styles.liveFeed} aria-live="polite">
+            <span className={styles.liveDot} aria-hidden="true" />
+            <span className={styles.liveAgent}>
+              {T.deviceOcr[lang]} · {Math.round(deviceOcr * 100)}%
+            </span>{" "}
+            {T.deviceOcrNote[lang]}
+          </p>
+        )}
 
         {!done && latest && (
           <p className={styles.liveFeed} aria-live="polite">

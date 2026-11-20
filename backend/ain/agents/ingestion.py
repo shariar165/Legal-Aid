@@ -4,6 +4,8 @@
 * DOCX         -> python-docx paragraphs
 * Image / scan -> EasyOCR (Bangla + English) on CPU, cached by file hash in demo/ocr_cache/
 * Text         -> as is
+* Browser OCR  -> on a server without EasyOCR, the citizen app reads the photo on the device (tesseract.js) and sends
+                  only its lines with their confidences (`parse_ocr_lines`); the photo itself is never uploaded
 
 OCR runs locally, so the photo itself never leaves the machine. Facts extracted here are
 regex-based (deterministic and testable); the Router agent refines them with an LLM
@@ -13,8 +15,10 @@ after the PII Shield has redacted the text.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import io
 import json
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -53,10 +57,51 @@ class OcrUnavailable(RuntimeError):
     """The lite deployment (requirements-lite.txt) ships without EasyOCR: only pre-cached photos can be read."""
 
 
+def ocr_available() -> bool:
+    """Whether this server can read a new photo itself (the lite deployment has no EasyOCR).
+    `AIN_OCR=0` makes a full install behave like the lite one, for local checks of the browser path."""
+    if os.getenv("AIN_OCR") == "0":
+        return False
+    try:
+        return importlib.util.find_spec("easyocr") is not None
+    except ValueError:  # sys.modules["easyocr"] is None
+        return False
+
+
+MAX_OCR_LINES = 400
+MAX_OCR_CHARS = 60_000
+
+
+def parse_ocr_lines(raw: str) -> list[OcrLine]:
+    """Lines read on the device, as JSON [{"text": str, "conf": 0..1}]. Raises ValueError with a message for the user."""
+    try:
+        items = json.loads(raw)
+    except json.JSONDecodeError:
+        raise ValueError("ocr_lines is not valid JSON.") from None
+    if not isinstance(items, list) or not items:
+        raise ValueError("ocr_lines must be a non-empty list.")
+    if len(items) > MAX_OCR_LINES:
+        raise ValueError(f"ocr_lines has more than {MAX_OCR_LINES} lines.")
+    lines = []
+    for it in items:
+        if not isinstance(it, dict) or not isinstance(it.get("text"), str) or isinstance(it.get("conf"), bool) or not isinstance(it.get("conf"), (int, float)):
+            raise ValueError('Each OCR line must be {"text": string, "conf": number}.')
+        if not 0 <= it["conf"] <= 1:
+            raise ValueError("OCR confidence must be between 0 and 1.")
+        lines.append(OcrLine(text=it["text"].replace("\x00", ""), conf=round(float(it["conf"]), 3)))
+    if sum(len(x.text) for x in lines) > MAX_OCR_CHARS:
+        raise ValueError(f"ocr_lines has more than {MAX_OCR_CHARS:,} characters.")
+    if not any(x.text.strip() for x in lines):
+        raise ValueError("No text was read from the photo.")
+    return lines
+
+
 def _ocr_reader():
     global _reader
     if _reader is None:
         try:
+            if not ocr_available():
+                raise ImportError
             import easyocr
         except ImportError:
             raise OcrUnavailable(
@@ -421,8 +466,13 @@ FACT_FIELD = {"contract_months": "contract_months", "hours_per_day": "hours_per_
               "passport": "passport_held_by"}
 
 
-def build_document(data: bytes, filename: str, source_kind: str | None = None) -> tuple[Document, DocFacts, Extracted]:
-    ex = extract(data, filename)
+def build_document(data: bytes, filename: str, source_kind: str | None = None,
+                   ocr_lines: list[OcrLine] | None = None) -> tuple[Document, DocFacts, Extracted]:
+    """`ocr_lines`: a photo already read on the device (browser OCR); `data` is then empty."""
+    if ocr_lines is not None:
+        ex = Extracted(text="\n".join(line.text for line in ocr_lines), kind="image", ocr_lines=ocr_lines)
+    else:
+        ex = extract(data, filename)
     text = ex.text.translate(str.maketrans({"\r": ""}))
     clauses = segment(text)
     facts = extract_facts(text, clauses)
@@ -437,6 +487,7 @@ def build_document(data: bytes, filename: str, source_kind: str | None = None) -
         clauses=clauses,
         ocr_used=bool(ex.ocr_lines),
         ocr_confidence=ex.ocr_confidence,
+        ocr_engine="tesseract" if ocr_lines is not None else ("easyocr" if ex.ocr_lines else None),
         pages=ex.pages,
     )
     return doc, facts, ex

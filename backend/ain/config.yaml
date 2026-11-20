@@ -63,6 +63,14 @@ council:
 verifier:
   quote_fidelity_threshold: 90
 
+ocr:
+  # The worker must confirm a salary read from a photo when the OCR's confidence on that line is under the floor.
+  # Each engine scores differently, so each has its own floor (spec 28): EasyOCR on the server, tesseract.js on the
+  # device when the server has no OCR (the lite demo).
+  confirm_floor:
+    easyocr: 0.9
+    tesseract: 0.9
+
 ledger:
   # Four Ledgers (told · paper · paid · law), docs/specs/2026-11-14-19-four-ledgers.md. Off until it has had a
   # browser check and a live run; while off, promises are refused and every prompt is unchanged.

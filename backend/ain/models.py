@@ -110,6 +110,7 @@ class Document(BaseModel):
     clauses: list[Clause]
     ocr_used: bool = False
     ocr_confidence: float | None = None
+    ocr_engine: Literal["easyocr", "tesseract"] | None = None  # tesseract = read on the device (spec 28)
     pages: int = 1
 
 

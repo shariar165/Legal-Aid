@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-ocr.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-ocr.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -12,9 +14,12 @@
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "recharts": "3.10.1"
+    "recharts": "3.10.1",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
+    "@tesseract.js-data/ben": "1.0.0",
+    "@tesseract.js-data/eng": "1.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -81,6 +81,28 @@ export const STRINGS = {
     failed: { bn: "বিশ্লেষণ শেষ করা যায়নি।", en: "The analysis could not be completed." },
     retry: { bn: "আবার চেষ্টা করুন", en: "Try again" },
     ocrLowConf: { bn: "ছবি থেকে পড়ার নিশ্চয়তা", en: "Reading confidence" },
+    // in-browser OCR (spec 28)
+    deviceOcr: { bn: "ফোনেই ছবি পড়া হচ্ছে", en: "Reading the photo on your phone" },
+    deviceOcrNote: {
+      bn: "ছবিটি আপনার ফোন থেকে বাইরে যাবে না, শুধু লেখাটুকু যাবে।",
+      en: "The photo stays on your phone; only its text is sent.",
+    },
+    ocr_unreadable: {
+      bn: "এই ছবিটি খোলা যাচ্ছে না। JPG বা PNG ছবি দিন, অথবা PDF আপলোড করুন।",
+      en: "This photo could not be opened. Use a JPG or PNG photo, or upload a PDF.",
+    },
+    ocr_empty: {
+      bn: "ছবিতে কোনো লেখা পড়া গেল না। আলোতে, সোজা করে আবার ছবি তুলুন।",
+      en: "No text could be read in the photo. Take it again in good light, straight on.",
+    },
+    ocr_blurry: {
+      bn: "ছবিটি খুব ঝাপসা, লেখা ঠিকমতো পড়া যাচ্ছে না। আলোতে, কাগজ সোজা রেখে, কাছ থেকে আবার ছবি তুলুন।",
+      en: "The photo is too blurry to read. Take it again in good light, with the page flat and close up.",
+    },
+    ocr_failed: {
+      bn: "ফোনে ছবি পড়া গেল না। আবার চেষ্টা করুন, অথবা PDF আপলোড করুন।",
+      en: "The photo could not be read on this phone. Try again, or upload a PDF.",
+    },
   },
 
   result: {
