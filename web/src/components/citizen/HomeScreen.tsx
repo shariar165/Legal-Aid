@@ -197,6 +197,11 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           <span>{howToPlaying ? `${T.howToStop[lang]} · ${T.howTo[lang]}` : T.howTo[lang]}</span>
           {howToPlaying && <span className={styles.listenProgress} style={{ width: `${speech.pct}%` }} />}
         </button>
+        {speech.noVoice === HOW_TO_ID && (
+          <p className={styles.voiceNote} role="status">
+            {STRINGS.voice.none[lang]}
+          </p>
+        )}
 
         {offline && (
           <p className={styles.hint} role="status">
