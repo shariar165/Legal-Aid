@@ -152,6 +152,11 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
                     <div className={styles.playFill} style={{ width: `${speech.pct}%` }} />
                   </div>
                 )}
+                {speech.noVoice === card.kind && (
+                  <p className={styles.voiceNote} role="status">
+                    {STRINGS.voice.none[lang]}
+                  </p>
+                )}
 
                 <div className={styles.cardBody}>
                   {card.big && <span className={styles.big}>{card.big[lang]}</span>}
@@ -220,6 +225,11 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
                 <Icon name={letterPlaying ? "pause" : "play"} size={18} strokeWidth={2.5} /> {letterPlaying ? T.stop[lang] : T.listen[lang]}
               </button>
             </div>
+            {speech.noVoice === LETTER_ID && (
+              <p className={styles.voiceNote} role="status">
+                {STRINGS.voice.none[lang]}
+              </p>
+            )}
             <div className={styles.cardBody}>
               <p className={styles.letterSub}>{T.letterSub[lang]}</p>
               <pre className={styles.letterText}>{letter}</pre>

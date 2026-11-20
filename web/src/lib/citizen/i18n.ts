@@ -116,6 +116,14 @@ export const STRINGS = {
     home: { bn: "নতুন চুক্তি দেখান", en: "Check a contract" },
   },
 
+  // read-aloud on a device without a voice for the language (spec 28)
+  voice: {
+    none: {
+      bn: "এই ফোনে বাংলা পড়ে শোনানোর কণ্ঠ নেই। লেখাটি পড়ে দেখুন, অথবা কাউকে পড়ে শোনাতে বলুন।",
+      en: "This device has no English voice to read this aloud. Please read the text instead.",
+    },
+  },
+
   result: {
     title: { bn: "ফলাফল", en: "Result" },
     back: { bn: "ফিরে যান", en: "Back" },
