@@ -416,6 +416,11 @@
   overflow-wrap: anywhere;
 }
 
+/* in a table, wrap model ids at their own break points (hyphens, <wbr>) instead of mid-word (spec 28) */
+.table .mono {
+  overflow-wrap: break-word;
+}
+
 .muted {
   color: var(--d-muted);
 }
@@ -570,6 +575,10 @@
   }
   .lede {
     font-size: 16px;
+  }
+  .table th,
+  .table td {
+    padding: 8px;
   }
   .nav {
     display: none;

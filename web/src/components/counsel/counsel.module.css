@@ -3531,6 +3531,22 @@ button.clause:hover {
   color: var(--c-accent);
 }
 
+/* phones: four tabs don't fit one row, and a scrolled-off "Compare" tab gives no hint it exists (spec 28) */
+@media (max-width: 640px) {
+  .subTabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 4px;
+    overflow: visible;
+  }
+
+  .subTab {
+    padding: 10px 8px;
+    white-space: normal;
+    text-align: left;
+  }
+}
+
 .panel {
   display: flex;
   flex-direction: column;
