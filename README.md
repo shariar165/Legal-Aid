@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 386 offline tests
+python -m pytest -q              # 373 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
@@ -378,7 +378,7 @@ The tests cover:
 - **Read-aloud needs a voice for the language on the device.** Chrome on Windows has no Bangla voice; the card then
   says so instead of playing, and on a computer points to Microsoft Edge, whose natural bn-BD voices do read it (checked
   on the live site). Long text is spoken in sentence chunks, so Chrome's ~15 s limit no longer cuts the letter off.
-  The chunking was checked with a simulated voice; a real Android or iPhone voice has not been tried yet.
+  It was heard working in Edge on a computer and on an Android phone; an iPhone has not been tried yet.
 - **The hosted demo is slower and less precise than the local one.** It retrieves with BM25 only, and Groq's free
   tier queues calls (rate waits of over a minute), so even the 7-call control document can take several minutes. On
   2026-11-20 the clean control contract came back from the hosted demo with one danger (an Adversary interaction risk
