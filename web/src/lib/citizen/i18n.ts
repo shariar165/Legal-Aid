@@ -119,9 +119,11 @@ export const STRINGS = {
   // read-aloud on a device without a voice for the language (spec 28)
   voice: {
     none: {
-      bn: "এই ফোনে বাংলা পড়ে শোনানোর কণ্ঠ নেই। লেখাটি পড়ে দেখুন, অথবা কাউকে পড়ে শোনাতে বলুন।",
-      en: "This device has no English voice to read this aloud. Please read the text instead.",
+      bn: "এই ডিভাইসের ব্রাউজারে বাংলা পড়ে শোনানোর কণ্ঠ নেই। লেখাটি পড়ে দেখুন, অথবা কাউকে পড়ে শোনাতে বলুন।",
+      en: "This browser has no English voice to read this aloud. Please read the text instead.",
     },
+    // computers only: Chrome and Firefox there have no Bangla voice, Edge has natural bn-BD voices
+    edge: { bn: "কম্পিউটারে Microsoft Edge ব্রাউজারে খুললে বাংলায় পড়ে শোনানো যায়।" },
   },
 
   result: {
