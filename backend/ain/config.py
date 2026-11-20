@@ -157,6 +157,18 @@ def llm_mode() -> str:
     return "live" if has_key else "fake"
 
 
+MODE_RANK = {"fake": 0, "replay": 1, "live": 2}  # what a mode may spend: fake nothing, replay the cache, live quota
+
+
+def allowed_mode(requested: str | None) -> str:
+    """The mode a request or a saved result may run in: it can lower the server's mode, never raise it.
+    So a client cannot force live calls on a replay server, and an old live result does not go live again."""
+    server = llm_mode()
+    if not requested or MODE_RANK.get(requested, 99) > MODE_RANK.get(server, 2):
+        return server
+    return requested
+
+
 def dense_enabled() -> bool:
     return os.getenv("AIN_DENSE", "1") != "0"
 
