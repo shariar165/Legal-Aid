@@ -13,6 +13,7 @@ import { RiskCard } from "./RiskCard";
 import { CaseDesk } from "./desk/CaseDesk";
 import styles from "./counsel.module.css";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 /* Case Desk is the default; the Contract tab folded into its left pane (spec 20). */
 type View = "desk" | "memo" | "council" | "checks";
@@ -107,12 +108,14 @@ export function CounselApp({ jobId }: { jobId: string }) {
                   <Icon name="download" size={16} />
                   <span>Download memo</span>
                 </a>
+                <ThemeToggle className={styles.themeBtn} />
                 <AccountMenu />
               </div>
             </>
           )}
           {!result && (
             <div className={styles.actions}>
+              <ThemeToggle className={styles.themeBtn} />
               <AccountMenu />
             </div>
           )}

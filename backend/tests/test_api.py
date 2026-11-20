@@ -73,6 +73,21 @@ def test_upload_and_bad_inputs(client, docs):
     assert client.get("/api/corpus/BD-CONTRACT-1872-s27").json()["section"] == "27"
 
 
+def test_llm_mode_can_lower_but_never_raise_the_server_mode(client, monkeypatch):
+    # the test server runs fake (conftest): a client cannot force replay or live calls through the form field
+    for mode in ("live", "replay"):
+        r = client.post("/api/analyze", data={"sample_id": "control", "llm_mode": mode})
+        assert r.status_code == 403 and "fake mode" in r.json()["detail"]
+    ok = client.post("/api/analyze", data={"sample_id": "control", "llm_mode": "fake"})
+    assert ok.status_code == 200 and _wait(client, ok.json()["job_id"])["status"] == "done"
+    # a result saved by an earlier live run (ablation, /promises/verify) runs in the server's mode now
+    assert config.allowed_mode("live") == "fake"
+    monkeypatch.setenv("AIN_LLM_MODE", "replay")
+    assert [config.allowed_mode(m) for m in ("live", "replay", "fake", None)] == ["replay", "replay", "fake", "replay"]
+    monkeypatch.setenv("AIN_LLM_MODE", "live")
+    assert [config.allowed_mode(m) for m in ("live", "replay", "fake", None)] == ["live", "replay", "fake", "live"]
+
+
 def test_countries_and_destination_override(client):
     listed = client.get("/api/countries").json()
     assert {c["code"] for c in listed} >= {"SA", "AE", "MY", "QA", "OM", "KW", "SG", "BH"}
@@ -90,8 +105,8 @@ def test_countries_and_destination_override(client):
 def test_blurry_salary_waits_for_human_confirmation(client, docs, monkeypatch):
     real = ingestion.build_document
 
-    def blurry(data, filename, source_kind=None):
-        doc, facts, ex = real(data, filename, source_kind)
+    def blurry(data, filename, source_kind=None, ocr_lines=None):
+        doc, facts, ex = real(data, filename, source_kind, ocr_lines)
         doc.ocr_used = True
         facts.salary_confidence = 0.42
         return doc, facts, ex

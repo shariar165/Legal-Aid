@@ -41,7 +41,10 @@ python -m eval.run_eval                    # gold-set recall / precision / citat
 python -m eval.run_eval --stop-on-quota    # live over several days: stops at OpenRouter's daily quota, never on a backup
 python -m eval.bench_quality               # Virtual Bench trap set: a quota-saver flag stays off until this passes
 python -m scripts.smoke_live --docs 1      # live keys: model check, cache warm-up, free-quota left
+python -m scripts.warm_clean <sample_id>   # re-warm a sample until no cached answer is a fallback (--dry: replay, purge only)
 cd web && npm run lint && npm run build
+python scripts/check/contrast.py           # WCAG contrast of the globals.css tokens, light + dark
+python scripts/check/shot.py snap / 390 out.png --full   # headless-Chrome screenshot / JS check (Gate 3); see citizen_js.py
 ```
 Low-memory machine: start the backend with `AIN_DENSE=0`, and serve the UI with `npm run build && npm start`.
 

@@ -151,6 +151,12 @@ def ledger_enabled() -> bool:
     return bool((_raw().get("ledger") or {}).get("enabled"))
 
 
+def ocr_confirm_floor(engine: str | None) -> float:
+    """Salary confidence under which the worker confirms the figure, per OCR engine (spec 28); 0.9 if unlisted."""
+    floors = ((_raw().get("ocr") or {}).get("confirm_floor") or {})
+    return float(floors.get(engine or "easyocr", 0.9))
+
+
 def quote_threshold() -> int:
     return int(_raw()["verifier"]["quote_fidelity_threshold"])
 
@@ -162,6 +168,18 @@ def llm_mode() -> str:
         return mode
     has_key = any(provider(p).api_key for p in ("groq", "openrouter"))
     return "live" if has_key else "fake"
+
+
+MODE_RANK = {"fake": 0, "replay": 1, "live": 2}  # what a mode may spend: fake nothing, replay the cache, live quota
+
+
+def allowed_mode(requested: str | None) -> str:
+    """The mode a request or a saved result may run in: it can lower the server's mode, never raise it.
+    So a client cannot force live calls on a replay server, and an old live result does not go live again."""
+    server = llm_mode()
+    if not requested or MODE_RANK.get(requested, 99) > MODE_RANK.get(server, 2):
+        return server
+    return requested
 
 
 def dense_enabled() -> bool:

@@ -1,7 +1,12 @@
 /* The one token source for Citizen and Counsel (spec 20). Modules read these; they do not define colours, sizes,
-   radii or shadows of their own. The docs page keeps its own list for now. */
+   radii or shadows of their own. The docs page keeps its own list for now.
+   Palette (spec 26): Forest Green #1F3D2B and Sand Beige #E8DCC4. Light is sand paper with forest ink; dark is the
+   deep forest of the reference hero with sand-cream ink. lib/theme.ts resolves "system" and sets
+   <html data-theme="light|dark"> before first paint, so the dark values are written once, below. */
 
 :root {
+  color-scheme: light;
+
   /* faces: the Latin face first, the Bengali face for Bangla glyphs */
   --sans: var(--font-inter), var(--font-hind-siliguri), system-ui, -apple-system, "Segoe UI", sans-serif;
   --serif: var(--font-source-serif), var(--font-noto-serif-bengali), Georgia, serif;
@@ -17,65 +22,80 @@
   --fs-40: 40px;
 
   /* ground and ink */
-  --bg: #f1f3ef;
-  --card: #ffffff;
-  --subtle: #f2f4f1;
+  --bg: #f3eee3;
+  --card: #fcfaf5;
+  --subtle: #ede6d7;
   --paper: #fffdf8;
-  --paper-line: #e7e1d2;
-  --ink: #121a16;
-  --ink-2: #323c36;
-  --muted: #59635d;
-  --line: #e2e6e1;
-  --line-strong: #c9d0ca;
+  --paper-line: #e3d9c4;
+  --ink: #17231b;
+  --ink-2: #34433a;
+  --muted: #5a6357;
+  --line: #e2d9c8;
+  --line-strong: #cdbfa6;
   --highlight: #ffe98a;
+  --highlight-ink: var(--ink);
 
-  /* brand */
-  --accent: #0f4c3a;
-  --accent-hover: #0a3a2c;
-  --accent-tint: #e9f2ed;
-  --accent-ring: rgba(15, 76, 58, 0.22);
-  --deep: #0b3a2c;
-  --deep-line: #3d6b5c;
-  --on-deep: #ffffff;
-  --on-deep-muted: #cfe3d9;
+  /* brand: forest and sand */
+  --accent: #1f3d2b;
+  --accent-hover: #16301f;
+  --accent-tint: #e3eadf;
+  --accent-line: #c3d3c5;
+  --accent-ring: rgba(31, 61, 43, 0.22);
+  --on-accent: #fcfaf5;
+  --link: #1f3d2b;
+  --link-hover: #16301f;
+  --deep: #1f3d2b;
+  --deep-line: #3a5644;
+  --on-deep: #f2ebdd;
+  --on-deep-muted: #c3c7b4;
+  --on-deep-hover: rgba(242, 235, 221, 0.1);
+  --on-deep-active: rgba(242, 235, 221, 0.16);
+  --sand: #e8dcc4;
+  --sand-hover: #f2e9d8;
+  --sand-ink: #1f3d2b;
   --gold: #f5c443;
   --gold-ink: #2b1d18;
   --focus: #1d6fd6;
+  /* a faint film grain for the forest bands, as in the reference hero */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
   /* status */
   --ok: #067647;
   --ok-ink: #05603a;
-  --ok-tint: #e8f5ee;
+  --ok-tint: #e6f2e9;
+  --ok-line: #a6d9bf;
   --warn: #a15c07;
   --warn-ink: #7a4500;
-  --warn-tint: #fef5e1;
+  --warn-tint: #fbf1dc;
+  --warn-line: #f0d9a2;
   --bad: #b42318;
   --bad-ink: #912018;
-  --bad-tint: #fdeeec;
+  --bad-tint: #fcebe7;
+  --bad-line: #f3c6bf;
 
   /* severity */
   --sev-critical: #b42318;
-  --sev-critical-tint: #fdeeec;
+  --sev-critical-tint: #fcebe7;
   --sev-critical-ink: #912018;
   --sev-high: #c4410c;
-  --sev-high-tint: #fff1e8;
+  --sev-high-tint: #fdeee2;
   --sev-high-ink: #93370d;
   --sev-medium: #b7791f;
-  --sev-medium-tint: #fdf6e3;
+  --sev-medium-tint: #fbf3df;
   --sev-medium-ink: #7a4500;
   --sev-low: #4b7a65;
-  --sev-low-tint: #ecf4f0;
+  --sev-low-tint: #e8f0ea;
   --sev-low-ink: #2c5242;
 
   /* council members */
   --p-happy: #9a6200;
-  --p-happy-tint: #fdf3dc;
+  --p-happy-tint: #fbf1d9;
   --p-happy-ink: #7a4500;
   --p-proud: #4338ca;
-  --p-proud-tint: #eef0fd;
+  --p-proud-tint: #ecedfb;
   --p-proud-ink: #3730a3;
   --p-gloomy: #475569;
-  --p-gloomy-tint: #eef1f5;
+  --p-gloomy-tint: #eceff2;
   --p-gloomy-ink: #334155;
 
   /* Four Ledgers: said amber, paper slate, paid green, law indigo (the member tints, reused) */
@@ -100,9 +120,94 @@
   --r-lg: 16px;
   --r-xl: 20px;
   --r-pill: 999px;
-  --shadow-1: 0 1px 2px rgba(18, 26, 22, 0.06);
-  --shadow-2: 0 1px 2px rgba(18, 26, 22, 0.06), 0 4px 12px rgba(18, 26, 22, 0.05);
-  --shadow-3: 0 1px 2px rgba(18, 26, 22, 0.06), 0 18px 44px rgba(18, 26, 22, 0.1);
+  --shadow-1: 0 1px 2px rgba(31, 61, 43, 0.07);
+  --shadow-2: 0 1px 2px rgba(31, 61, 43, 0.07), 0 6px 16px rgba(31, 61, 43, 0.06);
+  --shadow-3: 0 1px 2px rgba(31, 61, 43, 0.07), 0 18px 44px rgba(31, 61, 43, 0.12);
+  --shadow-up: 0 -10px 18px -14px rgba(31, 61, 43, 0.35);
+}
+
+/* Dark: the deep forest of the reference hero. Only colours change; the bands that are dark in light mode
+   (top bar, money hero) stay dark, a step deeper. Tints become low-chroma dark fills with light ink.
+   Screen only: the memo prints with the light values in either theme. */
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #0e1812;
+    --card: #15221a;
+    --subtle: #1b2a20;
+    --paper: #18251c;
+    --paper-line: #2c3b30;
+    --ink: #ece4d2;
+    --ink-2: #d3cab6;
+    --muted: #a49e8c;
+    --line: #26362b;
+    --line-strong: #3a4c3f;
+    --highlight: #5b4a17;
+    --highlight-ink: #f6eedd;
+
+    --accent: #e8dcc4;
+    --accent-hover: #f4ecdc;
+    --accent-tint: #223429;
+    --accent-line: #3e5444;
+    --accent-ring: rgba(232, 220, 196, 0.3);
+    --on-accent: #1f3d2b;
+    --link: #b8d3b0;
+    --link-hover: #d3e6cc;
+    --deep: #12221a;
+    --deep-line: #2d4235;
+    --on-deep: #ece4d2;
+    --on-deep-muted: #aab4a2;
+    --on-deep-hover: rgba(236, 228, 210, 0.08);
+    --on-deep-active: rgba(236, 228, 210, 0.14);
+    --sand-hover: #f4ecdc;
+    --gold: #e9bb48;
+    --focus: #8ab8f0;
+
+    --ok: #6fcf97;
+    --ok-ink: #93dcb2;
+    --ok-tint: #16301f;
+    --ok-line: #2d5a3e;
+    --warn: #e0a54a;
+    --warn-ink: #f0c47e;
+    --warn-tint: #31270f;
+    --warn-line: #5e4719;
+    --bad: #f07d70;
+    --bad-ink: #f5aaa0;
+    --bad-tint: #381b17;
+    --bad-line: #6a2e27;
+
+    --sev-critical: #f07d70;
+    --sev-critical-tint: #381b17;
+    --sev-critical-ink: #f5aaa0;
+    --sev-high: #f0965a;
+    --sev-high-tint: #372114;
+    --sev-high-ink: #f6b88d;
+    --sev-medium: #e0b055;
+    --sev-medium-tint: #31270f;
+    --sev-medium-ink: #f0c97e;
+    --sev-low: #8cc3a6;
+    --sev-low-tint: #17291f;
+    --sev-low-ink: #a9d6bc;
+
+    --p-happy: #e0b055;
+    --p-happy-tint: #31270f;
+    --p-happy-ink: #f0c97e;
+    --p-proud: #a5a8f5;
+    --p-proud-tint: #23244a;
+    --p-proud-ink: #c6c8fa;
+    --p-gloomy: #a3b1c4;
+    --p-gloomy-tint: #222932;
+    --p-gloomy-ink: #c8d2de;
+
+    --lg-paid-ink: #b8d3b0;
+    --lg-paid-bar: #7fcca6;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.28);
+    --shadow-3: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 44px rgba(0, 0, 0, 0.45);
+    --shadow-up: 0 -10px 18px -14px rgba(0, 0, 0, 0.6);
+  }
 }
 
 *,
@@ -121,6 +226,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media print {
+  html,
+  body {
+    background: #fff; /* paper, not the sand ground (spec 28) */
+  }
+}
+
 button,
 input,
 select,
@@ -129,13 +241,13 @@ textarea {
 }
 
 a {
-  color: var(--accent);
+  color: var(--link);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 a:hover {
-  color: var(--accent-hover);
+  color: var(--link-hover);
 }
 
 :focus-visible {

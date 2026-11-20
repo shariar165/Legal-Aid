@@ -102,9 +102,15 @@
   display: flex;
   flex-direction: column;
   padding: 0 24px;
-  background: var(--deep);
+  background-color: var(--deep);
+  background-image: var(--grain);
   color: var(--on-deep);
   border-bottom: 1px solid var(--deep-line);
+}
+
+/* on the start page the bar runs straight into the hero band */
+.page:has(.heroBand) .topbar {
+  border-bottom-color: transparent;
 }
 
 .topRow {
@@ -112,6 +118,11 @@
   align-items: center;
   gap: 16px;
   min-height: 64px;
+}
+
+/* with the section tabs below, the row gives 8px to them: the bar stays --header-h tall */
+.topRow:has(+ .views) {
+  min-height: 56px;
 }
 
 .brand {
@@ -131,7 +142,7 @@
   display: block;
   /* the tile is the same green as the bar: a faint ring keeps its edge (22% = the svg's 112/512 corner) */
   border-radius: 22%;
-  box-shadow: 0 0 0 1px rgba(255, 253, 248, 0.22);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-deep) 22%, transparent);
 }
 
 .brandText {
@@ -164,9 +175,9 @@
 }
 
 .docPill .chip {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--gold-ink);
+  background: var(--sand);
+  border-color: var(--sand);
+  color: var(--sand-ink);
 }
 
 .docPill .chip {
@@ -194,45 +205,65 @@
 }
 
 .topbar .quietBtn,
-.topbar .iconBtn {
+.topbar .iconBtn,
+.topbar .themeBtn {
   min-height: 44px;
+  border-radius: var(--r-pill);
   background: transparent;
   border: 1px solid var(--deep-line);
   color: var(--on-deep) !important;
 }
 
-.topbar .iconBtn {
+.topbar .iconBtn,
+.topbar .themeBtn {
   width: 44px;
   height: 44px;
 }
 
 .topbar .quietBtn:hover,
-.topbar .iconBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
+.topbar .iconBtn:hover,
+.topbar .themeBtn:hover {
+  background: var(--on-deep-hover);
   border-color: var(--on-deep-muted);
+}
+
+/* the light/dark switch: like .iconBtn, but it stays on a phone */
+.themeBtn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .topbar .primaryBtn {
   min-height: 44px;
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--gold-ink) !important;
+  border-radius: var(--r-pill);
+  background: var(--sand);
+  border-color: var(--sand);
+  color: var(--sand-ink) !important;
   box-shadow: none;
 }
 
 .topbar .primaryBtn:hover {
-  background: #f8d36f;
-  border-color: #f8d36f;
+  background: var(--sand-hover);
+  border-color: var(--sand-hover);
 }
 
 .topbar :focus-visible {
-  outline-color: var(--gold);
+  outline-color: var(--sand);
 }
 
 .views {
   display: flex;
-  gap: 4px;
-  margin-bottom: -1px;
+  gap: 2px;
+  align-self: flex-start;
+  max-width: 100%;
+  margin-bottom: 6px;
+  padding: 3px;
+  border: 1px solid var(--deep-line);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--on-deep) 5%, transparent);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -245,10 +276,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 10px 12px 12px;
+  min-height: 38px;
+  padding: 6px 14px;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-radius: var(--r-pill);
   background: none;
   font: inherit;
   font-size: var(--fs-14);
@@ -256,20 +287,22 @@
   color: var(--on-deep-muted);
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 .viewTab:hover {
   color: var(--on-deep);
+  background: var(--on-deep-hover);
 }
 
 .viewTab[aria-current="page"] {
   color: var(--on-deep);
-  border-bottom-color: var(--gold);
+  background: var(--on-deep-active);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-deep) 12%, transparent);
 }
 
 .viewTab[aria-current="page"] svg {
-  color: var(--gold);
+  color: var(--sand);
 }
 
 .count {
@@ -295,9 +328,9 @@
 }
 
 .viewTab[aria-current="page"] .count {
-  background: var(--gold);
+  background: var(--sand);
   border-color: transparent;
-  color: var(--gold-ink);
+  color: var(--sand-ink);
 }
 
 .narrow,
@@ -423,7 +456,7 @@
   padding: 12px 14px;
   border-radius: var(--r);
   background: var(--bad-tint);
-  border: 1px solid #f5c7c1;
+  border: 1px solid var(--bad-line);
   color: var(--bad-ink);
   font-size: 14px;
 }
@@ -443,7 +476,7 @@
   gap: 8px;
   min-height: 38px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--r-pill);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -456,9 +489,9 @@
 
 .primaryBtn {
   background: var(--c-accent);
-  color: #fff !important;
+  color: var(--on-accent) !important;
   border: 1px solid var(--c-accent);
-  box-shadow: 0 1px 2px rgba(10, 51, 40, 0.25);
+  box-shadow: var(--shadow-1);
 }
 
 .primaryBtn:hover {
@@ -513,7 +546,7 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 8px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--c-line);
   background: var(--c-card);
   color: var(--c-ink-2);
@@ -561,7 +594,7 @@
 
 .chip[data-tone="warn"] {
   background: var(--warn-tint);
-  border-color: #f3dca6;
+  border-color: var(--warn-line);
   color: var(--warn-ink);
 }
 
@@ -597,7 +630,7 @@
 .segmented button[aria-pressed="true"] {
   background: var(--c-card);
   color: var(--c-ink);
-  box-shadow: 0 1px 2px rgba(16, 24, 20, 0.1), 0 0 0 1px var(--c-line);
+  box-shadow: var(--shadow-1), 0 0 0 1px var(--c-line);
 }
 
 .segmented .count {
@@ -639,7 +672,7 @@
 .splitTag {
   background: var(--warn-tint);
   color: var(--warn-ink);
-  border: 1px solid #f3dca6;
+  border: 1px solid var(--warn-line);
 }
 
 .splitTag {
@@ -813,12 +846,12 @@ a.citeChip:hover {
 .filterChips button[aria-pressed="true"] {
   border-color: var(--c-ink);
   background: var(--c-ink);
-  color: #fff;
+  color: var(--c-card);
 }
 
 .filterChips button[aria-pressed="true"] .count {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: color-mix(in srgb, var(--c-card) 18%, transparent);
+  color: var(--c-card);
 }
 
 .salaryCheck {
@@ -828,7 +861,7 @@ a.citeChip:hover {
   padding: 16px;
   border-radius: var(--r);
   background: var(--warn-tint);
-  border: 1px solid #f3dca6;
+  border: 1px solid var(--warn-line);
 }
 
 .salaryIcon {
@@ -838,7 +871,7 @@ a.citeChip:hover {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--c-card);
   color: var(--warn-ink);
 }
 
@@ -890,7 +923,7 @@ a.citeChip:hover {
   min-height: 38px;
   border-radius: 8px;
   border: 1px solid var(--c-line-strong);
-  background: #fff;
+  background: var(--c-card);
   font-weight: 600;
 }
 
@@ -909,10 +942,18 @@ a.citeChip:hover {
 
 /* ================================================================ start */
 
+.heroBand {
+  background-color: var(--deep);
+  /* grain, and a soft sand glow rising from the bottom edge, as in the reference */
+  background-image: var(--grain), radial-gradient(120% 80% at 50% 130%, color-mix(in srgb, var(--sand) 16%, transparent), transparent 70%);
+  color: var(--on-deep);
+}
+
 .startMain {
+  position: relative;
   width: min(1080px, 100%);
-  margin: 0 auto;
-  padding: 56px 24px 72px;
+  margin: -56px auto 0;
+  padding: 0 24px 72px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -921,47 +962,62 @@ a.citeChip:hover {
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 760px;
+  align-items: center;
+  gap: 14px;
+  width: min(880px, 100%);
+  margin: 0 auto;
+  padding: 56px 24px 104px;
+  text-align: center;
+}
+
+.hero .kicker {
+  color: var(--on-deep-muted);
 }
 
 .heroTitle {
   margin: 0;
   font-family: var(--c-serif);
-  font-size: clamp(30px, 4.2vw, 44px);
+  font-size: clamp(32px, 4.6vw, 52px);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  color: var(--c-ink);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--on-deep);
+  text-wrap: balance;
 }
 
 .heroLead {
   margin: 0;
-  max-width: 64ch;
+  max-width: 60ch;
   font-size: 17px;
   line-height: 1.6;
-  color: var(--c-muted);
+  color: var(--on-deep-muted);
+  text-wrap: pretty;
 }
 
 .trust {
   list-style: none;
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 22px;
-  font-size: 14px;
-  color: var(--c-ink-2);
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--fs-14);
+  color: var(--on-deep);
 }
 
 .trust li {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--deep-line);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--on-deep) 5%, transparent);
 }
 
 .trust svg {
-  color: var(--c-accent);
+  color: var(--sand);
 }
 
 .dropzone {
@@ -970,9 +1026,10 @@ a.citeChip:hover {
   align-items: center;
   gap: 8px;
   padding: 40px 24px;
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   border: 1.5px dashed var(--c-line-strong);
   background: var(--c-card);
+  box-shadow: var(--shadow-3);
   font: inherit;
   color: var(--c-ink);
   text-align: center;
@@ -983,7 +1040,7 @@ a.citeChip:hover {
 .dropzone:hover:not(:disabled),
 .dropzone[data-dragging="true"] {
   border-color: var(--c-accent);
-  background: #fbfdfc;
+  background: color-mix(in srgb, var(--c-accent-tint) 50%, var(--c-card));
   box-shadow: 0 0 0 4px var(--c-accent-ring);
 }
 
@@ -1140,7 +1197,7 @@ a.citeChip:hover {
   margin-bottom: 6px;
   border-radius: 50%;
   background: var(--c-accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 700;
 }
@@ -1269,7 +1326,7 @@ a.citeChip:hover {
 [data-state="done"] > .stepDot {
   background: var(--c-accent);
   border-color: var(--c-accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 [data-state="current"] > .stepDot {
@@ -1281,7 +1338,7 @@ a.citeChip:hover {
 
 @keyframes pulse {
   50% {
-    box-shadow: 0 0 0 7px rgba(15, 76, 58, 0.08);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--c-accent) 10%, transparent);
   }
 }
 
@@ -1374,7 +1431,7 @@ a.citeChip:hover {
 
 .kpis > div[data-tone="bad"] {
   background: var(--bad-tint);
-  border-color: #f5c7c1;
+  border-color: var(--bad-line);
 }
 
 .kpis > div[data-tone="bad"] .kpiNum {
@@ -1563,12 +1620,12 @@ a.citeChip:hover {
   font-size: 13.5px;
   line-height: 1.4;
   text-align: left;
-  color: #05603a;
+  color: var(--ok-ink);
   cursor: pointer;
 }
 
 .verifiedStat:hover {
-  border-color: #a6d9bf;
+  border-color: var(--ok-line);
 }
 
 .verifiedStat > span {
@@ -1674,7 +1731,7 @@ a.citeChip:hover {
   border: 1px solid var(--c-accent);
   background: var(--c-accent);
   font: inherit;
-  color: #fff;
+  color: var(--on-accent);
   text-align: left;
   cursor: pointer;
   box-shadow: var(--shadow-2);
@@ -1771,7 +1828,7 @@ a.citeChip:hover {
   padding: 12px 14px;
   border-radius: var(--r);
   background: var(--c-accent-tint);
-  border: 1px solid #cfe3d8;
+  border: 1px solid var(--accent-line);
 }
 
 .todo > svg {
@@ -1901,8 +1958,8 @@ a.citeChip:hover {
 .mitigation {
   padding: 14px 16px;
   border-radius: var(--r);
-  border: 1px solid #cfe3d8;
-  background: #f7fbf9;
+  border: 1px solid var(--accent-line);
+  background: color-mix(in srgb, var(--c-accent-tint) 45%, var(--c-card));
 }
 
 .mitigation p {
@@ -1970,7 +2027,7 @@ a.citeChip:hover {
   gap: 10px 16px;
   padding: 8px 10px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--c-card) 94%, transparent);
   backdrop-filter: blur(8px);
   border: 1px solid var(--c-line);
   box-shadow: var(--shadow-1);
@@ -2133,7 +2190,7 @@ button.clause:hover {
 }
 
 .member[aria-checked="true"] {
-  background: color-mix(in srgb, var(--tint) 70%, #fff);
+  background: color-mix(in srgb, var(--tint) 70%, var(--c-card));
   border-color: color-mix(in srgb, var(--acc) 35%, transparent);
   box-shadow: inset 3px 0 0 var(--acc);
 }
@@ -2302,7 +2359,7 @@ button.clause:hover {
 }
 
 .memberVote[data-dissent="true"] {
-  border-color: #f3dca6;
+  border-color: var(--warn-line);
   background: var(--warn-tint);
   color: var(--warn-ink);
 }
@@ -2402,7 +2459,7 @@ button.clause:hover {
   padding: 10px 14px;
   border-radius: 14px 14px 4px 14px;
   background: var(--c-ink);
-  color: #fff;
+  color: var(--c-card);
   font-size: 14.5px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -2549,7 +2606,7 @@ button.clause:hover {
   border: none;
   border-radius: 9px;
   background: var(--c-accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
   transition: background 0.15s, opacity 0.15s;
 }
@@ -2623,7 +2680,7 @@ button.clause:hover {
 }
 
 .voteCase > summary:hover {
-  background: #fafbfa;
+  background: var(--c-subtle);
 }
 
 .voteTitle {
@@ -2657,7 +2714,7 @@ button.clause:hover {
   padding: 2px 10px;
   border-radius: 999px;
   background: var(--ok-tint);
-  color: #05603a;
+  color: var(--ok-ink);
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -2853,7 +2910,7 @@ button.clause:hover {
   padding: 2px 8px;
   border-radius: 6px;
   background: var(--c-ink);
-  color: #fff;
+  color: var(--c-card);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.06em;
@@ -3131,7 +3188,7 @@ button.clause:hover {
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: var(--r-lg);
-  background: #f8eee2;
+  background: var(--sand); /* the scene's art is drawn for a light stage: sand in both themes */
   border: 1px solid var(--c-line);
   box-shadow: var(--shadow-2);
 }
@@ -3156,7 +3213,7 @@ button.clause:hover {
   height: 38px;
   border-radius: 50%;
   background: var(--c-accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .rulingTitle {
@@ -3182,7 +3239,7 @@ button.clause:hover {
   padding: 4px 12px 4px 8px;
   border-radius: 999px;
   background: var(--ok-tint);
-  color: #05603a;
+  color: var(--ok-ink);
   font-size: 13px;
   font-weight: 650;
   white-space: nowrap;
@@ -3474,6 +3531,22 @@ button.clause:hover {
   color: var(--c-accent);
 }
 
+/* phones: four tabs don't fit one row, and a scrolled-off "Compare" tab gives no hint it exists (spec 28) */
+@media (max-width: 640px) {
+  .subTabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 4px;
+    overflow: visible;
+  }
+
+  .subTab {
+    padding: 10px 8px;
+    white-space: normal;
+    text-align: left;
+  }
+}
+
 .panel {
   display: flex;
   flex-direction: column;
@@ -3536,12 +3609,12 @@ button.clause:hover {
 }
 
 .ledgerRow[data-verdict="dropped"] {
-  background: #fffafa;
-  border-color: #f5d5d0;
+  background: color-mix(in srgb, var(--bad-tint) 40%, var(--c-card));
+  border-color: var(--bad-line);
 }
 
 .ledgerRow[data-verdict="partial"] {
-  border-color: #f3e2b8;
+  border-color: var(--warn-line);
 }
 
 .ledgerTop {
@@ -3579,7 +3652,7 @@ button.clause:hover {
 
 .verdictPill[data-verdict="verified"] {
   background: var(--ok-tint);
-  color: #05603a;
+  color: var(--ok-ink);
 }
 
 .verdictPill[data-verdict="partial"] {
@@ -3619,7 +3692,7 @@ button.clause:hover {
 
 .gate[data-status="pass"] {
   background: var(--ok-tint);
-  color: #05603a;
+  color: var(--ok-ink);
 }
 
 .gate[data-status="warn"] {
@@ -3629,7 +3702,7 @@ button.clause:hover {
 
 .gate[data-status="fail"] {
   background: var(--bad);
-  color: #fff;
+  color: var(--c-card);
 }
 
 .gate[data-status="skip"] {
@@ -3714,7 +3787,7 @@ button.clause:hover {
   overflow-y: auto;
   border-radius: var(--r);
   border: 1px solid var(--c-line);
-  background: #fbfcfb;
+  background: color-mix(in srgb, var(--c-subtle) 50%, var(--c-card));
   font-family: var(--c-mono);
   font-size: 12px;
 }
@@ -4079,7 +4152,7 @@ button.clause:hover {
   padding: 12px;
   border-radius: var(--r);
   background: var(--bad-tint);
-  border: 1px solid #f5c7c1;
+  border: 1px solid var(--bad-line);
   font-size: 13.5px;
   color: var(--bad-ink);
 }
@@ -4099,7 +4172,7 @@ button.clause:hover {
   border-radius: 8px;
   border: 1px solid var(--bad);
   background: var(--bad);
-  color: #fff;
+  color: var(--c-card);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -4622,8 +4695,13 @@ button.clause:hover {
     padding: 0;
   }
 
+  .topRow:has(+ .views) {
+    min-height: 50px;
+  }
+
   .viewTab {
-    padding: 10px 10px 12px;
+    min-height: 36px;
+    padding: 6px 12px;
     font-size: var(--fs-14);
   }
 
@@ -4635,8 +4713,13 @@ button.clause:hover {
   }
 
   .startMain {
-    padding-top: 32px;
+    margin-top: -40px;
+    padding-top: 0;
     gap: 22px;
+  }
+
+  .hero {
+    padding: 36px 16px 76px;
   }
 
   .card,
@@ -4862,7 +4945,7 @@ button.clause:hover {
     z-index: 6;
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
     border-radius: 0 0 var(--r-lg) var(--r-lg);
-    box-shadow: 0 -10px 18px -14px rgba(16, 24, 20, 0.35);
+    box-shadow: var(--shadow-up);
   }
 
   .composerBox textarea {

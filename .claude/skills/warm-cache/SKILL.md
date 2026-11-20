@@ -16,3 +16,6 @@ unreachable. Replay mode (`AIN_LLM_MODE=replay`) only uses this cache, so the de
    is low and continue after UTC midnight.
 4. Report per document: clauses, off-playbook risks, dropped restatements, calls, fallbacks and time. Say plainly if
    any seat fell back to Groq.
+5. Cached fallback answers are served before the primary is tried. To purge them, run
+   `AIN_LLM_MODE=replay python -m scripts.warm_clean <sample_id> --dry` (no network), then
+   `python -m scripts.warm_clean <sample_id>` to refill from the configured models (it stops at a quota reserve).

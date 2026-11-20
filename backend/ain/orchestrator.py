@@ -27,7 +27,6 @@ from ain.models import (
 from ain.retrieval import CorpusOverlay, get_corpus
 
 CONFIRM_TIMEOUT_S = 600.0
-OCR_CONFIDENCE_FLOOR = 0.9
 
 # Procedural facts the citizen cards rely on (deadline / what to do). They are claims like any
 # other and must pass the same gates before they are shown.
@@ -106,16 +105,18 @@ def new_job(name: str) -> Job:
 async def run_pipeline(
     job: Job, data: bytes, filename: str, source_kind: str | None = None, llm_mode: str | None = None,
     confirm_timeout: float = CONFIRM_TIMEOUT_S, llm: LLM | None = None, destination: str | None = None,
-    policy: tuple[bytes, str] | None = None, promises: Promises | None = None,
+    policy: tuple[bytes, str] | None = None, promises: Promises | None = None, ocr_lines: list[ingestion.OcrLine] | None = None,
 ) -> AnalysisResult:
-    """`destination` is the country the user picked when the document does not name one clearly;
+    """`ocr_lines` is a photo already read on the device (browser OCR, spec 28), sent instead of the photo;
+    `destination` is the country the user picked when the document does not name one clearly;
     `policy` is the employer's own policy or handbook as (file bytes, file name), checked against the contract;
     `promises` is what the worker says they were told (Four Ledgers, only when `ledger.enabled` is on)."""
     try:
-        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm, destination, policy, promises)
+        return await _run(job, data, filename, source_kind, llm_mode, confirm_timeout, llm, destination, policy, promises, ocr_lines)
     except Exception as e:  # surfaced to the UI; the trace keeps what happened before
         job.status = "error"
-        job.error = f"{type(e).__name__}: {e}"
+        # a message written for the user is shown as is; anything else keeps its type for debugging
+        job.error = str(e) if isinstance(e, ingestion.OcrUnavailable) else f"{type(e).__name__}: {e}"
         job.say("error", None, job.error)
         raise
 
@@ -123,6 +124,7 @@ async def run_pipeline(
 async def _run(
     job: Job, data: bytes, filename: str, source_kind: str | None, llm_mode: str | None, confirm_timeout: float, llm: LLM | None,
     destination: str | None, policy: tuple[bytes, str] | None, promises: Promises | None = None,
+    ocr_lines: list[ingestion.OcrLine] | None = None,
 ) -> AnalysisResult:
     t_start = time.time()
     ledger_on = config.ledger_enabled()
@@ -140,8 +142,9 @@ async def _run(
 
     # 1. ingestion -----------------------------------------------------------------
     job.say("agent_start", "Ingestion", "Reading the document")
-    doc, facts, ex = await asyncio.to_thread(ingestion.build_document, data, filename, source_kind)
-    job.say("agent_done", "Ingestion", f"{len(doc.clauses)} clauses" + (f", OCR confidence {doc.ocr_confidence:.0%}" if doc.ocr_confidence is not None else ""), clauses=len(doc.clauses), ocr=doc.ocr_used)
+    doc, facts, ex = await asyncio.to_thread(ingestion.build_document, data, filename, source_kind, ocr_lines)
+    job.say("agent_done", "Ingestion", f"{len(doc.clauses)} clauses" + (f", OCR confidence {doc.ocr_confidence:.0%}" if doc.ocr_confidence is not None else "")
+            + (" (photo read on the device)" if doc.ocr_engine == "tesseract" else ""), clauses=len(doc.clauses), ocr=doc.ocr_used, ocr_engine=doc.ocr_engine)
     job.say("step", None, "read", step="read")
 
     # 2. PII shield ----------------------------------------------------------------
@@ -194,7 +197,7 @@ async def _run(
     job.say("agent_done", "Jurisdiction Router", ", ".join(p.label for p in route.packs), packs=[p.pack for p in route.packs], excluded=[p.model_dump() for p in route.excluded])
 
     # human-in-the-loop: a blurry salary must be confirmed before the wage maths runs
-    need_confirm = doc.ocr_used and facts.salary_amount is not None and facts.salary_confidence < OCR_CONFIDENCE_FLOOR
+    need_confirm = doc.ocr_used and facts.salary_amount is not None and facts.salary_confidence < config.ocr_confirm_floor(doc.ocr_engine)
 
     async def wage_task():
         salary, confirmed = facts.salary_amount, False
