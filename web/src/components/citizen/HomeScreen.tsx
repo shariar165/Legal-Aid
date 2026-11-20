@@ -8,6 +8,7 @@ import { SPEECH_LANG, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useSpeech } from "@/lib/citizen/useSpeech";
 import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
+import { VoiceNote } from "./VoiceNote";
 import styles from "./citizen.module.css";
 import { Logo } from "@/components/brand/Logo";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
@@ -198,9 +199,7 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           {howToPlaying && <span className={styles.listenProgress} style={{ width: `${speech.pct}%` }} />}
         </button>
         {speech.noVoice === HOW_TO_ID && (
-          <p className={styles.voiceNote} role="status">
-            {STRINGS.voice.none[lang]}
-          </p>
+          <VoiceNote lang={lang} />
         )}
 
         {offline && (

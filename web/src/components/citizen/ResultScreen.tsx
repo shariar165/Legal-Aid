@@ -9,6 +9,7 @@ import { Icon } from "@/components/shared/Icons";
 import { HeroChip, MoneyHero } from "@/components/shared/MoneyHero";
 import { PromiseStep } from "./PromiseStep";
 import { useScreenFocus } from "./useScreenFocus";
+import { VoiceNote } from "./VoiceNote";
 import styles from "./citizen.module.css";
 
 const T = STRINGS.result;
@@ -153,9 +154,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
                   </div>
                 )}
                 {speech.noVoice === card.kind && (
-                  <p className={styles.voiceNote} role="status">
-                    {STRINGS.voice.none[lang]}
-                  </p>
+                  <VoiceNote lang={lang} />
                 )}
 
                 <div className={styles.cardBody}>
@@ -226,9 +225,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
               </button>
             </div>
             {speech.noVoice === LETTER_ID && (
-              <p className={styles.voiceNote} role="status">
-                {STRINGS.voice.none[lang]}
-              </p>
+              <VoiceNote lang={lang} />
             )}
             <div className={styles.cardBody}>
               <p className={styles.letterSub}>{T.letterSub[lang]}</p>
