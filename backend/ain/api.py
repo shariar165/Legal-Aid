@@ -347,6 +347,8 @@ async def analyze(
         raise HTTPException(400, "Send a file or a sample_id.")
     if llm_mode and llm_mode not in ("live", "replay", "fake"):
         raise HTTPException(400, "llm_mode must be live, replay or fake")
+    if llm_mode and config.allowed_mode(llm_mode) != llm_mode:
+        raise HTTPException(403, f"This server runs in {config.llm_mode()} mode; a request cannot raise it.")
     if destination_country and not countries.by_name(destination_country):
         raise HTTPException(400, "Unknown destination_country. See /api/countries.")
     if policy is not None:
@@ -356,7 +358,7 @@ async def analyze(
     job = new_job(name)
     auth.record_job(owner.user_id, job.id, name)
     async def run_and_notify():
-        await automation.notify_job(await run_pipeline(job, data, name, kind, llm_mode, destination=destination_country, policy=policy_doc, promises=told))
+        await automation.notify_job(await run_pipeline(job, data, name, kind, config.allowed_mode(llm_mode), destination=destination_country, policy=policy_doc, promises=told))
 
     task = asyncio.create_task(run_and_notify())
     _tasks.add(task)
@@ -455,7 +457,7 @@ async def verify_promises(job_id: str) -> FourLedgers:
     if r.four_ledgers is None or not r.four_ledgers.pending_risks:
         raise HTTPException(409, "Nothing is waiting for verification.")
     try:
-        return await verify_pending(r, LLM(mode=r.llm_mode))
+        return await verify_pending(r, LLM(mode=config.allowed_mode(r.llm_mode)))
     except PIILeakError:
         raise HTTPException(422, PII_MESSAGE) from None
     except LLMError as e:
@@ -488,7 +490,7 @@ def memo(job_id: str) -> Response:
 async def run_ablation(job_id: str) -> AblationResult:
     r = _result_or_409(job_id)
     if r.ablation is None:
-        r.ablation = await ablation.run(LLM(mode=r.llm_mode), get_corpus(), r)
+        r.ablation = await ablation.run(LLM(mode=config.allowed_mode(r.llm_mode)), get_corpus(), r)
         save_result(r)
     return r.ablation
 
