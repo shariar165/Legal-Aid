@@ -4,6 +4,7 @@ import { LiveStatus } from "@/components/docs/LiveStatus";
 import s from "@/components/docs/docs.module.css";
 import { inter, sourceSerif } from "@/lib/fonts";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Docs · Jukti",
@@ -48,6 +49,7 @@ export default function DocsPage() {
               </a>
             ))}
           </nav>
+          <ThemeToggle className={s.themeBtn} />
         </div>
       </header>
 

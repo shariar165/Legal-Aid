@@ -8,7 +8,7 @@ import s from "./docs.module.css";
 /* Colours come from the page's CSS tokens (light/dark), read at runtime because SVG presentation
    attributes can't resolve var(). Palette: dataviz reference slots 1-2 (blue, orange). */
 type Viz = { surface: string; grid: string; axis: string; c1: string; c2: string };
-const FALLBACK: Viz = { surface: "#ffffff", grid: "#e8ebe7", axis: "#59635d", c1: "#2a78d6", c2: "#eb6834" };
+const FALLBACK: Viz = { surface: "#fcfaf5", grid: "#e6decd", axis: "#5a6357", c1: "#2a78d6", c2: "#eb6834" };
 
 function useViz(ref: React.RefObject<HTMLElement | null>): Viz {
   const [viz, setViz] = useState(FALLBACK);
@@ -20,9 +20,10 @@ function useViz(ref: React.RefObject<HTMLElement | null>): Viz {
       setViz({ surface: v("--viz-surface", FALLBACK.surface), grid: v("--viz-grid", FALLBACK.grid), axis: v("--viz-axis", FALLBACK.axis), c1: v("--viz-1", FALLBACK.c1), c2: v("--viz-2", FALLBACK.c2) });
     };
     read();
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener("change", read);
-    return () => mq.removeEventListener("change", read);
+    /* <html data-theme> changes with the reader's toggle and, on "system", with the OS (lib/theme.ts) */
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => mo.disconnect();
   }, [ref]);
   return viz;
 }

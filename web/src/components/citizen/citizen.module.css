@@ -69,6 +69,30 @@
   font-weight: 700;
 }
 
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* the light/dark switch (spec 26): a 44px tap target, like the language buttons beside it */
+.themeBtn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.themeBtn:hover {
+  border-color: var(--accent);
+}
+
 .langToggle {
   display: flex;
   border: 1.5px solid var(--accent);
@@ -153,7 +177,7 @@
 
 .cameraSub {
   font-size: var(--fs-16);
-  color: var(--on-deep-muted);
+  color: color-mix(in srgb, var(--card) 80%, var(--accent));
 }
 
 .uploadBtn {
@@ -568,7 +592,7 @@
   border-radius: var(--r-pill);
   border: none;
   background: var(--card-accent);
-  color: var(--on-deep);
+  color: var(--card);
   font-size: var(--fs-16);
   font-weight: 600;
   display: flex;
@@ -767,7 +791,7 @@
 
 .helpSub {
   font-size: var(--fs-14);
-  color: var(--on-deep-muted);
+  color: color-mix(in srgb, var(--card) 80%, var(--accent));
 }
 
 /* ---------- Samples (home) ---------- */

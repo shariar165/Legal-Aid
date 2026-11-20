@@ -9,8 +9,10 @@
   align-items: center;
   gap: 32px 48px;
   padding: 36px 28px 40px;
-  background-color: var(--accent);
-  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.055) 0, rgba(255, 255, 255, 0.055) 1px, transparent 1px, transparent 34px);
+  background-color: var(--deep);
+  background-image:
+    var(--grain),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--on-deep) 5.5%, transparent) 0, color-mix(in srgb, var(--on-deep) 5.5%, transparent) 1px, transparent 1px, transparent 34px);
   color: var(--on-deep);
   font-family: var(--sans);
 }
@@ -154,13 +156,14 @@
 }
 
 .bar[data-k="paper"] {
-  background: var(--card);
-  color: var(--ink);
+  /* sand paper on the forest band, in both themes (spec 26) */
+  background: var(--sand);
+  color: var(--sand-ink);
 }
 
 .bar[data-k="take"] {
   background: var(--lg-paid-bar);
-  color: #0b2e23;
+  color: var(--sand-ink);
 }
 
 .bar[data-free="true"] {
