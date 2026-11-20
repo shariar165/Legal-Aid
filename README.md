@@ -375,9 +375,10 @@ The tests cover:
 - **A result link works only on the device that ran it.** `/r/<id>` belongs to that browser's session (guests are
   deleted after 7 days); anyone else gets "this result is no longer here" and, for a sample, a button to run it
   again. Results survive backend redeploys, because they live on the `/data` volume.
-- **Read-aloud needs a voice for the language on the device.** Many desktop browsers have no Bangla voice; the card
-  then says so instead of playing. Long text is spoken in sentence chunks, so Chrome's ~15 s limit no longer cuts the
-  letter off. This was checked with a simulated voice; a real Android or iPhone voice has not been tried yet.
+- **Read-aloud needs a voice for the language on the device.** Chrome on Windows has no Bangla voice; the card then
+  says so instead of playing, and on a computer points to Microsoft Edge, whose natural bn-BD voices do read it (checked
+  on the live site). Long text is spoken in sentence chunks, so Chrome's ~15 s limit no longer cuts the letter off.
+  The chunking was checked with a simulated voice; a real Android or iPhone voice has not been tried yet.
 - **The hosted demo is slower and less precise than the local one.** It retrieves with BM25 only, and Groq's free
   tier queues calls (rate waits of over a minute), so even the 7-call control document can take several minutes. On
   2026-11-20 the clean control contract came back from the hosted demo with one danger (an Adversary interaction risk
