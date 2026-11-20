@@ -2,6 +2,10 @@
 
   python shot.py eval "<async js expression>"
   python shot.py snap <path> <width> <out.png> [--height 900] [--full] [--wait 2500] [--js "<js before snap>"]
+                       [--theme light|dark] [--print out.pdf]
+
+--theme stores the choice in localStorage (spec 26) before the page loads. --print also emulates print media and saves
+a PDF of the page (A4) next to the screenshot, which is then taken in print media too.
 
 A persistent profile (in the system temp dir, outside the repo) keeps the session cookie between calls.
 Expects the web app on :3000 and the backend on :8000. `eval` and `--login` sign in the local test account
@@ -12,6 +16,7 @@ Pair with citizen_js.py to drive the Citizen page, e.g. `python shot.py eval "$(
 import argparse
 import base64
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -24,7 +29,7 @@ from websockets.sync.client import connect
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 PROFILE = Path(tempfile.gettempdir()) / "jukti-shot-profile"
 PORT = 9333
-ORIGIN = "http://localhost:3000"
+ORIGIN = os.environ.get("JUKTI_ORIGIN", "http://localhost:3000")  # another port: also add it to AIN_CORS
 LOGIN = ("fetch('http://localhost:8000/api/auth/login', {method: 'POST', credentials: 'include', headers: {'Content-Type': 'application/json'},"
          " body: JSON.stringify({email: 'desk-check@example.test', password: 'desk-check-pass-2026'})}).then(r => r.status)")
 
@@ -79,6 +84,8 @@ def main():
     ap.add_argument("--js", default=None)
     ap.add_argument("--pre", default=None, help="file of JS to run before every page script")
     ap.add_argument("--login", action="store_true", help="sign in the local test account first")
+    ap.add_argument("--theme", choices=["light", "dark"], default=None)
+    ap.add_argument("--print", dest="pdf", default=None, help="emulate print media and save the page as this PDF")
     a = ap.parse_args()
     proc, ws_url = launch()
     try:
@@ -99,10 +106,18 @@ def main():
                 tab.js(LOGIN)
             if a.pre:
                 tab.call("Page.addScriptToEvaluateOnNewDocument", source=Path(a.pre).read_text(encoding="utf-8"))
+            if a.theme:
+                tab.call("Page.addScriptToEvaluateOnNewDocument", source=f"try{{localStorage.setItem('jukti-theme','{a.theme}')}}catch(e){{}}")
             tab.goto(ORIGIN + path, a.wait)
             if a.js:
                 print(json.dumps(tab.js(a.js), ensure_ascii=False))
                 time.sleep(1.2)
+            if a.pdf:
+                tab.call("Emulation.setEmulatedMedia", media="print")
+                time.sleep(0.5)
+                pdf = tab.call("Page.printToPDF", printBackground=True, paperWidth=8.27, paperHeight=11.69, preferCSSPageSize=True)
+                Path(a.pdf).write_bytes(base64.b64decode(pdf["data"]))
+                print("saved", a.pdf)
             if a.full:
                 h = int(tab.js("Math.ceil(document.documentElement.scrollHeight)"))
                 tab.call("Emulation.setDeviceMetricsOverride", width=width, height=h, deviceScaleFactor=1, mobile=mobile)

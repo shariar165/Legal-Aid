@@ -226,6 +226,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media print {
+  html,
+  body {
+    background: #fff; /* paper, not the sand ground (spec 28) */
+  }
+}
+
 button,
 input,
 select,

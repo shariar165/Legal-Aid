@@ -1352,3 +1352,43 @@ a.citName {
   line-height: 1.45;
   color: var(--muted);
 }
+
+/* ---------- Print (spec 28): the result and the letter to the agency, on paper ---------- */
+/* Light tokens only: the dark theme is screen-only (globals.css). The phone frame and its inner scrolling go, so
+   every card prints, and the letter prints whole. */
+@media print {
+  .app,
+  .screen,
+  .resultScroll {
+    height: auto;
+    max-width: none;
+    margin: 0;
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  .backBtn,
+  .playBtn,
+  .twoUp,
+  .detailsBtn,
+  .memoLink,
+  .helpBar {
+    display: none !important;
+  }
+
+  .card,
+  .countryCard,
+  .heroWrap {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .letterText {
+    max-height: none;
+    overflow: visible;
+    background: none;
+    border: 1px solid #ccc;
+  }
+}

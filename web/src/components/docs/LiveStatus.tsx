@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api, type Health, type Metrics, type SeatHealth } from "@/lib/api";
 import s from "./docs.module.css";
 
@@ -95,9 +95,9 @@ export function LiveStatus() {
                   <tr key={r.role}>
                     <td className={`${s.mono} ${s.nowrap}`}>{r.role}</td>
                     <td className={s.mono}>
-                      {r.provider} · {r.model}
+                      <ModelId provider={r.provider} model={r.model} />
                     </td>
-                    <td className={`${s.mono} ${s.muted}`}>{r.backup ? `${r.backup.provider} · ${r.backup.model}` : "–"}</td>
+                    <td className={`${s.mono} ${s.muted}`}>{r.backup ? <ModelId provider={r.backup.provider} model={r.backup.model} /> : "–"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -107,6 +107,22 @@ export function LiveStatus() {
       </div>
 
       <EvalBlock metrics={metrics} />
+    </>
+  );
+}
+
+/* "provider · org/model:tag", allowed to wrap after "/" and before ":" (and at hyphens), never mid-word (spec 28) */
+function ModelId({ provider, model }: { provider: string; model: string }) {
+  const parts = model.split(/(?<=\/)|(?=:)/);
+  return (
+    <>
+      {provider} ·{" "}
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && <wbr />}
+          {part}
+        </Fragment>
+      ))}
     </>
   );
 }
