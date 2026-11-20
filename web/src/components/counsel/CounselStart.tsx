@@ -8,6 +8,7 @@ import { AccountMenu } from "./Account";
 import { Icon, type IconName } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const TRUST: { icon: IconName; text: string }[] = [
   { icon: "shieldCheck", text: "Every citation checked against the statute book" },
@@ -82,163 +83,169 @@ export function CounselStart() {
             <Link href="/" className={styles.quietBtn}>
               Citizen app
             </Link>
+            <ThemeToggle className={styles.themeBtn} />
             <AccountMenu />
           </div>
         </div>
       </header>
 
-      <main className={styles.startMain}>
-        <section className={styles.hero}>
-          <p className={styles.kicker}>Counsel mode · Bangladesh &amp; migrant labour law</p>
-          <h1 className={styles.heroTitle}>Review a contract for legal risk, with every citation verified.</h1>
-          <p className={styles.heroLead}>
-            Get a plain-language risk memo where each finding is backed by a statute we have checked, then discuss it with a council of three AI
-            reviewers.
-          </p>
-          <ul className={styles.trust}>
-            {TRUST.map((t) => (
-              <li key={t.text}>
-                <Icon name={t.icon} size={18} />
-                {t.text}
-              </li>
-            ))}
-          </ul>
-        </section>
+      <main>
+        {/* the forest band under the bar (spec 26); the dropzone card below overlaps its lower edge */}
+        <div className={styles.heroBand}>
+          <section className={styles.hero}>
+            <p className={styles.kicker}>Counsel mode · Bangladesh &amp; migrant labour law</p>
+            <h1 className={styles.heroTitle}>Review a contract for legal risk, with every citation verified.</h1>
+            <p className={styles.heroLead}>
+              Get a plain-language risk memo where each finding is backed by a statute we have checked, then discuss it with a council of three AI
+              reviewers.
+            </p>
+            <ul className={styles.trust}>
+              {TRUST.map((t) => (
+                <li key={t.text}>
+                  <Icon name={t.icon} size={18} />
+                  {t.text}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
 
-        {error && (
-          <p className={styles.errorBox} role="alert">
-            <Icon name="alert" size={16} />
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          className={styles.dropzone}
-          data-dragging={dragging}
-          disabled={!!busy}
-          onClick={() => input.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            upload(e.dataTransfer.files?.[0]);
-          }}
-        >
-          <span className={styles.dropIcon}>
-            <Icon name="upload" size={26} />
-          </span>
-          <span className={styles.dropTitle}>{busy === "upload" ? "Uploading…" : dragging ? "Drop to upload" : "Drop a contract here, or browse"}</span>
-          <span className={styles.dropSub}>PDF, Word, plain text or a phone photo · names and ID numbers are hidden before any AI sees it</span>
-          <span className={styles.secondaryBtn} aria-hidden="true">
-            <Icon name="file" size={15} />
-            Choose file
-          </span>
-        </button>
-        <input
-          ref={input}
-          type="file"
-          hidden
-          accept=".pdf,.docx,.txt,image/*"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = "";
-            upload(f);
-          }}
-        />
-
-        <div className={styles.countryRow}>
-          <span>Employer&apos;s own policy</span>
-          {policy ? (
-            <>
-              <span className={styles.chip}>
-                <Icon name="file" size={13} />
-                {policy.name}
-              </span>
-              <button type="button" className={styles.quietBtn} onClick={() => setPolicy(null)}>
-                Remove
-              </button>
-            </>
-          ) : (
-            <button type="button" className={styles.secondaryBtn} onClick={() => policyInput.current?.click()} disabled={!!busy}>
-              <Icon name="plus" size={15} />
-              Add a policy or handbook (optional)
-            </button>
+        <div className={styles.startMain}>
+          {error && (
+            <p className={styles.errorBox} role="alert">
+              <Icon name="alert" size={16} />
+              {error}
+            </p>
           )}
+
+          <button
+            type="button"
+            className={styles.dropzone}
+            data-dragging={dragging}
+            disabled={!!busy}
+            onClick={() => input.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              upload(e.dataTransfer.files?.[0]);
+            }}
+          >
+            <span className={styles.dropIcon}>
+              <Icon name="upload" size={26} />
+            </span>
+            <span className={styles.dropTitle}>{busy === "upload" ? "Uploading…" : dragging ? "Drop to upload" : "Drop a contract here, or browse"}</span>
+            <span className={styles.dropSub}>PDF, Word, plain text or a phone photo · names and ID numbers are hidden before any AI sees it</span>
+            <span className={styles.secondaryBtn} aria-hidden="true">
+              <Icon name="file" size={15} />
+              Choose file
+            </span>
+          </button>
           <input
-            ref={policyInput}
+            ref={input}
             type="file"
             hidden
             accept=".pdf,.docx,.txt,image/*"
             onChange={(e) => {
-              setPolicy(e.target.files?.[0] ?? null);
+              const f = e.target.files?.[0];
               e.target.value = "";
+              upload(f);
             }}
           />
-        </div>
 
-        {countries.length > 0 && (
-          <label className={styles.countryRow}>
-            <span>Country of work</span>
-            <select className={styles.countrySelect} value={country} onChange={(e) => setCountry(e.target.value)}>
-              <option value="">Detect from the document</option>
-              {countries.map((c) => (
-                <option key={c.code} value={c.code ?? ""}>
-                  {c.name.en} · {c.law}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {samples.length > 0 && (
-          <section aria-labelledby="samples-title">
-            <div className={styles.sectionHead}>
-              <h2 id="samples-title" className={styles.sectionTitle}>
-                Or try a sample contract
-              </h2>
-              <span className={styles.sectionMeta}>Real-world patterns, no personal data</span>
-            </div>
-            <div className={styles.startGrid}>
-              {samples.map((s) => (
-                <button key={s.id} type="button" className={styles.sampleCard} disabled={!!busy} onClick={() => go(() => api.analyzeSample(s.id), s.id)}>
-                  <span className={styles.sampleKind}>
-                    <Icon name={s.kind === "image" ? "camera" : "file"} size={13} />
-                    {s.kind === "image" ? "Phone photo" : s.with_policy ? "Contract + policy" : "Document"}
-                  </span>
-                  <span className={styles.sampleTitle}>{s.title.en}</span>
-                  <span className={styles.sampleBn} lang="bn">
-                    {s.title.bn}
-                  </span>
-                  <span className={styles.sampleSubline}>{s.subtitle.en}</span>
-                  <span className={styles.sampleGo}>
-                    {busy === s.id ? "Starting…" : "Analyse this sample"}
-                    <Icon name="arrowRight" size={15} />
-                  </span>
+          <div className={styles.countryRow}>
+            <span>Employer&apos;s own policy</span>
+            {policy ? (
+              <>
+                <span className={styles.chip}>
+                  <Icon name="file" size={13} />
+                  {policy.name}
+                </span>
+                <button type="button" className={styles.quietBtn} onClick={() => setPolicy(null)}>
+                  Remove
                 </button>
-              ))}
-            </div>
-          </section>
-        )}
+              </>
+            ) : (
+              <button type="button" className={styles.secondaryBtn} onClick={() => policyInput.current?.click()} disabled={!!busy}>
+                <Icon name="plus" size={15} />
+                Add a policy or handbook (optional)
+              </button>
+            )}
+            <input
+              ref={policyInput}
+              type="file"
+              hidden
+              accept=".pdf,.docx,.txt,image/*"
+              onChange={(e) => {
+                setPolicy(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </div>
 
-        <section aria-labelledby="how-title">
-          <h2 id="how-title" className={styles.sectionTitle}>
-            How it works
-          </h2>
-          <ol className={styles.howSteps}>
-            {STEPS.map((s, i) => (
-              <li key={s.title}>
-                <span className={styles.howNum}>{i + 1}</span>
-                <b>{s.title}</b>
-                <span>{s.text}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+          {countries.length > 0 && (
+            <label className={styles.countryRow}>
+              <span>Country of work</span>
+              <select className={styles.countrySelect} value={country} onChange={(e) => setCountry(e.target.value)}>
+                <option value="">Detect from the document</option>
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code ?? ""}>
+                    {c.name.en} · {c.law}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {samples.length > 0 && (
+            <section aria-labelledby="samples-title">
+              <div className={styles.sectionHead}>
+                <h2 id="samples-title" className={styles.sectionTitle}>
+                  Or try a sample contract
+                </h2>
+                <span className={styles.sectionMeta}>Real-world patterns, no personal data</span>
+              </div>
+              <div className={styles.startGrid}>
+                {samples.map((s) => (
+                  <button key={s.id} type="button" className={styles.sampleCard} disabled={!!busy} onClick={() => go(() => api.analyzeSample(s.id), s.id)}>
+                    <span className={styles.sampleKind}>
+                      <Icon name={s.kind === "image" ? "camera" : "file"} size={13} />
+                      {s.kind === "image" ? "Phone photo" : s.with_policy ? "Contract + policy" : "Document"}
+                    </span>
+                    <span className={styles.sampleTitle}>{s.title.en}</span>
+                    <span className={styles.sampleBn} lang="bn">
+                      {s.title.bn}
+                    </span>
+                    <span className={styles.sampleSubline}>{s.subtitle.en}</span>
+                    <span className={styles.sampleGo}>
+                      {busy === s.id ? "Starting…" : "Analyse this sample"}
+                      <Icon name="arrowRight" size={15} />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section aria-labelledby="how-title">
+            <h2 id="how-title" className={styles.sectionTitle}>
+              How it works
+            </h2>
+            <ol className={styles.howSteps}>
+              {STEPS.map((s, i) => (
+                <li key={s.title}>
+                  <span className={styles.howNum}>{i + 1}</span>
+                  <b>{s.title}</b>
+                  <span>{s.text}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
       </main>
     </div>
   );

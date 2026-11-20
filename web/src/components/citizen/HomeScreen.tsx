@@ -10,6 +10,7 @@ import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const T = STRINGS.home;
 const HOW_TO_ID = "how-to";
@@ -65,13 +66,16 @@ export function HomeScreen({ lang, onLangChange, onFile, onSample, speech }: Pro
           <Logo size={36} className={styles.brandMark} />
           <span className={styles.brandName}>{STRINGS.brand[lang]}</span>
         </div>
-        <div className={styles.langToggle} role="group" aria-label={STRINGS.langSwitch[lang]}>
-          <button type="button" lang="bn" aria-pressed={lang === "bn"} onClick={() => onLangChange("bn")}>
-            বাংলা
-          </button>
-          <button type="button" lang="en" aria-pressed={lang === "en"} onClick={() => onLangChange("en")}>
-            EN
-          </button>
+        <div className={styles.topActions}>
+          <ThemeToggle className={styles.themeBtn} lang={lang} />
+          <div className={styles.langToggle} role="group" aria-label={STRINGS.langSwitch[lang]}>
+            <button type="button" lang="bn" aria-pressed={lang === "bn"} onClick={() => onLangChange("bn")}>
+              বাংলা
+            </button>
+            <button type="button" lang="en" aria-pressed={lang === "en"} onClick={() => onLangChange("en")}>
+              EN
+            </button>
+          </div>
         </div>
       </header>
 

@@ -8,6 +8,7 @@ import { safeNext, useSession } from "@/lib/useSession";
 import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 const COPY = {
   login: {
@@ -67,6 +68,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>যুক্তি · Jukti</span>
           </Link>
+          <div className={styles.actions}>
+            <ThemeToggle className={styles.themeBtn} />
+          </div>
         </div>
       </header>
 
