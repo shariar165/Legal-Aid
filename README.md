@@ -198,8 +198,19 @@ runs `railway up` on it. `Dockerfile.lite` installs `requirements-lite.txt` (no 
 EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`, trusting `X-Forwarded-For` so
 per-IP limits see real clients. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
 Service variables: `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `AIN_DATA_KEY`, `AIN_CORS=https://ain-copilot.vercel.app`,
-`AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, with a volume mounted at `/data` so accounts survive restarts. Point
-Vercel's `AIN_INTERNAL_API` at the service's public URL and redeploy.
+`AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, with a volume mounted at `/data` so accounts and saved results
+survive restarts and redeploys. Point Vercel's `AIN_INTERNAL_API` at the service's public URL and redeploy.
+
+**Deploy order: Railway first, then Vercel.** A new frontend may call API fields an old backend does not know yet
+(for example the in-browser OCR's `ocr_lines`), so the backend goes up first and `/api/health` is checked before
+`vercel deploy --prod`. The LLM cache ships inside the Railway image, not on the volume, so each deploy resets it to
+the warmed cache; warm it with `AIN_DENSE=0`, because Railway retrieves with BM25 only and its prompts differ from a
+dense-retrieval run.
+
+**Photos on the lite backend.** Railway has no EasyOCR, so `/api/health` says `"ocr": false` and Citizen reads a new
+photo on the phone with tesseract.js (Bangla + English, served from `/ocr` on our own origin, never a CDN). Only the
+lines it read and their confidences go to the server (`ocr_lines` on `POST /api/analyze`); the image never leaves the
+device. The rest of the pipeline is the same, salary check and PII redaction included. Spec 28.
 
 ### Local development
 
@@ -299,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 274 offline tests
+python -m pytest -q              # 373 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
@@ -333,7 +344,8 @@ The tests cover:
 
 1. **Citizen, 60 s.** On a phone, choose the *Malaysia job contract (photo)* sample.
    - The steps tick off as real agent events arrive. The salary card says the photo is blurry (OCR confidence 77%); confirm RM 1,200.
-   - The result reads "৭টি বড় বিপদ" (seven serious dangers) and can be read aloud in Bangla. The take-home pay is RM 550 against the RM 1,700 minimum.
+   - The result reads "৭টি বড় বিপদ" (seven serious dangers) and can be read aloud in Bangla where the phone has a Bangla voice (otherwise it says so). The take-home pay is RM 550 against the RM 1,700 minimum.
+   - The address bar now shows `/r/<id>`: reload it and the result comes back. On another phone the same link says the result is not there and offers to run the sample again.
    - Open **বিস্তারিত** (Details) to show the real section numbers, each linking to bdlaws. Show the letter to the agency.
 2. **Counsel, 90 s.** Tap *Full legal memo*.
    - **Report** lists the risks by severity; **Contract** shows which clauses carry them.
@@ -352,8 +364,25 @@ The tests cover:
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
-- The hosted demo (Vercel + Railway lite) has no EasyOCR and no dense retrieval, to fit 0.5 GB of RAM: the demo photo
-  reads from the OCR cache, a new photo or scanned page is refused with a clear message, and search is BM25 only.
+- The hosted demo (Vercel + Railway lite) has no EasyOCR and no dense retrieval, to fit 0.5 GB of RAM. The demo photo
+  reads from the OCR cache, and search is BM25 only. A **new photo is read on the phone** with tesseract.js (spec 28):
+  it took about 5 s per page on a desktop and will be slower on a phone; a Bangla line scores low confidence even
+  when it is read right, so a Bangla photo almost always asks the worker to confirm the salary (one tap). On 14
+  readable fictional test photos tesseract misread the salary on 6 (for example "1.200" for "1,200"), always with a
+  line confidence of 0.68 or less, which the 0.9 floor catches; a photo too blurry to read (mean confidence under 0.25)
+  is sent back to be retaken. A **scanned PDF** is still refused on the hosted demo: the browser path reads images
+  only.
+- **A result link works only on the device that ran it.** `/r/<id>` belongs to that browser's session (guests are
+  deleted after 7 days); anyone else gets "this result is no longer here" and, for a sample, a button to run it
+  again. Results survive backend redeploys, because they live on the `/data` volume.
+- **Read-aloud needs a voice for the language on the device.** Chrome on Windows has no Bangla voice; the card then
+  says so instead of playing, and on a computer points to Microsoft Edge, whose natural bn-BD voices do read it (checked
+  on the live site). Long text is spoken in sentence chunks, so Chrome's ~15 s limit no longer cuts the letter off.
+  It was heard working in Edge on a computer and on an Android phone; an iPhone has not been tried yet.
+- **The hosted demo is slower and less precise than the local one.** It retrieves with BM25 only, and Groq's free
+  tier queues calls (rate waits of over a minute), so even the 7-call control document can take several minutes. On
+  2026-11-20 the clean control contract came back from the hosted demo with one danger (an Adversary interaction risk
+  on delay compensation and payment terms), where the local gold-set runs find none.
   Railway's Serverless mode sleeps the backend when idle, so the first request after a pause waits for a cold start.
 - Country coverage is the 8 main destinations. For any other country only Bangladesh law and ILO standards are checked, and the UI says so. Qatar's 2020 minimum wage and Kuwait's minimum wage have no official English text in the corpus yet, so the calculator shows no minimum for them.
 - The company database starts small (two companies). The format is designed for growth, but each entry needs a published document from the company itself.
