@@ -2,6 +2,9 @@
 
 # যুক্তি · Jukti
 
+**Live demo: [ain-copilot.vercel.app](https://ain-copilot.vercel.app)** · Citizen mode at `/`, Counsel mode at
+[`/counsel`](https://ain-copilot.vercel.app/counsel), docs and system status at [`/docs`](https://ain-copilot.vercel.app/docs)
+
 *যুক্তি* (jukti) is Bangla for reasoning, the argued case. The logo's balance beam is the *matra*, the headline that every Bangla letter hangs from: the contract is weighed against the law, and both sides are shown.
 
 *Formerly Ain Copilot. Internal identifiers keep the old name so deploys and MCP configs keep working: the `ain` Python package, `AIN_*` env vars, the `ain-copilot` MCP server id, `ain://` resource URIs, the Docker tag and the `ain-copilot` Vercel project.*
