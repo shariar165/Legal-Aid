@@ -105,6 +105,17 @@ export const STRINGS = {
     },
   },
 
+  // a /r/<id> link whose result this device cannot open (spec 28)
+  gone: {
+    title: { bn: "এই ফলাফলটি আর নেই", en: "This result is no longer here" },
+    body: {
+      bn: "ফলাফল শুধু যে ফোনে বিশ্লেষণ করা হয়েছে সেখানেই খোলে, আর ৭ দিন পরে মুছে যায়।",
+      en: "A result opens only on the device that ran it, and is deleted after 7 days.",
+    },
+    rerun: { bn: "আবার চালান", en: "Run it again" },
+    home: { bn: "নতুন চুক্তি দেখান", en: "Check a contract" },
+  },
+
   result: {
     title: { bn: "ফলাফল", en: "Result" },
     back: { bn: "ফিরে যান", en: "Back" },

@@ -2,7 +2,7 @@
 
   python shot.py eval "<async js expression>"
   python shot.py snap <path> <width> <out.png> [--height 900] [--full] [--wait 2500] [--js "<js before snap>"]
-                       [--theme light|dark] [--print out.pdf]
+                       [--theme light|dark] [--print out.pdf] [--clear-cookies] [--reload]
 
 --theme stores the choice in localStorage (spec 26) before the page loads. --print also emulates print media and saves
 a PDF of the page (A4) next to the screenshot, which is then taken in print media too.
@@ -86,6 +86,8 @@ def main():
     ap.add_argument("--login", action="store_true", help="sign in the local test account first")
     ap.add_argument("--theme", choices=["light", "dark"], default=None)
     ap.add_argument("--print", dest="pdf", default=None, help="emulate print media and save the page as this PDF")
+    ap.add_argument("--clear-cookies", action="store_true", help="start with no cookies: another device opening a link")
+    ap.add_argument("--reload", action="store_true", help="after --js, reload the page in the same browser session (cookies kept)")
     a = ap.parse_args()
     proc, ws_url = launch()
     try:
@@ -101,6 +103,8 @@ def main():
             path, width, out = a.args[0], int(a.args[1]), Path(a.args[2])
             mobile = width < 600
             tab.call("Emulation.setDeviceMetricsOverride", width=width, height=a.height, deviceScaleFactor=1, mobile=mobile)
+            if a.clear_cookies:
+                tab.call("Network.clearBrowserCookies")
             if a.login:
                 tab.goto(ORIGIN + "/login", 1500)
                 tab.js(LOGIN)
@@ -112,6 +116,10 @@ def main():
             if a.js:
                 print(json.dumps(tab.js(a.js), ensure_ascii=False))
                 time.sleep(1.2)
+            if a.reload:  # Chrome writes cookies to the profile lazily, so a reload must happen in this session
+                tab.call("Page.reload")
+                time.sleep(a.wait / 1000)
+                print("after reload:", tab.js("location.pathname + location.search"))
             if a.pdf:
                 tab.call("Emulation.setEmulatedMedia", media="print")
                 time.sleep(0.5)
