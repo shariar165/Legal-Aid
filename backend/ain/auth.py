@@ -40,9 +40,11 @@ JOB_ID = re.compile(r"^[0-9a-f]{12}$")
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]+$")
 BAD_LOGIN = "Invalid email or password."
 
-LOGIN_LIMIT, LOGIN_WINDOW = 5, 15 * 60  # failed attempts per IP and per email
-SIGNUP_LIMIT, SIGNUP_WINDOW = 10, 60 * 60  # attempts per IP
-# Model calls a guest can start from Counsel (spec 29 step 1.1), per guest and per IP: council questions and
+# No limit is keyed on the visitor's IP: behind Vercel's rewrite the backend sees only Vercel's proxy addresses,
+# shared by every visitor (checked on the live site, 2026-11-23).
+LOGIN_LIMIT, LOGIN_WINDOW = 5, 15 * 60  # failed attempts per email
+SIGNUP_LIMIT, SIGNUP_WINDOW = 30, 60 * 60  # sign-ups an hour, all visitors together
+# Model calls a guest can start from Counsel (spec 29 step 1.1), per guest session: council questions and
 # deliberations (each counts once) and plain-chatbot comparisons. Accounts are not capped.
 GUEST_CALLS = {"council": 10, "ablation": 10}
 GUEST_WINDOW = 60 * 60
@@ -354,20 +356,14 @@ class RateLimiter:
 LIMITER = RateLimiter()
 
 
-def client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
-
-
-def spend_guest_call(p: Principal, request: Request, kind: str) -> None:
-    """Count one model-backed Counsel call for a guest; 429 once the guest or its IP has used the hour's share."""
+def spend_guest_call(p: Principal, kind: str) -> None:
+    """Count one model-backed Counsel call for a guest; 429 once its session has used the hour's share."""
     if not p.is_guest:
         return
-    keys = [f"{kind}:{p.user_id}", f"{kind}-ip:{client_ip(request)}"]
-    limit = GUEST_CALLS[kind]
-    if any(LIMITER.blocked(k, limit, GUEST_WINDOW) for k in keys):
+    key, limit = f"{kind}:{p.user_id}", GUEST_CALLS[kind]
+    if LIMITER.blocked(key, limit, GUEST_WINDOW):
         raise HTTPException(429, GUEST_BUSY[kind].format(n=limit))
-    for k in keys:
-        LIMITER.hit(k)
+    LIMITER.hit(key)
 
 
 # ---------------------------------------------------------------- CSRF + security headers

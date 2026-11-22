@@ -159,24 +159,22 @@ def _start_session(response: Response, p: Principal, token: str) -> Me:
 
 @app.post("/api/auth/signup", response_model=Me)
 def signup(body: Credentials, request: Request, response: Response) -> Me:
-    key = f"signup:{auth.client_ip(request)}"
-    if auth.LIMITER.blocked(key, auth.SIGNUP_LIMIT, auth.SIGNUP_WINDOW):
-        raise HTTPException(429, "Too many sign-up attempts. Try again later.")
-    auth.LIMITER.hit(key)
+    if auth.LIMITER.blocked("signup", auth.SIGNUP_LIMIT, auth.SIGNUP_WINDOW):  # one shared limit: no visitor IP behind Vercel
+        raise HTTPException(429, "Too many sign-ups right now. Try again later.")
+    auth.LIMITER.hit("signup")
     p, token = auth.signup(body.email, body.password, auth.principal(request))
     return _start_session(response, p, token)
 
 
 @app.post("/api/auth/login", response_model=Me)
 def login(body: Credentials, request: Request, response: Response) -> Me:
-    keys = [f"login-ip:{auth.client_ip(request)}", f"login-email:{body.email.strip().lower()}"]
-    if any(auth.LIMITER.blocked(k, auth.LOGIN_LIMIT, auth.LOGIN_WINDOW) for k in keys):
+    key = f"login-email:{body.email.strip().lower()}"  # per email: behind Vercel every visitor shares a few proxy IPs
+    if auth.LIMITER.blocked(key, auth.LOGIN_LIMIT, auth.LOGIN_WINDOW):
         raise HTTPException(429, "Too many failed sign-in attempts. Try again in 15 minutes.")
     try:
         p, token = auth.login(body.email, body.password, auth.principal(request))
     except HTTPException:
-        for k in keys:
-            auth.LIMITER.hit(k)
+        auth.LIMITER.hit(key)
         raise
     return _start_session(response, p, token)
 
@@ -499,10 +497,10 @@ def memo(job_id: str) -> Response:
 
 
 @app.post("/api/jobs/{job_id}/ablation", response_model=AblationResult)
-async def run_ablation(job_id: str, request: Request, p: Principal = Depends(owned_job)) -> AblationResult:
+async def run_ablation(job_id: str, p: Principal = Depends(owned_job)) -> AblationResult:
     r = _result_or_409(job_id)
     if r.ablation is None:  # a stored comparison is free to show again
-        auth.spend_guest_call(p, request, "ablation")
+        auth.spend_guest_call(p, "ablation")
         r.ablation = await ablation.run(LLM(mode=config.allowed_mode(r.llm_mode)), get_corpus(), r)
         save_result(r)
     return r.ablation
@@ -531,13 +529,13 @@ def _save_council_calls(r: AnalysisResult, llm: LLM) -> None:
 
 
 @app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse)
-async def council_chat(job_id: str, body: CouncilChatRequest, request: Request, p: Principal = Depends(owned_job)) -> CouncilChatResponse:
+async def council_chat(job_id: str, body: CouncilChatRequest, p: Principal = Depends(owned_job)) -> CouncilChatResponse:
     r = _result_or_409(job_id)
     unknown = [m for m in body.members if m not in council.BY_ID]
     if unknown:
         raise HTTPException(422, f"Unknown council member: {', '.join(unknown)}")
     risk = _council_risk(r, body.risk_id)
-    auth.spend_guest_call(p, request, "council")
+    auth.spend_guest_call(p, "council")
     llm = LLM(mode=council.chat_mode(r.llm_mode))
     try:
         replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history, body.language)
@@ -550,13 +548,13 @@ async def council_chat(job_id: str, body: CouncilChatRequest, request: Request, 
 
 
 @app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse)
-async def council_deliberate(job_id: str, body: CouncilDeliberateRequest, request: Request, p: Principal = Depends(owned_job)) -> CouncilDeliberateResponse:
+async def council_deliberate(job_id: str, body: CouncilDeliberateRequest, p: Principal = Depends(owned_job)) -> CouncilDeliberateResponse:
     """Round 2: the members respond to each other's first answers, then the Chief Justice rules."""
     r = _result_or_409(job_id)
     if len({x.member for x in body.replies if x.member in council.BY_ID}) < 2:
         raise HTTPException(422, "Deliberation needs first answers from at least two council members.")
     risk = _council_risk(r, body.risk_id)
-    auth.spend_guest_call(p, request, "council")
+    auth.spend_guest_call(p, "council")
     llm = LLM(mode=council.chat_mode(r.llm_mode))
     try:
         rebuttals, ruling = await council.deliberate(llm, r, body.message.strip(), body.replies, risk, body.history, body.language)

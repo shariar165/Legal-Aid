@@ -84,6 +84,19 @@ def test_wrong_password_is_generic_and_rate_limited(a, b):
         assert b.post("/api/auth/login", json={"email": email, "password": "wrong password!"}).status_code == 401
     # locked out even with the right password until the window passes
     assert b.post("/api/auth/login", json={"email": email, "password": PASSWORD}).status_code == 429
+    # the lock is per email, not per client: behind Vercel every visitor shares a few proxy IPs
+    other = _email("bystander")
+    a.post("/api/auth/signup", json={"email": other, "password": PASSWORD})
+    assert b.post("/api/auth/login", json={"email": other, "password": PASSWORD}).status_code == 200
+
+
+def test_signup_limit_is_shared_by_all_visitors(a, b, monkeypatch):
+    monkeypatch.setattr(auth, "SIGNUP_LIMIT", 2)
+    assert a.post("/api/auth/signup", json={"email": _email("one"), "password": PASSWORD}).status_code == 200
+    assert b.post("/api/auth/signup", json={"email": _email("two"), "password": PASSWORD}).status_code == 200
+    with _client() as c:
+        late = c.post("/api/auth/signup", json={"email": _email("three"), "password": PASSWORD})
+    assert late.status_code == 429 and "Try again later" in late.json()["detail"]
 
 
 def test_another_user_cannot_reach_a_job(a, b):
@@ -167,20 +180,21 @@ def test_a_guest_uses_counsel_on_its_own_job(a):
     assert a.delete(f"/api/jobs/{job}").json() == {"ok": True}
 
 
-def test_guest_model_calls_are_capped_per_guest_and_ip(a, b, monkeypatch):
+def test_guest_model_calls_are_capped_per_guest_session(a, b, monkeypatch):
     monkeypatch.setitem(auth.GUEST_CALLS, "council", 2)
     monkeypatch.setitem(auth.GUEST_CALLS, "ablation", 1)
-    mine, theirs = _analyze(a), _analyze(b)  # two guests on one IP
+    mine, theirs = _analyze(a), _analyze(b)  # two guests, one client address (as behind Vercel's proxy)
     ask = {"message": "Should I sign?", "members": ["happy"]}
     for _ in range(2):
         assert a.post(f"/api/jobs/{mine}/council/chat", json=ask).status_code == 200
     capped = a.post(f"/api/jobs/{mine}/council/chat", json=ask)
     assert capped.status_code == 429 and "try again later" in capped.json()["detail"]
-    assert b.post(f"/api/jobs/{theirs}/council/chat", json=ask).status_code == 429  # the same IP
+    assert b.post(f"/api/jobs/{theirs}/council/chat", json=ask).status_code == 200  # another guest has its own share
 
     assert a.post(f"/api/jobs/{mine}/ablation").status_code == 200
     assert a.post(f"/api/jobs/{mine}/ablation").status_code == 200  # stored: shown again without a new run
-    assert b.post(f"/api/jobs/{theirs}/ablation").status_code == 429
+    assert b.post(f"/api/jobs/{theirs}/ablation").status_code == 200
+    assert a.post(f"/api/jobs/{_analyze(a)}/ablation").status_code == 429  # a's share is used, on any of its jobs
 
     a.post("/api/auth/signup", json={"email": _email("capless"), "password": PASSWORD})
     assert a.post(f"/api/jobs/{mine}/council/chat", json=ask).status_code == 200  # accounts are not capped
