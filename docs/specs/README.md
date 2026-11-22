@@ -26,4 +26,12 @@ the current state.
 | 17 | 2026-11-13 | [Grey on Qwen, ERNIE as its backup, and a seat health check](2026-11-13-17-grey-on-qwen-and-seat-health.md) |
 | 18 | 2026-11-13 | [Where the Adversary loses risks, gold anchored on clauses, two new playbook rules](2026-11-13-18-adversary-funnel-and-gold-anchors.md) |
 | 19 | 2026-11-14 | [Four Ledgers (চার খাতা): told vs paper vs law, backend v1](2026-11-14-19-four-ledgers.md) |
+| 20 | 2026-11-15 | [Case Desk, a UI upgrade in three phases](2026-11-15-20-case-desk.md) |
+| 21 | 2026-11-18 | [Deploy the frontend to Vercel (backend later)](2026-11-18-21-vercel-deploy.md) |
+| 22 | 2026-11-18 | [Rename to যুক্তি · Jukti, with a new logo](2026-11-18-22-jukti-rename.md) |
+| 23 | 2026-11-19 | [Case Desk review round](2026-11-19-23-desk-review.md) |
+| 24 | 2026-11-19 | [Seat health: a rejected key](2026-11-19-24-seat-health.md) |
+| 26 | 2026-11-20 | [Forest & Sand theme, dark mode, a more polished Counsel](2026-11-20-26-forest-theme.md) |
+| 27 | 2026-11-20 | [Keep the scratchpad dev tools, lock `llm_mode`](2026-11-20-27-dev-tools-mode-lock.md) |
+| 28 | 2026-11-20 | [Judge-ready pass (work order)](2026-11-20-28-judge-ready.md) |
 | 29 | 2026-11-22 | [Judge round: UI to 9/10, legal accuracy, depth (work order)](2026-11-22-29-judge-round.md) |
