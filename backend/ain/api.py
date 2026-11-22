@@ -498,10 +498,11 @@ def memo(job_id: str) -> Response:
     )
 
 
-@app.post("/api/jobs/{job_id}/ablation", response_model=AblationResult, dependencies=[Depends(owned_job)])
-async def run_ablation(job_id: str) -> AblationResult:
+@app.post("/api/jobs/{job_id}/ablation", response_model=AblationResult)
+async def run_ablation(job_id: str, request: Request, p: Principal = Depends(owned_job)) -> AblationResult:
     r = _result_or_409(job_id)
-    if r.ablation is None:
+    if r.ablation is None:  # a stored comparison is free to show again
+        auth.spend_guest_call(p, request, "ablation")
         r.ablation = await ablation.run(LLM(mode=config.allowed_mode(r.llm_mode)), get_corpus(), r)
         save_result(r)
     return r.ablation
@@ -529,13 +530,14 @@ def _save_council_calls(r: AnalysisResult, llm: LLM) -> None:
     save_result(r)
 
 
-@app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse, dependencies=[Depends(owned_job)])
-async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResponse:
+@app.post("/api/jobs/{job_id}/council/chat", response_model=CouncilChatResponse)
+async def council_chat(job_id: str, body: CouncilChatRequest, request: Request, p: Principal = Depends(owned_job)) -> CouncilChatResponse:
     r = _result_or_409(job_id)
     unknown = [m for m in body.members if m not in council.BY_ID]
     if unknown:
         raise HTTPException(422, f"Unknown council member: {', '.join(unknown)}")
     risk = _council_risk(r, body.risk_id)
+    auth.spend_guest_call(p, request, "council")
     llm = LLM(mode=council.chat_mode(r.llm_mode))
     try:
         replies = await council.chat(llm, r, body.message.strip(), body.members, risk, body.history, body.language)
@@ -547,13 +549,14 @@ async def council_chat(job_id: str, body: CouncilChatRequest) -> CouncilChatResp
     return CouncilChatResponse(replies=replies)
 
 
-@app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse, dependencies=[Depends(owned_job)])
-async def council_deliberate(job_id: str, body: CouncilDeliberateRequest) -> CouncilDeliberateResponse:
+@app.post("/api/jobs/{job_id}/council/deliberate", response_model=CouncilDeliberateResponse)
+async def council_deliberate(job_id: str, body: CouncilDeliberateRequest, request: Request, p: Principal = Depends(owned_job)) -> CouncilDeliberateResponse:
     """Round 2: the members respond to each other's first answers, then the Chief Justice rules."""
     r = _result_or_409(job_id)
     if len({x.member for x in body.replies if x.member in council.BY_ID}) < 2:
         raise HTTPException(422, "Deliberation needs first answers from at least two council members.")
     risk = _council_risk(r, body.risk_id)
+    auth.spend_guest_call(p, request, "council")
     llm = LLM(mode=council.chat_mode(r.llm_mode))
     try:
         rebuttals, ruling = await council.deliberate(llm, r, body.message.strip(), body.replies, risk, body.history, body.language)

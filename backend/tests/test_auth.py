@@ -156,6 +156,36 @@ def test_results_are_encrypted_at_rest(a):
     assert load_result(job).memo.title == r["memo"]["title"]
 
 
+def test_a_guest_uses_counsel_on_its_own_job(a):
+    """Counsel needs no account (spec 29 step 1.1): a guest gets every Counsel feature on the analyses it owns."""
+    job = _analyze(a)
+    assert a.get("/api/auth/me").json()["kind"] == "guest"
+    assert [j["job_id"] for j in a.get("/api/jobs").json()] == [job]
+    assert a.get(f"/api/jobs/{job}/memo.docx").status_code == 200
+    assert a.post(f"/api/jobs/{job}/ablation").status_code == 200
+    assert a.post(f"/api/jobs/{job}/council/chat", json={"message": "Should I sign?", "members": ["happy"]}).status_code == 200
+    assert a.delete(f"/api/jobs/{job}").json() == {"ok": True}
+
+
+def test_guest_model_calls_are_capped_per_guest_and_ip(a, b, monkeypatch):
+    monkeypatch.setitem(auth.GUEST_CALLS, "council", 2)
+    monkeypatch.setitem(auth.GUEST_CALLS, "ablation", 1)
+    mine, theirs = _analyze(a), _analyze(b)  # two guests on one IP
+    ask = {"message": "Should I sign?", "members": ["happy"]}
+    for _ in range(2):
+        assert a.post(f"/api/jobs/{mine}/council/chat", json=ask).status_code == 200
+    capped = a.post(f"/api/jobs/{mine}/council/chat", json=ask)
+    assert capped.status_code == 429 and "try again later" in capped.json()["detail"]
+    assert b.post(f"/api/jobs/{theirs}/council/chat", json=ask).status_code == 429  # the same IP
+
+    assert a.post(f"/api/jobs/{mine}/ablation").status_code == 200
+    assert a.post(f"/api/jobs/{mine}/ablation").status_code == 200  # stored: shown again without a new run
+    assert b.post(f"/api/jobs/{theirs}/ablation").status_code == 429
+
+    a.post("/api/auth/signup", json={"email": _email("capless"), "password": PASSWORD})
+    assert a.post(f"/api/jobs/{mine}/council/chat", json=ask).status_code == 200  # accounts are not capped
+
+
 def test_delete_job_and_account(a):
     a.post("/api/auth/signup", json={"email": _email("erase"), "password": PASSWORD})
     keep, gone = _analyze(a), _analyze(a)

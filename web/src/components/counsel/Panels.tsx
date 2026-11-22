@@ -165,7 +165,7 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
     try {
       setData(await api.ablation(result.job_id));
     } catch (e) {
-      setError((e as Error).message);
+      setError((e as Error).message.replace(/^\d+: /, ""));  // e.g. the guest limit says "try again later"
     } finally {
       setBusy(false);
     }

@@ -42,6 +42,14 @@ BAD_LOGIN = "Invalid email or password."
 
 LOGIN_LIMIT, LOGIN_WINDOW = 5, 15 * 60  # failed attempts per IP and per email
 SIGNUP_LIMIT, SIGNUP_WINDOW = 10, 60 * 60  # attempts per IP
+# Model calls a guest can start from Counsel (spec 29 step 1.1), per guest and per IP: council questions and
+# deliberations (each counts once) and plain-chatbot comparisons. Accounts are not capped.
+GUEST_CALLS = {"council": 10, "ablation": 10}
+GUEST_WINDOW = 60 * 60
+GUEST_BUSY = {
+    "council": "Guests can ask the council {n} questions an hour. Please try again later, or create a free account to keep going.",
+    "ablation": "Guests can run the chatbot comparison {n} times an hour. Please try again later, or create a free account to keep going.",
+}
 
 _hasher = PasswordHasher()
 # an unknown email still pays the argon2 cost, so response time doesn't reveal which emails exist
@@ -348,6 +356,18 @@ LIMITER = RateLimiter()
 
 def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
+
+
+def spend_guest_call(p: Principal, request: Request, kind: str) -> None:
+    """Count one model-backed Counsel call for a guest; 429 once the guest or its IP has used the hour's share."""
+    if not p.is_guest:
+        return
+    keys = [f"{kind}:{p.user_id}", f"{kind}-ip:{client_ip(request)}"]
+    limit = GUEST_CALLS[kind]
+    if any(LIMITER.blocked(k, limit, GUEST_WINDOW) for k in keys):
+        raise HTTPException(429, GUEST_BUSY[kind].format(n=limit))
+    for k in keys:
+        LIMITER.hit(k)
 
 
 # ---------------------------------------------------------------- CSRF + security headers

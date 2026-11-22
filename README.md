@@ -298,7 +298,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ### Security and user data
 
-- **Who owns what.** Citizen mode needs no signup. The first analysis on a device creates a private **guest** session, which owns that device's analyses; guests and their data are deleted after 7 days. Counsel mode (`/counsel`) needs an **account** (email + password). Signing up or signing in from a guest session moves the guest's analyses into the account.
+- **Who owns what.** Citizen mode needs no signup. The first analysis on a device creates a private **guest** session, which owns that device's analyses; guests and their data are deleted after 7 days. Counsel mode (`/counsel`) works the same way, with no sign-in. An **account** (email + password) keeps analyses across devices and adds erasure of the whole account. Signing up or signing in from a guest session moves the guest's analyses into the account. Guests can ask the council, or run the plain-chatbot comparison, 10 times an hour each (per guest and per IP).
 - **Passwords** are hashed with argon2id. A wrong password and an unknown email get the same answer. After 5 failed sign-ins (per IP or per email) sign-in is locked for 15 minutes, and sign-ups are limited to 10 per IP per hour.
 - **Sessions** are random tokens in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` with `AIN_COOKIE_SECURE=1`). Only a SHA-256 of each token is stored, in `backend/.data/ain.db`. Account sessions last 30 days and renew while in use. A new token is issued at every sign-in.
 - **CSRF**: state-changing requests from a browser origin outside `AIN_CORS` are rejected with `403`.
@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 373 offline tests
+python -m pytest -q              # 375 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
