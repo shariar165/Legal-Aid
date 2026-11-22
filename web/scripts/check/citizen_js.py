@@ -2,12 +2,14 @@
 import sys
 
 WAIT = "const until = async (f, t = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < t) { const v = f(); if (v) return v; await new Promise(r => setTimeout(r, 200)); } throw new Error('timeout'); };"
+# Citizen draws inside a fixed phone frame with its own scroll: this lets the page grow to its full height
+GROW = "const st = document.createElement('style'); st.textContent = '[class$=_app]{height:auto!important;margin:0 auto!important;border-radius:0!important} [class$=_screen],[class$=_resultScroll]{overflow:visible!important}'; document.head.appendChild(st);"
 CLICK_TEXT = "const clickText = async (txt) => { const b = await until(() => [...document.querySelectorAll('button')].find(x => !x.disabled && x.textContent.includes(txt))); b.click(); return b; };"
 
 def to_result(sample_index: int, lang: str = "bn", full: bool = True) -> str:
     lang_js = "await clickText('EN');" if lang == "en" else ""
     see = "See result" if lang == "en" else "ফলাফল দেখুন"
-    grow = ("const st = document.createElement('style'); st.textContent = '[class$=_app]{height:auto!important;margin:0 auto!important;border-radius:0!important} [class$=_screen],[class$=_resultScroll]{overflow:visible!important}'; document.head.appendChild(st);" if full else "")
+    grow = GROW if full else ""
     return f"""(async () => {{ {WAIT} {CLICK_TEXT}
       {lang_js}
       const btns = await until(() => {{ const l = [...document.querySelectorAll('button')].filter(b => b.className.includes('sampleBtn')); return l.length ? l : null; }});

@@ -45,6 +45,8 @@ python -m scripts.warm_clean <sample_id>   # re-warm a sample until no cached an
 cd web && npm run lint && npm run build
 python scripts/check/contrast.py           # WCAG contrast of the globals.css tokens, light + dark
 python scripts/check/shot.py snap / 390 out.png --full   # headless-Chrome screenshot / JS check (Gate 3); see citizen_js.py
+python scripts/check/shot.py audit-all --against baseline # Gate 3 audit: axe, targets, text sizes, bytes -> docs/design/audit/<branch>.md
+python -m pytest scripts/check -q                         # the audit's self-test (needs Chrome; CHROME= / CHROME_FLAGS= on Linux)
 ```
 Low-memory machine: start the backend with `AIN_DENSE=0`, and serve the UI with `npm run build && npm start`.
 
