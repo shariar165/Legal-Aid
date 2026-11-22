@@ -26,3 +26,4 @@ the current state.
 | 17 | 2026-11-13 | [Grey on Qwen, ERNIE as its backup, and a seat health check](2026-11-13-17-grey-on-qwen-and-seat-health.md) |
 | 18 | 2026-11-13 | [Where the Adversary loses risks, gold anchored on clauses, two new playbook rules](2026-11-13-18-adversary-funnel-and-gold-anchors.md) |
 | 19 | 2026-11-14 | [Four Ledgers (চার খাতা): told vs paper vs law, backend v1](2026-11-14-19-four-ledgers.md) |
+| 29 | 2026-11-22 | [Judge round: UI to 9/10, legal accuracy, depth (work order)](2026-11-22-29-judge-round.md) |
