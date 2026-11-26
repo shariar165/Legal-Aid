@@ -73,7 +73,7 @@ export function CounselApp({ jobId }: { jobId: string }) {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/counsel" className={styles.brand} aria-label="যুক্তি · Jukti, start a new analysis">
+          <Link href="/counsel" className={styles.brand} aria-label="যুক্তি · Jukti Counsel, start a new analysis">
             <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
               যুক্তি · Jukti <span>Counsel</span>
@@ -106,7 +106,8 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 <button type="button" className={styles.iconBtn} onClick={() => window.print()} aria-label="Print memo" title="Print memo">
                   <Icon name="printer" size={18} />
                 </button>
-                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)}>
+                {/* named at every width: a phone hides the text and shows only the icon */}
+                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)} aria-label="Download memo">
                   <Icon name="download" size={16} />
                   <span>Download memo</span>
                 </a>
@@ -277,7 +278,7 @@ function Progress({
             : "This usually takes under a minute. You can keep this tab open."}
         </p>
         {needsCheck && <SalaryCheck check={ocrCheck} onConfirm={onConfirm} />}
-        <div className={styles.progressBar} role="progressbar" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
+        <div className={styles.progressBar} role="progressbar" aria-label="Analysis progress" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
           <span style={{ width: `${(100 * stepsDone.length) / STEP_ORDER.length}%` }} />
         </div>
         <ol className={styles.stepper}>

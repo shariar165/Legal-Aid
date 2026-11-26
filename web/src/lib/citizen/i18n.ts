@@ -135,8 +135,6 @@ export const STRINGS = {
     },
     listen: { bn: "শুনুন", en: "Listen" },
     stop: { bn: "থামুন", en: "Stop" },
-    playAria: { bn: "শুনুন", en: "Play audio" },
-    pauseAria: { bn: "থামুন", en: "Pause audio" },
     details: { bn: "বিস্তারিত", en: "Details" },
     basis: { bn: "যে আইনের ভিত্তিতে বলা হয়েছে:", en: "Based on these laws:" },
     verified: { bn: "যাচাইকৃত", en: "Verified" },

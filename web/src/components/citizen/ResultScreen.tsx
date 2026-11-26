@@ -148,7 +148,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
                   <button
                     type="button"
                     className={styles.playBtn}
-                    aria-label={playing ? T.pauseAria[lang] : T.playAria[lang]}
+                    aria-label={`${playing ? T.stop[lang] : T.listen[lang]}: ${card.title[lang]}`}
                     aria-pressed={playing}
                     onClick={() => speech.toggle(card.kind, spoken, SPEECH_LANG[lang])}
                   >
@@ -224,7 +224,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
               <button
                 type="button"
                 className={styles.playBtn}
-                aria-label={letterPlaying ? T.pauseAria[lang] : T.playAria[lang]}
+                aria-label={`${letterPlaying ? T.stop[lang] : T.listen[lang]}: ${T.letterTitle[lang]}`}
                 aria-pressed={letterPlaying}
                 onClick={() => speech.toggle(LETTER_ID, letter, SPEECH_LANG[lang])}
               >
@@ -236,7 +236,10 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
             )}
             <div className={styles.cardBody}>
               <p className={styles.letterSub}>{T.letterSub[lang]}</p>
-              <pre className={styles.letterText}>{letter}</pre>
+              {/* it scrolls on a small screen, so a keyboard must be able to reach it */}
+              <pre className={styles.letterText} tabIndex={0} aria-label={T.letterTitle[lang]}>
+                {letter}
+              </pre>
               <div className={styles.twoUp}>
                 <button type="button" className={styles.btnSolid} onClick={copyLetter}>
                   {copied ? (
