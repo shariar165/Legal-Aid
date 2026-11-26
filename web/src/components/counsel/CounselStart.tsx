@@ -80,7 +80,8 @@ export function CounselStart() {
             </span>
           )}
           <div className={styles.actions}>
-            <Link href="/" className={styles.quietBtn}>
+            {/* hidden on a phone, where it pushed the header past the screen: the brand link also goes to Citizen */}
+            <Link href="/" className={`${styles.quietBtn} ${styles.hideSm}`}>
               Citizen app
             </Link>
             <ThemeToggle className={styles.themeBtn} />

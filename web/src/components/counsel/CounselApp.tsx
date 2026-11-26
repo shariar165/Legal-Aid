@@ -98,9 +98,9 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 )}
               </span>
               <div className={styles.actions}>
-                <Link href="/counsel" className={styles.quietBtn} title="Analyse another contract">
+                <Link href="/counsel" className={`${styles.quietBtn} ${styles.newBtn}`} title="Analyse another contract" aria-label="New analysis">
                   <Icon name="plus" size={16} />
-                  <span className={styles.hideSm}>New analysis</span>
+                  <span className={`${styles.hideSm} ${styles.newLabel}`}>New analysis</span>
                 </Link>
                 <button type="button" className={styles.iconBtn} onClick={() => window.print()} aria-label="Print memo" title="Print memo">
                   <Icon name="printer" size={18} />
