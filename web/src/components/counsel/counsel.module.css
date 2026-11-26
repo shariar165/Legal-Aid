@@ -4036,6 +4036,20 @@ button.clause:hover {
   text-overflow: ellipsis;
 }
 
+/* a guest's panel head: where the analyses live, and why to keep them (spec 29 step 1.1) */
+.accountGuest {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.accountGuest .accountEmail {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
 .accountLabel {
   margin: 0;
   font-size: 12px;
@@ -5097,4 +5111,36 @@ button.clause:hover {
   margin: 0;
   font-size: 14px;
   color: var(--c-ink-2);
+}
+
+/* The account panel is a light card inside the dark top bar (spec 29 step 1.1): its buttons and focus ring take the
+   card's colours again, and a phone's icon-only rule for top-bar buttons does not squeeze them. */
+.topbar .accountPanel .quietBtn {
+  min-height: 30px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--c-ink-2) !important;
+}
+
+.topbar .accountPanel .quietBtn:hover {
+  background: var(--c-subtle);
+  border-color: var(--c-line);
+}
+
+.topbar .accountPanel .primaryBtn {
+  width: auto;
+  min-height: 38px;
+  padding: 0 16px;
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--on-accent) !important;
+}
+
+.topbar .accountPanel .primaryBtn:hover {
+  background: var(--c-accent-hover);
+  border-color: var(--c-accent-hover);
+}
+
+.topbar .accountPanel :focus-visible {
+  outline-color: var(--focus);
 }

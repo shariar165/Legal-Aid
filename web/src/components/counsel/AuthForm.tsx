@@ -13,7 +13,7 @@ import { ThemeToggle } from "@/components/shared/ThemeToggle";
 const COPY = {
   login: {
     title: "Sign in",
-    lead: "Open your saved analyses and Counsel mode.",
+    lead: "Open your saved analyses on any device.",
     submit: "Sign in",
     busy: "Signing in…",
     switchText: "New here?",

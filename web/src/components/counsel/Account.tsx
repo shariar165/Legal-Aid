@@ -10,31 +10,39 @@ import styles from "./counsel.module.css";
 
 const AccountContext = createContext<Me | null>(null);
 
-/** Counsel mode is for signed-in accounts: anyone else is sent to sign in, then brought back here. */
+/**
+ * Counsel opens for everyone (spec 29 step 1.1): an account, a guest (this device only, kept 7 days) or a first-time
+ * visitor, whose first analysis creates the guest, as in Citizen. The API already limits each of them to the analyses
+ * they own. The gate only waits for the session answer, so the account menu knows which of the three it is.
+ */
 export function AccountGate({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { me, offline } = useSession((m) => {
-    if (m.kind !== "account") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  });
-  const allowed = me?.kind === "account";
+  const { me, offline } = useSession();
 
   // backend unreachable: let the page show its own "server not reachable" message
-  if (allowed || offline) return <AccountContext value={me}>{children}</AccountContext>;
+  if (me || offline) return <AccountContext value={me}>{children}</AccountContext>;
   return (
     <div className={styles.page}>
       <main className={styles.narrow}>
         <p className={styles.gateNote} role="status">
-          Checking your sign-in…
+          Checking your session…
         </p>
       </main>
     </div>
   );
 }
 
+/** The session the gate resolved: null while offline. */
+export function useMe() {
+  return use(AccountContext);
+}
+
 const shortDate = (unix: number) => new Date(unix * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-/** Topbar account chip: saved analyses, sign out, and erasure of the account with all its data. */
+/**
+ * Topbar account chip. An account: saved analyses, sign out, and erasure of the account with all its data.
+ * A guest: this device's analyses, and a way to keep them (sign up or sign in moves them into the account).
+ * No session yet: a "Sign in" link.
+ */
 export function AccountMenu() {
   const me = use(AccountContext);
   const router = useRouter();
@@ -64,7 +72,16 @@ export function AccountMenu() {
     };
   }, [open]);
 
-  if (!me?.email) return null;
+  if (!me) return null;
+  const next = encodeURIComponent(pathname);
+  if (me.kind === null) {
+    return (
+      <Link href={`/login?next=${next}`} className={styles.quietBtn}>
+        Sign in
+      </Link>
+    );
+  }
+  const guest = me.kind === "guest";
 
   const toggle = () => {
     setOpen((o) => !o);
@@ -106,19 +123,36 @@ export function AccountMenu() {
 
   return (
     <div className={styles.account} ref={root}>
-      <button type="button" className={styles.accountBtn} aria-expanded={open} aria-haspopup="dialog" onClick={toggle} title={me.email}>
+      <button
+        type="button"
+        className={styles.accountBtn}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={toggle}
+        title={guest ? "Guest on this device" : (me.email ?? undefined)}
+      >
         <span className={styles.avatar} aria-hidden="true">
-          {me.email[0].toUpperCase()}
+          {guest ? <Icon name="monitor" size={15} /> : (me.email ?? "?")[0].toUpperCase()}
         </span>
-        <span className={styles.srOnly}>Your account</span>
+        <span className={styles.srOnly}>{guest ? "Guest session" : "Your account"}</span>
         <Icon name="chevronDown" size={14} className={styles.chevron} />
       </button>
       {open && (
-        <div className={styles.accountPanel} role="dialog" aria-label="Your account">
-          <p className={styles.accountEmail}>
-            <Icon name="lock" size={14} />
-            <span>{me.email}</span>
-          </p>
+        <div className={styles.accountPanel} role="dialog" aria-label={guest ? "Guest session" : "Your account"}>
+          {guest ? (
+            <div className={styles.accountGuest}>
+              <p className={styles.accountEmail}>
+                <Icon name="monitor" size={14} />
+                <span>Guest · kept 7 days on this device</span>
+              </p>
+              <p className={styles.accountMuted}>Save to an account to keep your analyses and open them on any device.</p>
+            </div>
+          ) : (
+            <p className={styles.accountEmail}>
+              <Icon name="lock" size={14} />
+              <span>{me.email}</span>
+            </p>
+          )}
 
           <p className={styles.accountLabel}>My analyses</p>
           {jobs === null ? (
@@ -142,7 +176,16 @@ export function AccountMenu() {
             </ul>
           )}
 
-          {confirming ? (
+          {guest ? (
+            <div className={styles.accountActions}>
+              <Link href={`/signup?next=${next}`} className={styles.primaryBtn}>
+                Save to an account
+              </Link>
+              <Link href={`/login?next=${next}`} className={styles.quietBtn} data-size="sm">
+                Sign in
+              </Link>
+            </div>
+          ) : confirming ? (
             <div className={styles.accountConfirm} role="alert">
               <p>This permanently deletes your account and every saved analysis. It cannot be undone.</p>
               <div>

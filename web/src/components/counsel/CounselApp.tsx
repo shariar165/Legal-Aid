@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
 import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAnalysis";
-import { AccountMenu } from "./Account";
+import { AccountMenu, useMe } from "./Account";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "@/components/shared/Icons";
@@ -34,6 +34,7 @@ function liveRisks(result: AnalysisResult) {
 
 export function CounselApp({ jobId }: { jobId: string }) {
   const analysis = useAnalysis(jobId);
+  const me = useMe();
   const { result, status, events, error, stepsDone } = analysis;
   const [view, setView] = useState<View>("desk");
   const [deskClause, setDeskClause] = useState<string | null>(null);
@@ -148,7 +149,12 @@ export function CounselApp({ jobId }: { jobId: string }) {
             {error?.startsWith("404") ? (
               <>
                 <h1 className={styles.stateTitle}>This analysis isn&apos;t available</h1>
-                <p className={styles.stateText}>It may have been deleted, or it belongs to another account.</p>
+                <p className={styles.stateText}>It may have been deleted, or it belongs to another account or device.</p>
+                {me?.kind !== "account" && (
+                  <p className={styles.stateText}>
+                    Saved it in your account? <Link href={`/login?next=${encodeURIComponent(`/counsel/${jobId}`)}`}>Sign in</Link> to open it.
+                  </p>
+                )}
               </>
             ) : (
               <>
