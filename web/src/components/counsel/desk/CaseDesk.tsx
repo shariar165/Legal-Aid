@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api, type AnalysisResult } from "@/lib/api";
 import { DESK, type Lang } from "@/lib/desk/i18n";
+import { DESK_LANG_KEY, usePref } from "@/lib/prefs";
 import { deskRows, firstRow } from "@/lib/desk/rows";
 import { HeroChip, MoneyHero } from "@/components/shared/MoneyHero";
 import { Icon } from "@/components/shared/Icons";
@@ -12,6 +13,8 @@ import { EvidenceFile } from "./EvidenceFile";
 import { MoneyStrip } from "./MoneyStrip";
 import { PromiseForm } from "./PromiseForm";
 import s from "./desk.module.css";
+
+const LANGS = ["bn", "en"] as const;
 
 /* The Case Desk (spec 20): the money first, then three panes driven by one selection. The contract on the left, the
    chain rows (told · paper · paid · law) in the middle, the evidence file for the selected row on the right. */
@@ -41,7 +44,8 @@ interface Props {
 }
 
 export function CaseDesk({ result, reload, onAsk, clause }: Props) {
-  const [lang, setLang] = useState<Lang>("bn");
+  // Counsel is English-first, so the desk opens in English; a choice of বাংলা is remembered on this device (spec 29 1.2)
+  const [lang, setLang] = usePref<Lang>(DESK_LANG_KEY, LANGS, "en");
   const rows = useMemo(() => deskRows(result), [result]);
   const [picked, setPicked] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);

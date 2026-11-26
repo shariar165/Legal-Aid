@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { STRINGS, type Lang } from "@/lib/citizen/i18n";
+import { CITIZEN_LANG_KEY, usePref } from "@/lib/prefs";
 import { useSpeech } from "@/lib/citizen/useSpeech";
 import { useAnalysis } from "@/lib/useAnalysis";
 import { AnalyzingScreen } from "./AnalyzingScreen";
 import { HomeScreen } from "./HomeScreen";
 import { ResultScreen } from "./ResultScreen";
 import styles from "./citizen.module.css";
+
+const LANGS = ["bn", "en"] as const;
 
 type Screen = "home" | "analyzing" | "result";
 
@@ -18,7 +21,8 @@ const resultPath = (id: string, sampleId?: string) => `/r/${id}${sampleId ? `?s=
 
 /** `jobId`: opened from a /r/<id> link, so attach to that job instead of starting at home. */
 export function CitizenApp({ jobId }: { jobId?: string }) {
-  const [lang, setLang] = useState<Lang>("bn");
+  // Bangla on a first visit; a choice of English is remembered on this device (spec 29 step 1.2)
+  const [lang, setLang] = usePref<Lang>(CITIZEN_LANG_KEY, LANGS, "bn");
   const [screen, setScreen] = useState<Screen>(jobId ? "analyzing" : "home");
   const speech = useSpeech();
   const { stop } = speech;
