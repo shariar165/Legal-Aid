@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 390 offline tests
+python -m pytest -q              # 412 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
@@ -363,6 +363,13 @@ The tests cover:
 - The 2026 Labour Act amendments are read from bdlaws' consolidated text. The Bangla text is authoritative, and English propositions are checked against it by the judge models.
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
+- **Ratification is a hand-checked table.** Each ILO citation says whether Bangladesh and the destination ratified it
+  (C181: neither; it is shown as a persuasive international standard). The table (`corpus/ratifications.yaml`)
+  covers C029, C095 and C181 for the 9 countries, read from NORMLEX in a browser on 2026-11-27, because NORMLEX
+  refuses automated fetches. Nothing re-checks it automatically, and a ratification after that date won't show.
+- **The chatbot comparison only judges law Jukti holds.** A plain-model citation is called "Section doesn't exist"
+  only for an act the corpus holds in full (the bdlaws scrapes). The Malaysian and international acts are excerpts,
+  so a made-up section of one of them reads "Outside our corpus", like any law the corpus doesn't hold.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
 - The hosted demo (Vercel + Railway lite) has no EasyOCR and no dense retrieval, to fit 0.5 GB of RAM. The demo photo
   reads from the OCR cache, and search is BM25 only. A **new photo is read on the phone** with tesseract.js (spec 28):
