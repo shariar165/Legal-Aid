@@ -188,7 +188,8 @@ export default function DocsPage() {
               </table>
             </div>
             <div>
-              <pre className={s.code}>{`// .mcp.json (Claude Code), stdio
+              {/* it scrolls sideways on a phone, so a keyboard must be able to reach it (spec 29 step 1.6) */}
+              <pre className={s.code} tabIndex={0} aria-label="MCP server configuration example">{`// .mcp.json (Claude Code), stdio
 {
   "mcpServers": {
     "ain-copilot": {

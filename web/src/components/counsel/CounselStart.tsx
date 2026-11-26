@@ -72,7 +72,7 @@ export function CounselStart() {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti home">
+          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti Counsel, back to the Citizen app">
             <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
               যুক্তি · Jukti <span>Counsel</span>
