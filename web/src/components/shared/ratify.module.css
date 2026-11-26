@@ -1,0 +1,61 @@
+/* Who is bound by an international instrument (spec 29 step 2.1): "BD ✓ · MY ✗". Shared tokens only. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--ink-2);
+  vertical-align: middle;
+  align-self: flex-start; /* in a column (the desk's law block) it stays its own width */
+}
+
+.badge[data-persuasive="true"] {
+  border-color: var(--warn-line);
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+
+.party[data-ok="true"] .mark {
+  color: var(--ok-ink);
+}
+
+.party[data-ok="false"] .mark {
+  color: var(--bad-ink);
+}
+
+.badge[data-persuasive="true"] .party .mark {
+  color: inherit;
+}
+
+.dot {
+  opacity: 0.6;
+}
+
+.note {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.note[data-persuasive="true"] {
+  color: var(--warn-ink);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

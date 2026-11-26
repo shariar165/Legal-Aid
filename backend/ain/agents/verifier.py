@@ -19,7 +19,7 @@ import re
 
 from rapidfuzz import fuzz
 
-from ain import companies, config
+from ain import companies, config, ratification
 from ain.agents import bench as bench_mod
 from ain.llm import LLM, LLMError
 from ain.models import BenchResult, Claim, GateResult, Risk, RouteDecision, Section, Verification
@@ -47,8 +47,14 @@ def gate_existence(claim: Claim, corpus: Corpus, route: RouteDecision) -> tuple[
         hit = next((excluded[p] for p in sec.packs if p in excluded), None)
         if hit:
             return GateResult(gate="existence", status="fail", detail=f"Exists, but does not apply to this document. {hit}"), sec
-        return GateResult(gate="existence", status="warn", detail=f"Exists ({sec.act_en} s.{sec.section}) but lies outside the law packs routed for this document."), sec
-    return GateResult(gate="existence", status="pass", detail=f"Found {sec.act_en} s.{sec.section} - {sec.heading}"), sec
+        return GateResult(gate="existence", status="warn", detail=f"Exists ({sec.act_en} s.{sec.section}) but lies outside the law packs routed for this document.{_bound(sec, route)}"), sec
+    return GateResult(gate="existence", status="pass", detail=f"Found {sec.act_en} s.{sec.section} - {sec.heading}{_bound(sec, route)}"), sec
+
+
+def _bound(sec: Section, route: RouteDecision) -> str:
+    """Who is bound by an international instrument; it informs the reader and changes no gate decision."""
+    r = ratification.status(sec.act_key, route.parties)
+    return f" {r.note.en}" if r else ""
 
 
 def quote_score(quote: str, text: str) -> float:

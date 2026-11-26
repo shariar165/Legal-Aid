@@ -5,6 +5,7 @@ import type { AnalysisResult, BenchResult, PersonaId, Severity } from "@/lib/api
 import { DESK, num, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
 import { claimFor, type DeskRow, type LawRef } from "@/lib/desk/rows";
 import { Icon } from "@/components/shared/Icons";
+import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import { CouncilAvatar, memberLabel } from "../Council";
 import { GATE_ICON } from "../format";
 import { LawBadgePill, NodeMark } from "./ChainRows";
@@ -239,6 +240,7 @@ function LawBlock({ result, law, lang, violation }: { result: AnalysisResult; la
           citeName(result, id, lang)
         )}
       </span>
+      <RatifyBadge r={result.ratification?.[id]} lang={lang} full />
     </div>
   );
 }

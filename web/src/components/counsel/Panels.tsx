@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { api, type Ablation, type AnalysisResult, type TraceEvent, type Verdict } from "@/lib/api";
 import { citeLabel, GATE_ICON, GATE_STATUS_LABEL, GATES, ORIGIN_LABEL, OUTCOME, VERDICT_ICON, VERDICT_LABEL, WRONG_WHY } from "./format";
 import { Icon } from "@/components/shared/Icons";
+import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import styles from "./counsel.module.css";
 
 /* ------------------------------------------------------------------ Ledger */
@@ -54,7 +55,10 @@ export function LedgerPanel({ result }: { result: AnalysisResult }) {
                 {VERDICT_LABEL[v.verdict]}
               </span>
             </div>
-            <p className={styles.prop}>{v.claim.proposition}</p>
+            <p className={styles.prop}>
+              {v.claim.proposition}
+              <RatifyBadge r={result.ratification?.[v.claim.citation_id]} full />
+            </p>
             <div className={styles.gates}>
               {GATES.map((g) => {
                 const gate = v.gates.find((x) => x.gate === g.id);

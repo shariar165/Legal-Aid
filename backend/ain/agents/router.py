@@ -8,7 +8,7 @@ fill facts the regexes missed; it may add packs but can never re-enable an exclu
 from __future__ import annotations
 
 import logging
-from ain import countries
+from ain import countries, ratification
 from ain.llm import LLM, MalformedAnswer
 from ain.models import DocFacts, L10n, PackDecision, RouteDecision
 
@@ -84,7 +84,7 @@ def decide(facts: DocFacts, text_lower: str) -> RouteDecision:
         add("ilo_supervisory", "How the ILO's supervisory body reads the conventions Bangladesh ratified, applied to Bangladesh.")
     labour = {"bd_migration", "bd_labour", "bd_epz"} | {c.pack for c in countries.load_countries()}
     note = None if labour & {p.pack for p in packs} else SCOPE_NOTE
-    return RouteDecision(packs=packs, excluded=excluded, scope_note=note)
+    return RouteDecision(packs=packs, excluded=excluded, scope_note=note, parties=ratification.parties(country.code if country else None))
 
 
 # Jukti is built for one niche: employment and migrant-worker contracts (and the supply contracts that bind factories).

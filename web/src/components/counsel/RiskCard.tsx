@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Clause, MemoIssue, Risk, Verification } from "@/lib/api";
+import type { AnalysisResult, Clause, MemoIssue, Risk, Verification } from "@/lib/api";
 import { benchOutcome, CouncilFaces, MemberVotes } from "./Council";
 import { citeLabel, SEVERITY_LABEL } from "./format";
 import { Icon } from "@/components/shared/Icons";
+import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import styles from "./counsel.module.css";
 
 interface Props {
@@ -13,13 +14,15 @@ interface Props {
   issue: MemoIssue | undefined;
   rows: Verification[];
   clauses: Clause[];
+  /** who is bound by each cited international instrument (spec 29 step 2.1) */
+  ratification?: AnalysisResult["ratification"];
   active: boolean;
   onAskCouncil: () => void;
   onClause: (clauseId: string) => void;
 }
 
 /* One risk: what is wrong, what to do, and the law behind it. Everything else sits behind "Details". */
-export function RiskCard({ risk, index, issue, rows, clauses, active, onAskCouncil, onClause }: Props) {
+export function RiskCard({ risk, index, issue, rows, clauses, ratification, active, onAskCouncil, onClause }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const laws = rows.filter((v) => v.section && v.verdict !== "dropped");
@@ -83,6 +86,7 @@ export function RiskCard({ risk, index, issue, rows, clauses, active, onAskCounc
                   >
                     <Icon name={v.verdict === "verified" ? "check" : "alert"} size={13} />
                     {citeLabel(v.section!)}
+                    <RatifyBadge r={ratification?.[v.claim.citation_id]} />
                     <Icon name="external" size={12} className={styles.extIcon} />
                   </a>
                 ))}
