@@ -149,7 +149,7 @@ function EvalBlock({ metrics }: { metrics: Metrics }) {
         <RisksChart rows={rows} />
         <ClaimsChart rows={rows} />
       </div>
-      <div className={s.tableWrap} style={{ marginTop: 14 }}>
+      <div className={s.tableWrap} style={{ marginTop: 14 }} tabIndex={0} role="region" aria-label="Evaluation results table">
         <table className={s.table}>
           <thead>
             <tr>

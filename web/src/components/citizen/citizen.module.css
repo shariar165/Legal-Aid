@@ -1402,3 +1402,69 @@ a.citName {
     border: 1px solid #ccc;
   }
 }
+
+/* the raw error text, closed by default (spec 29 step 1.4): the message above says what to do */
+.errorDetails {
+  margin-top: 12px;
+  font-size: var(--fs-16);
+  color: var(--muted);
+}
+
+.errorDetails summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.errorDetails p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* the helpdesk sheet above the help button (spec 29 step 1.5): two numbers to call, each a tel: link */
+.helpSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.helpSheetTitle {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.helpNumber {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink) !important;
+  text-decoration: none;
+}
+
+.helpNumber:hover {
+  border-color: var(--accent);
+}
+
+.helpNumberMain {
+  font-size: var(--fs-20);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.helpNumberSub {
+  font-size: var(--fs-16);
+  color: var(--ink-2);
+  text-align: right;
+}

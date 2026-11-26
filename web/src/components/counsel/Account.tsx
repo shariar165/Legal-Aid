@@ -6,6 +6,7 @@ import { createContext, use, useEffect, useRef, useState, type ReactNode } from 
 import { api, type JobSummary, type Me } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import { Icon } from "@/components/shared/Icons";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import styles from "./counsel.module.css";
 
 const AccountContext = createContext<Me | null>(null);
@@ -153,6 +154,12 @@ export function AccountMenu() {
               <span>{me.email}</span>
             </p>
           )}
+
+          {/* the top bar's theme switch moves here on a tablet-wide job page (spec 29 step 1.3) */}
+          <div className={styles.panelTheme}>
+            <span>Theme</span>
+            <ThemeToggle className={styles.themeBtn} />
+          </div>
 
           <p className={styles.accountLabel}>My analyses</p>
           {jobs === null ? (

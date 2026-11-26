@@ -306,7 +306,7 @@ STATES = [
     ("citizen-upload-error", "Citizen · upload error", _upload_error),
     ("counsel-start", "Counsel · start", _plain("/counsel")),
     ("counsel-running", "Counsel · running", _running),
-    ("desk-bn", "Counsel · Case Desk (bn)", _counsel()),
+    ("desk-bn", "Counsel · Case Desk (bn)", _counsel(desk_lang="bn")),  # the desk opens in English since step 1.2
     ("desk-en", "Counsel · Case Desk (en)", _counsel(desk_lang="en")),
     ("memo", "Counsel · Memo", _counsel("Memo")),
     ("council", "Counsel · Council after a question", _counsel("Council", ask=True)),
@@ -349,8 +349,10 @@ def audit_all(tab, a):
     for theme in themes:
         if theme_script:
             tab.call("Page.removeScriptToEvaluateOnNewDocument", identifier=theme_script)
+        # every page starts from the default languages: a choice made in one state (EN) must not leak into the next
         theme_script = tab.call("Page.addScriptToEvaluateOnNewDocument",
-                                source=f"try{{localStorage.setItem('jukti-theme','{theme}')}}catch(e){{}}")["identifier"]
+                                source=f"try{{localStorage.setItem('jukti-theme','{theme}');"
+                                       f"localStorage.removeItem('jukti-lang');localStorage.removeItem('jukti-desk-lang')}}catch(e){{}}")["identifier"]
         for width in widths:
             set_width(tab, width)
             for key, title, run in states:

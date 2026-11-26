@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
 import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAnalysis";
 import { AccountMenu, useMe } from "./Account";
+import { ERRORS, errorDetail } from "@/lib/errors";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "@/components/shared/Icons";
@@ -72,7 +73,7 @@ export function CounselApp({ jobId }: { jobId: string }) {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/counsel" className={styles.brand} aria-label="যুক্তি · Jukti, start a new analysis">
+          <Link href="/counsel" className={styles.brand} aria-label="যুক্তি · Jukti Counsel, start a new analysis">
             <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
               যুক্তি · Jukti <span>Counsel</span>
@@ -98,14 +99,15 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 )}
               </span>
               <div className={styles.actions}>
-                <Link href="/counsel" className={styles.quietBtn} title="Analyse another contract">
+                <Link href="/counsel" className={`${styles.quietBtn} ${styles.newBtn}`} title="Analyse another contract" aria-label="New analysis">
                   <Icon name="plus" size={16} />
-                  <span className={styles.hideSm}>New analysis</span>
+                  <span className={`${styles.hideSm} ${styles.newLabel}`}>New analysis</span>
                 </Link>
                 <button type="button" className={styles.iconBtn} onClick={() => window.print()} aria-label="Print memo" title="Print memo">
                   <Icon name="printer" size={18} />
                 </button>
-                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)}>
+                {/* named at every width: a phone hides the text and shows only the icon */}
+                <a className={styles.primaryBtn} href={api.memoUrl(result.job_id)} aria-label="Download memo">
                   <Icon name="download" size={16} />
                   <span>Download memo</span>
                 </a>
@@ -157,10 +159,23 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 )}
               </>
             ) : (
-              <>
-                <h1 className={styles.stateTitle}>The analysis could not be completed</h1>
-                <p className={styles.stateText}>{error === "offline" ? "The analysis server is not reachable. Check that the backend is running, then try again." : error}</p>
-              </>
+              (() => {
+                // the message says what to do (spec 29 step 1.4); the raw text goes under Details
+                const code = analysis.errorCode ?? (error === "offline" ? "offline" : "failed");
+                const detail = errorDetail(error, code);
+                return (
+                  <>
+                    <h1 className={styles.stateTitle}>{ERRORS[code].title.en}</h1>
+                    <p className={styles.stateText}>{ERRORS[code].body.en}</p>
+                    {detail && (
+                      <details className={styles.errorDetails}>
+                        <summary>Details</summary>
+                        <p>{detail}</p>
+                      </details>
+                    )}
+                  </>
+                );
+              })()
             )}
             <Link href="/counsel" className={styles.primaryBtn}>
               <Icon name="arrowLeft" size={16} />
@@ -263,7 +278,7 @@ function Progress({
             : "This usually takes under a minute. You can keep this tab open."}
         </p>
         {needsCheck && <SalaryCheck check={ocrCheck} onConfirm={onConfirm} />}
-        <div className={styles.progressBar} role="progressbar" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
+        <div className={styles.progressBar} role="progressbar" aria-label="Analysis progress" aria-valuemin={0} aria-valuemax={STEP_ORDER.length} aria-valuenow={stepsDone.length}>
           <span style={{ width: `${(100 * stepsDone.length) / STEP_ORDER.length}%` }} />
         </div>
         <ol className={styles.stepper}>

@@ -15,8 +15,15 @@ import styles from "./citizen.module.css";
 const T = STRINGS.result;
 const LETTER_ID = "letter";
 
-/** Optional helpdesk number, e.g. "+8801XXXXXXXXX". Without it the button only shows the calling state. */
+/** Optional override: one number the help button dials directly, e.g. "+8801XXXXXXXXX". */
 const HELPDESK_PHONE = process.env.NEXT_PUBLIC_HELPDESK_PHONE;
+/* Without the override, the button opens the Probash Bandhu call centre (Wage Earners' Welfare Board, Ministry of
+   Expatriates' Welfare): 16135 toll-free from inside Bangladesh, +8809610102030 from abroad, 24 hours.
+   Source: Dhaka Tribune, "Control room to remain open during Eid holidays" (March 2026); checked 2026-11-26. */
+const PROBASH_BANDHU = [
+  { tel: "16135", shown: "16135", where: "helpInBd" },
+  { tel: "+8809610102030", shown: "+880 9610 102030", where: "helpAbroad" },
+] as const;
 
 interface Props {
   lang: Lang;
@@ -29,7 +36,7 @@ interface Props {
 
 export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
   const [open, setOpen] = useState<Partial<Record<CardKind, boolean>>>({});
-  const [helpTapped, setHelpTapped] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const heading = useScreenFocus<HTMLHeadingElement>();
   const { citizen, destination } = result;
@@ -39,7 +46,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
 
   const helpContent = (
     <>
-      <span className={styles.helpMain}>{helpTapped ? T.calling[lang] : T.help[lang]}</span>
+      <span className={styles.helpMain}>{T.help[lang]}</span>
       <span className={styles.helpSub} lang={lang === "bn" ? "en" : "bn"}>
         {T.helpSub[lang]}
       </span>
@@ -141,7 +148,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
                   <button
                     type="button"
                     className={styles.playBtn}
-                    aria-label={playing ? T.pauseAria[lang] : T.playAria[lang]}
+                    aria-label={`${playing ? T.stop[lang] : T.listen[lang]}: ${card.title[lang]}`}
                     aria-pressed={playing}
                     onClick={() => speech.toggle(card.kind, spoken, SPEECH_LANG[lang])}
                   >
@@ -217,7 +224,7 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
               <button
                 type="button"
                 className={styles.playBtn}
-                aria-label={letterPlaying ? T.pauseAria[lang] : T.playAria[lang]}
+                aria-label={`${letterPlaying ? T.stop[lang] : T.listen[lang]}: ${T.letterTitle[lang]}`}
                 aria-pressed={letterPlaying}
                 onClick={() => speech.toggle(LETTER_ID, letter, SPEECH_LANG[lang])}
               >
@@ -229,7 +236,10 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
             )}
             <div className={styles.cardBody}>
               <p className={styles.letterSub}>{T.letterSub[lang]}</p>
-              <pre className={styles.letterText}>{letter}</pre>
+              {/* it scrolls on a small screen, so a keyboard must be able to reach it */}
+              <pre className={styles.letterText} tabIndex={0} aria-label={T.letterTitle[lang]}>
+                {letter}
+              </pre>
               <div className={styles.twoUp}>
                 <button type="button" className={styles.btnSolid} onClick={copyLetter}>
                   {copied ? (
@@ -270,13 +280,31 @@ export function ResultScreen({ lang, result, speech, onBack, reload }: Props) {
 
       <div className={styles.helpBar}>
         {HELPDESK_PHONE ? (
-          <a className={styles.helpBtn} href={`tel:${HELPDESK_PHONE}`} onClick={() => setHelpTapped(true)}>
+          <a className={styles.helpBtn} href={`tel:${HELPDESK_PHONE}`}>
             {helpContent}
           </a>
         ) : (
-          <button type="button" className={styles.helpBtn} onClick={() => setHelpTapped((t) => !t)}>
-            {helpContent}
-          </button>
+          <>
+            {/* a call needs a tel: link: the sheet offers the two numbers, shown as text so a computer shows them too */}
+            {helpOpen && (
+              <div id="help-sheet" className={styles.helpSheet} role="group" aria-labelledby="help-sheet-title">
+                <p id="help-sheet-title" className={styles.helpSheetTitle}>
+                  {T.helpSheetTitle[lang]}
+                </p>
+                {PROBASH_BANDHU.map((n) => (
+                  <a key={n.tel} className={styles.helpNumber} href={`tel:${n.tel}`}>
+                    <span className={styles.helpNumberMain} lang="en">
+                      {n.shown}
+                    </span>
+                    <span className={styles.helpNumberSub}>{T[n.where][lang]}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+            <button type="button" className={styles.helpBtn} aria-expanded={helpOpen} aria-controls="help-sheet" onClick={() => setHelpOpen((o) => !o)}>
+              {helpContent}
+            </button>
+          </>
         )}
       </div>
     </div>

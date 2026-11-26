@@ -19,7 +19,7 @@ from ain import companies, config, countries, vault
 from ain.agents import adversary, calculator, critic, drafter, ingestion, policy_check, risk_analyst, router, verifier
 from ain.agents import ledger as ledger_mod  # `ledger` is the citation ledger inside _run
 from ain.agents.pii import redact
-from ain.llm import LLM
+from ain.llm import LLM, LLMError
 from ain.models import (
     AnalysisResult, Claim, FourLedgers, OcrCheck, OutboundCall, PackDecision, PrivacyReceipt, Promises, Redaction, Risk, RouteDecision, Stats,
     TraceEvent, Verification,
@@ -47,6 +47,7 @@ class Job:
     events: list[TraceEvent] = field(default_factory=list)
     result: AnalysisResult | None = None
     error: str | None = None
+    error_code: str | None = None  # stable, for the UI's message (spec 29 step 1.4): ocr_unavailable, busy or failed
     confirmed_salary: float | None = None
     _confirm: asyncio.Event = field(default_factory=asyncio.Event)
     _changed: asyncio.Condition = field(default_factory=asyncio.Condition)
@@ -117,8 +118,20 @@ async def run_pipeline(
         job.status = "error"
         # a message written for the user is shown as is; anything else keeps its type for debugging
         job.error = str(e) if isinstance(e, ingestion.OcrUnavailable) else f"{type(e).__name__}: {e}"
-        job.say("error", None, job.error)
+        job.error_code = _error_code(e)
+        job.say("error", None, job.error, code=job.error_code)
         raise
+
+
+
+def _error_code(e: Exception) -> str:
+    """What the UI can say about a failed run: `ocr_unavailable` (no photo reading on this server), `busy` for the
+    models (quota, timeout), else `failed`."""
+    if isinstance(e, ingestion.OcrUnavailable):
+        return "ocr_unavailable"
+    if isinstance(e, (LLMError, TimeoutError)):  # asyncio.TimeoutError is TimeoutError since Python 3.11
+        return "busy"
+    return "failed"
 
 
 async def _run(

@@ -627,6 +627,26 @@ export interface JobSummary {
 /** The backend answered 401: there is no signed-in account for this request. */
 export class AuthError extends Error {}
 
+/** Any other error answer. The message stays "<status>: <detail>" (callers strip the prefix); `code` is what the
+    screens map to a message and a next action (lib/errors.ts, spec 29 step 1.4). */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail: string;
+  readonly code: "unsupported_type" | "too_large" | "busy" | "not_found" | "failed";
+
+  constructor(status: number, detail: string) {
+    super(`${status}: ${detail}`);
+    this.status = status;
+    this.detail = detail;
+    this.code =
+      status === 415 ? "unsupported_type"
+      : status === 413 ? "too_large"
+      : status === 429 || status === 502 || status === 503 || status === 504 ? "busy"
+      : status === 404 ? "not_found"
+      : "failed";
+  }
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
@@ -637,7 +657,7 @@ async function json<T>(res: Response): Promise<T> {
       /* not JSON */
     }
     if (res.status === 401) throw new AuthError(detail);
-    throw new Error(`${res.status}: ${detail}`);
+    throw new ApiError(res.status, detail);
   }
   return res.json() as Promise<T>;
 }
@@ -676,7 +696,7 @@ export const api = {
     return call("/api/analyze", { method: "POST", body: form }).then((r) => json<{ job_id: string; name: string }>(r));
   },
   confirm: (jobId: string, value: string) => post(`/api/jobs/${jobId}/confirm`, { field: "salary", value }).then((r) => json<{ ok: boolean; value: number }>(r)),
-  status: (jobId: string) => call(`/api/jobs/${jobId}`).then((r) => json<{ status: string; error: string | null }>(r)),
+  status: (jobId: string) => call(`/api/jobs/${jobId}`).then((r) => json<{ status: string; error: string | null; error_code?: string | null }>(r)),
   result: (jobId: string) => call(`/api/jobs/${jobId}/result`).then((r) => json<AnalysisResult>(r)),
   ablation: (jobId: string) => post(`/api/jobs/${jobId}/ablation`).then((r) => json<Ablation>(r)),
   council: () => call("/api/council").then((r) => json<CouncilMember[]>(r)),

@@ -45,7 +45,7 @@ A general commercial document (NDA, MSA, lease) still runs, but only the general
 | **Long documents** | Clauses are split at numbered sub-clauses ("12.3"), schedules and annexes. Any clause over 2,500 characters is cut at paragraph breaks. PDF running headers, footers and page numbers are removed. The Adversary reads a long contract **map → reduce**: each part (≈8,000 characters) is hypothesised on its own and returns a digest of its material terms. One reduce call then merges the parts and looks *across* the digests for interactions between far-apart clauses. Groq calls are paced under each model's tokens-per-minute budget, re-synced from Groq's own rate-limit headers. A request too big for that budget (413) goes to the backup provider. The ~25-page sample `long_migrant_msa.txt` hides a passport-deposit clause in Part 3 and an "absconding" penalty in Schedule 4; only the reduce step can link them. |
 | **ILO supervisory comments** | Besides statutes and standards, the corpus holds verbatim **ILO Committee of Experts (CEACR) observations on Bangladesh**: C87 and C98 (2023, freedom of association and anti-union discrimination in EPZs) and C29 (2021, forced labour). They are cut from the ILO's own compilation. They pass the same 4 gates and are always labelled *ILO supervisory, interpretive, not binding*. |
 | **Wage Truth Calculator** | Uses arithmetic only, no LLM. Example: RM 1,200 − RM 650 in deductions = **RM 550 take-home**, against the RM 1,700 legal minimum and the 50% deduction cap. |
-| **Four Ledgers (চার খাতা)** *(behind `ledger.enabled`, off by default)* | For each term (salary, deductions, recruitment cost, hours, ticket, passport, contract length) it sets what the worker was **told** next to what the **paper** says and what the **law** says, and types each mismatch (`said_vs_paper`, `paper_vs_law`). What the worker was told comes in as structured fields on `POST /api/analyze` or `POST /api/jobs/{id}/promises`, which recomputes from the saved result with no model call. Law cells come only from claims that passed the 4 gates. A gap on pay or benefits becomes playbook risk `PB-PROMISE-GAP` (OEMA 2013 s.31(ঘ)), verified like any other risk. Added later through `/promises`, the risk is held back as *not verified yet* until `POST /api/jobs/{id}/promises/verify` runs the gates on it. A **projection** adds only lines with a verified citation (Malaysia sample: RM 500 × 36 months + RM 3,000 = RM 21,000 projected). Each line's basis is `projected` (contract term, rate on paper); `accrued`, for months actually worked, waits for payslips. It is labelled as not money owed and not a prediction of any award. The promise gap is shown separately. Break-even is counted month by month (RM 550 a month while the 12-month recruitment deduction runs, RM 800 after: at least 24.2 months) and is labelled a minimum, since it assumes all take-home pay is sent home. Amounts in two currencies are compared only through an exchange rate the user types. Spec: `docs/specs/2026-11-14-19-four-ledgers.md`. |
+| **Four Ledgers (চার খাতা)** *(behind `ledger.enabled`, off by default; `AIN_LEDGER=1` or `0` overrides it per deployment)* | For each term (salary, deductions, recruitment cost, hours, ticket, passport, contract length) it sets what the worker was **told** next to what the **paper** says and what the **law** says, and types each mismatch (`said_vs_paper`, `paper_vs_law`). What the worker was told comes in as structured fields on `POST /api/analyze` or `POST /api/jobs/{id}/promises`, which recomputes from the saved result with no model call. Law cells come only from claims that passed the 4 gates. A gap on pay or benefits becomes playbook risk `PB-PROMISE-GAP` (OEMA 2013 s.31(ঘ)), verified like any other risk. Added later through `/promises`, the risk is held back as *not verified yet* until `POST /api/jobs/{id}/promises/verify` runs the gates on it. A **projection** adds only lines with a verified citation (Malaysia sample: RM 500 × 36 months + RM 3,000 = RM 21,000 projected). Each line's basis is `projected` (contract term, rate on paper); `accrued`, for months actually worked, waits for payslips. It is labelled as not money owed and not a prediction of any award. The promise gap is shown separately. Break-even is counted month by month (RM 550 a month while the 12-month recruitment deduction runs, RM 800 after: at least 24.2 months) and is labelled a minimum, since it assumes all take-home pay is sent home. Amounts in two currencies are compared only through an exchange rate the user types. Spec: `docs/specs/2026-11-14-19-four-ledgers.md`. |
 | **Privacy** | OCR runs locally (EasyOCR on CPU), so the photo never leaves the machine. A PII Shield redacts names, passport, NID, phone, address and DOB before any model call. A guard in the LLM layer blocks any payload that still contains an identifier, including council chat messages (rejected with HTTP 422). OpenRouter calls request `data_collection: deny`. |
 
 ## Architecture
@@ -195,10 +195,10 @@ a redeploy, and the backend's `AIN_CORS` must list the Vercel origin. Spec: `doc
 **Railway (backend, lite)**: `cd backend && bash scripts/railway_up.sh --service backend` copies exactly what the
 server reads (code, corpus, demo files, the warmed LLM cache; never `.data`, `runs/` or `.env`) into a temp folder and
 runs `railway up` on it. `Dockerfile.lite` installs `requirements-lite.txt` (no torch, sentence-transformers or
-EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`, trusting `X-Forwarded-For` so
-per-IP limits see real clients. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
+EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`. It trusts `X-Forwarded-For`,
+but behind Vercel's rewrite that holds Vercel's proxy address, not the visitor's, so no rate limit uses IPs. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
 Service variables: `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `AIN_DATA_KEY`, `AIN_CORS=https://ain-copilot.vercel.app`,
-`AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, with a volume mounted at `/data` so accounts and saved results
+`AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, optionally `AIN_LEDGER=1` (Four Ledgers on), with a volume mounted at `/data` so accounts and saved results
 survive restarts and redeploys. Point Vercel's `AIN_INTERNAL_API` at the service's public URL and redeploy.
 
 **Deploy order: Railway first, then Vercel.** A new frontend may call API fields an old backend does not know yet
@@ -248,7 +248,7 @@ Model IDs live in `backend/ain/config.yaml`. `scripts/smoke_live.py` checks each
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/health` | LLM mode, which provider keys are set, corpus size |
+| `GET` | `/api/health` | LLM mode, which provider keys are set, corpus size, whether Four Ledgers is on, council seat health |
 | `GET` | `/api/samples` | demo documents |
 | `GET` | `/api/countries` | countries of work whose labour law is in the corpus |
 | `POST` | `/api/analyze` | upload a document or pick a sample; optional `destination_country` (code) and `policy` (the employer's own policy file); returns a job id |
@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 376 offline tests
+python -m pytest -q              # 390 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up

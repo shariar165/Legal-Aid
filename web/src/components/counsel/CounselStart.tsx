@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, type Destination, type Health, type Sample } from "@/lib/api";
 import { AccountMenu } from "./Account";
+import { ERRORS, errorCodeOf, errorDetail } from "@/lib/errors";
 import { Icon, type IconName } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 import { Logo } from "@/components/brand/Logo";
@@ -30,7 +31,7 @@ export function CounselStart() {
   const [country, setCountry] = useState("");
   const [policy, setPolicy] = useState<File | null>(null);
   const policyInput = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ text: string; detail: string | null } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -41,7 +42,7 @@ export function CounselStart() {
         setHealth(h);
         setSamples(s);
       })
-      .catch(() => setError("The analysis server is not reachable at the configured address. Start the backend and reload."));
+      .catch(() => setError({ text: "The analysis server is not reachable at the configured address. Start the backend and reload.", detail: null }));
     api
       .countries()
       .then(setCountries)
@@ -55,7 +56,10 @@ export function CounselStart() {
       const job = await run();
       router.push(`/counsel/${job.job_id}`);
     } catch (e) {
-      setError((e as Error).message);
+      // the message says what to do (spec 29 step 1.4); the server's own words go under Details
+      const code = errorCodeOf(e);
+      const copy = ERRORS[code];
+      setError({ text: `${copy.title.en}. ${copy.body.en}`, detail: errorDetail((e as Error).message, code) });
       setBusy(null);
     }
   };
@@ -68,7 +72,7 @@ export function CounselStart() {
     <div className={styles.page}>
       <header className={styles.topbar}>
         <div className={styles.topRow}>
-          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti home">
+          <Link href="/" className={styles.brand} aria-label="যুক্তি · Jukti Counsel, back to the Citizen app">
             <Logo size={36} className={styles.brandMark} />
             <span className={styles.brandText}>
               যুক্তি · Jukti <span>Counsel</span>
@@ -80,7 +84,8 @@ export function CounselStart() {
             </span>
           )}
           <div className={styles.actions}>
-            <Link href="/" className={styles.quietBtn}>
+            {/* hidden on a phone, where it pushed the header past the screen: the brand link also goes to Citizen */}
+            <Link href="/" className={`${styles.quietBtn} ${styles.hideSm}`}>
               Citizen app
             </Link>
             <ThemeToggle className={styles.themeBtn} />
@@ -112,10 +117,18 @@ export function CounselStart() {
 
         <div className={styles.startMain}>
           {error && (
-            <p className={styles.errorBox} role="alert">
+            <div className={styles.errorBox} role="alert">
               <Icon name="alert" size={16} />
-              {error}
-            </p>
+              <div>
+                <p>{error.text}</p>
+                {error.detail && (
+                  <details className={styles.errorDetails}>
+                    <summary>Details</summary>
+                    <p>{error.detail}</p>
+                  </details>
+                )}
+              </div>
+            </div>
           )}
 
           <button
