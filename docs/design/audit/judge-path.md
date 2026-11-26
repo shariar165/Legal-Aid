@@ -1,6 +1,6 @@
-# UI audit: judge-path @ 1ec0a50
+# UI audit: judge-path @ 3b4067f
 
-`python web/scripts/check/shot.py audit-all` · 2026-11-26 21:44 · llm_mode `fake` · dense retrieval `False` · Four Ledgers `on` · sample `migrant_text` · Chrome/158.0.8127.88 · http://localhost:3000
+`python web/scripts/check/shot.py audit-all` · 2026-11-27 00:00 · llm_mode `fake` · dense retrieval `False` · Four Ledgers `on` · sample `migrant_text` · Chrome/158.0.8127.88 · http://localhost:3000
 
 Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), since the page was opened, decoded and on the wire. axe-core: WCAG 2.0/2.1/2.2 A + AA tags. "Running" is the photo sample paused at its salary check. Δ is the change from `baseline`.
 
@@ -20,7 +20,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Counsel · Memo | 390 | light | 0 | -2 | 0 | 1 |  | 34 | 0 | 140 |  | 114 |  | 12 |  | 1 |  | 10,403 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Council after a question | 390 | light | 0 | -1 | 0 | 0 |  | 14 | 0 | 64 |  | 60 |  | 1 |  | 1 |  | 3,016 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Checks | 390 | light | 0 | -1 | 0 | 1 |  | 30 | 0 | 318 |  | 255 |  | 10 |  | 8 |  | 13,339 |  | 495 |  | 500 | 133 | +3 | 26 |
-| /docs | 390 | light | 1 |  | 1 | 3 |  | 8 | 1 | 212 |  | 166 |  | 0 |  | 0 |  | 11,742 |  | 467 |  | 472 | 141 | +3 | 29 |
+| /docs | 390 | light | 0 | -1 | 0 | 3 |  | 8 | 1 | 212 |  | 166 |  | 0 |  | 0 |  | 11,742 |  | 467 |  | 472 | 141 | +3 | 29 |
 | /login | 390 | light | 0 |  | 0 | 1 |  | 5 | 0 | 2 |  | 2 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Citizen · home | 820 | light | 0 |  | 0 | 3 |  |  | 0 | 0 |  | 0 |  | 9 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Citizen · salary check (photo OCR confirm) | 820 | light | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 1 |  | 0 |  | 923 |  | 467 |  | 472 | 133 | +3 | 26 |
@@ -29,7 +29,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Citizen · result (en) | 820 | light | 0 | -2 | 0 | 0 |  |  | 0 | 5 |  | 5 |  | 2 |  | 0 |  | 4,202 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Citizen · result gone | 820 | light | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 61 |  | 13 |
 | Citizen · upload error | 820 | light | 0 |  | 0 | 1 | +1 |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
-| Counsel · start | 820 | light | 1 |  | 1 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,906 |  | 467 |  | 472 | 133 | +3 | 26 |
+| Counsel · start | 820 | light | 0 | -1 | 0 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,906 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · running | 820 | light | 0 | -2 | 0 | 1 |  |  | 0 | 11 |  | 8 |  | 0 |  | 0 |  | 916 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · Case Desk (bn) | 820 | light | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 3 |  | 191 |  | 117 |  | 4,237 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Case Desk (en) | 820 | light | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 120 |  | 3 |  | 0 |  | 4,336 |  | 495 |  | 500 | 133 | +3 | 26 |
@@ -45,7 +45,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Citizen · result (en) | 1440 | light | 0 | -2 | 0 | 0 |  |  | 0 | 5 |  | 5 |  | 2 |  | 0 |  | 4,202 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Citizen · result gone | 1440 | light | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 61 |  | 13 |
 | Citizen · upload error | 1440 | light | 0 |  | 0 | 1 | +1 |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
-| Counsel · start | 1440 | light | 1 |  | 1 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,687 |  | 467 |  | 472 | 133 | +3 | 26 |
+| Counsel · start | 1440 | light | 0 | -1 | 0 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,687 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · running | 1440 | light | 0 | -2 | 0 | 1 |  |  | 0 | 11 |  | 8 |  | 0 |  | 0 |  | 916 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · Case Desk (bn) | 1440 | light | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 3 |  | 194 |  | 117 |  | 2,511 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Case Desk (en) | 1440 | light | 0 | -1 | 0 | 1 |  |  | 0 | 122 |  | 120 |  | 5 |  | 0 |  | 2,608 |  | 495 |  | 500 | 133 | +3 | 26 |
@@ -68,7 +68,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Counsel · Memo | 390 | dark | 0 | -2 | 0 | 1 |  | 34 | 0 | 140 |  | 114 |  | 12 |  | 1 |  | 10,403 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Council after a question | 390 | dark | 0 | -1 | 0 | 0 |  | 14 | 0 | 64 |  | 60 |  | 1 |  | 1 |  | 3,016 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Checks | 390 | dark | 0 | -1 | 0 | 1 |  | 30 | 0 | 318 |  | 255 |  | 10 |  | 8 |  | 13,339 |  | 495 |  | 500 | 133 | +3 | 26 |
-| /docs | 390 | dark | 1 |  | 1 | 3 |  | 8 | 1 | 212 |  | 166 |  | 0 |  | 0 |  | 11,742 |  | 467 |  | 472 | 141 | +3 | 29 |
+| /docs | 390 | dark | 0 | -1 | 0 | 3 |  | 8 | 1 | 212 |  | 166 |  | 0 |  | 0 |  | 11,742 |  | 467 |  | 472 | 141 | +3 | 29 |
 | /login | 390 | dark | 0 |  | 0 | 1 |  | 5 | 0 | 2 |  | 2 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Citizen · home | 820 | dark | 0 |  | 0 | 3 |  |  | 0 | 0 |  | 0 |  | 9 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Citizen · salary check (photo OCR confirm) | 820 | dark | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 1 |  | 0 |  | 923 |  | 467 |  | 472 | 133 | +3 | 26 |
@@ -77,7 +77,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Citizen · result (en) | 820 | dark | 0 | -2 | 0 | 0 |  |  | 0 | 5 |  | 5 |  | 2 |  | 0 |  | 4,202 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Citizen · result gone | 820 | dark | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 61 |  | 13 |
 | Citizen · upload error | 820 | dark | 0 |  | 0 | 1 | +1 |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
-| Counsel · start | 820 | dark | 1 |  | 1 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,906 |  | 467 |  | 472 | 133 | +3 | 26 |
+| Counsel · start | 820 | dark | 0 | -1 | 0 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,906 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · running | 820 | dark | 0 | -2 | 0 | 1 |  |  | 0 | 11 |  | 8 |  | 0 |  | 0 |  | 916 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · Case Desk (bn) | 820 | dark | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 3 |  | 191 |  | 117 |  | 4,237 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Case Desk (en) | 820 | dark | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 120 |  | 3 |  | 0 |  | 4,336 |  | 495 |  | 500 | 133 | +3 | 26 |
@@ -93,7 +93,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 | Citizen · result (en) | 1440 | dark | 0 | -2 | 0 | 0 |  |  | 0 | 5 |  | 5 |  | 2 |  | 0 |  | 4,202 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Citizen · result gone | 1440 | dark | 0 |  | 0 | 0 |  |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 61 |  | 13 |
 | Citizen · upload error | 1440 | dark | 0 |  | 0 | 1 | +1 |  | 0 | 0 |  | 0 |  | 0 |  | 0 |  | 900 |  | 467 |  | 472 | 133 | +3 | 26 |
-| Counsel · start | 1440 | dark | 1 |  | 1 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,687 |  | 467 |  | 472 | 133 | +3 | 26 |
+| Counsel · start | 1440 | dark | 0 | -1 | 0 | 0 |  |  | 0 | 15 |  | 12 |  | 6 |  | 0 |  | 1,687 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · running | 1440 | dark | 0 | -2 | 0 | 1 |  |  | 0 | 11 |  | 8 |  | 0 |  | 0 |  | 916 |  | 467 |  | 472 | 133 | +3 | 26 |
 | Counsel · Case Desk (bn) | 1440 | dark | 0 | -1 | 0 | 2 |  |  | 0 | 122 |  | 3 |  | 194 |  | 117 |  | 2,511 |  | 495 |  | 500 | 133 | +3 | 26 |
 | Counsel · Case Desk (en) | 1440 | dark | 0 | -1 | 0 | 1 |  |  | 0 | 122 |  | 120 |  | 5 |  | 0 |  | 2,608 |  | 495 |  | 500 | 133 | +3 | 26 |
@@ -105,10 +105,7 @@ Rules: `web/scripts/check/audit_js.py`. Bytes are a first visit (cache off), sin
 
 ## axe violations
 
-- **label-content-name-mismatch** (serious): Elements must have their visible text as part of their accessible name. In 4 of 96 audited pages, e.g. `._-qEJG_brand`. Fix any of the following:   Text inside the element is not included in the accessible name
-  - states: Counsel · start
-- **scrollable-region-focusable** (serious): Scrollable region must have keyboard access. In 2 of 96 audited pages, e.g. `pre`. Fix any of the following:   Element should have focusable content
-  - states: /docs
+None.
 
 ## Examples (widest light run of each state)
 

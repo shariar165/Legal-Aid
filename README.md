@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 376 offline tests
+python -m pytest -q              # 390 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
