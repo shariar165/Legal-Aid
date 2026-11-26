@@ -1402,3 +1402,24 @@ a.citName {
     border: 1px solid #ccc;
   }
 }
+
+/* the raw error text, closed by default (spec 29 step 1.4): the message above says what to do */
+.errorDetails {
+  margin-top: 12px;
+  font-size: var(--fs-16);
+  color: var(--muted);
+}
+
+.errorDetails summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.errorDetails p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}

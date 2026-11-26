@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type AnalysisResult, type TraceEvent } from "./api";
+import { asErrorCode, errorCodeOf, type ErrorCode } from "./errors";
 import { isImage, OcrError, readPhoto } from "./citizen/browserOcr";
 
 export type StepId = "read" | "redact" | "match" | "verify";
@@ -26,6 +27,8 @@ export interface AnalysisState {
   confirmed: boolean;
   result: AnalysisResult | null;
   error: string | null;
+  /** what the screens say about `error` (spec 29 step 1.4); `error` keeps the raw text for the details */
+  errorCode: ErrorCode | null;
   /** 0..1 while the photo is being read on the device (spec 28); null otherwise */
   deviceOcr: number | null;
 }
@@ -40,6 +43,7 @@ const INITIAL: AnalysisState = {
   confirmed: false,
   result: null,
   error: null,
+  errorCode: null,
   deviceOcr: null,
 };
 
@@ -66,7 +70,7 @@ export function useAnalysis(existingJobId?: string) {
       const result = await api.result(jobId);
       setState((s) => ({ ...s, status: "done", result, stepsDone: STEP_ORDER }));
     } catch (e) {
-      setState((s) => ({ ...s, status: "error", error: (e as Error).message }));
+      setState((s) => ({ ...s, status: "error", error: (e as Error).message, errorCode: errorCodeOf(e) }));
     }
   }, []);
 
@@ -88,15 +92,16 @@ export function useAnalysis(existingJobId?: string) {
           if (ev.type === "error") {
             next.status = "error";
             next.error = ev.message;
+            next.errorCode = asErrorCode(ev.data?.code as string | undefined) ?? "failed";
           }
           return next;
         });
       });
       es.addEventListener("end", (msg) => {
         close();
-        const end = JSON.parse((msg as MessageEvent).data) as { status: string; error: string | null };
+        const end = JSON.parse((msg as MessageEvent).data) as { status: string; error: string | null; code?: string | null };
         if (end.status === "done") void loadResult(jobId);
-        else setState((s) => ({ ...s, status: "error", error: end.error ?? "Analysis failed" }));
+        else setState((s) => ({ ...s, status: "error", error: end.error ?? "Analysis failed", errorCode: asErrorCode(end.code) ?? "failed" }));
       });
       es.onerror = () => {
         // The stream closes normally after "end"; otherwise fall back to checking the job.
@@ -106,10 +111,11 @@ export function useAnalysis(existingJobId?: string) {
           .status(jobId)
           .then((st) => {
             if (st.status === "done") void loadResult(jobId);
-            else if (st.status === "error") setState((s) => ({ ...s, status: "error", error: st.error ?? "Analysis failed" }));
+            else if (st.status === "error")
+              setState((s) => ({ ...s, status: "error", error: st.error ?? "Analysis failed", errorCode: asErrorCode(st.error_code) ?? "failed" }));
             else setTimeout(() => follow(jobId), 1500);
           })
-          .catch(() => setState((s) => ({ ...s, status: "error", error: "offline" })));
+          .catch(() => setState((s) => ({ ...s, status: "error", error: "offline", errorCode: "offline" })));
       };
     },
     [loadResult],
@@ -135,7 +141,8 @@ export function useAnalysis(existingJobId?: string) {
         return job.job_id;
       } catch (e) {
         const msg = e instanceof OcrError ? e.code : (e as Error).message;
-        setState((s) => ({ ...s, status: "error", deviceOcr: null, error: msg.includes("Failed to fetch") ? "offline" : msg }));
+        const errorCode = errorCodeOf(e);
+        setState((s) => ({ ...s, status: "error", deviceOcr: null, error: errorCode === "offline" ? "offline" : msg, errorCode }));
         return null;
       }
     },
@@ -174,7 +181,7 @@ export function useAnalysis(existingJobId?: string) {
         if (st.status === "done") void loadResult(existingJobId);
         else follow(existingJobId);
       })
-      .catch((e) => !cancelled && setState((s) => ({ ...s, status: "error", error: (e as Error).message })));
+      .catch((e) => !cancelled && setState((s) => ({ ...s, status: "error", error: (e as Error).message, errorCode: errorCodeOf(e) })));
     return () => {
       cancelled = true;
       close();

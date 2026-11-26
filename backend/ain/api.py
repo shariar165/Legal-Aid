@@ -392,9 +392,9 @@ def job_status(job_id: str) -> dict:
     job = JOBS.get(job_id)
     if not job:
         if load_result(job_id):
-            return {"job_id": job_id, "status": "done", "events": 0, "error": None}
+            return {"job_id": job_id, "status": "done", "events": 0, "error": None, "error_code": None}
         raise HTTPException(404, "Unknown job")
-    return {"job_id": job.id, "status": job.status, "events": len(job.events), "error": job.error}
+    return {"job_id": job.id, "status": job.status, "events": len(job.events), "error": job.error, "error_code": job.error_code}
 
 
 @app.get("/api/jobs/{job_id}/events", dependencies=[Depends(owned_job)])
@@ -410,7 +410,7 @@ async def job_events(job_id: str, last_event_id: int | None = None):
                 yield {"event": "ping", "data": "{}"}
                 continue
             yield {"id": str(i), "event": "trace", "data": ev.model_dump_json()}
-        yield {"event": "end", "data": json.dumps({"status": job.status, "error": job.error})}
+        yield {"event": "end", "data": json.dumps({"status": job.status, "error": job.error, "code": job.error_code})}
 
     return EventSourceResponse(gen())
 

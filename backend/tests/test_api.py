@@ -62,6 +62,39 @@ def test_sample_run_streams_trace_and_returns_result(client):
     assert ab["ain_verified"] > 0
 
 
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [(LLMError("every route failed"), "busy"), (TimeoutError(), "busy"),
+     (ingestion.OcrUnavailable("Photo reading (OCR) is not installed on this server."), "ocr_unavailable"),
+     (ValueError("boom"), "failed")],
+)
+def test_a_failed_run_carries_a_stable_code(client, monkeypatch, error, code):
+    """Spec 29 step 1.4: the UI picks its message from `code`; the raw text stays for the details and the log."""
+    from ain.agents import router
+
+    async def broken(*a, **kw):
+        raise error
+
+    monkeypatch.setattr(router, "refine_facts", broken)
+    job = client.post("/api/analyze", data={"sample_id": "control"}).json()["job_id"]
+    events, end, ended = [], None, False
+    with client.stream("GET", f"/api/jobs/{job}/events") as resp:
+        for line in resp.iter_lines():
+            if line.startswith("event: end"):
+                ended = True
+            elif line.startswith("data:"):
+                if ended:
+                    end = json.loads(line[5:])
+                    break
+                events.append(json.loads(line[5:]))
+    [err] = [e for e in events if e.get("type") == "error"]
+    assert err["data"]["code"] == code and err["message"]
+    assert end == {"status": "error", "error": err["message"], "code": code}
+    status = client.get(f"/api/jobs/{job}").json()
+    assert status["status"] == "error" and status["error_code"] == code
+
+
 def test_upload_and_bad_inputs(client, docs):
     data = (docs / "control_clean.txt").read_bytes()
     ok = client.post("/api/analyze", files={"file": ("contract.txt", data, "text/plain")})

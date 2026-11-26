@@ -5195,3 +5195,29 @@ button.clause:hover {
     flex: none;
   }
 }
+
+/* the raw error text, closed by default (spec 29 step 1.4) */
+.errorDetails {
+  margin-top: 8px;
+  font-size: var(--fs-14);
+  color: var(--c-muted);
+}
+
+.errorDetails summary {
+  min-height: 24px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.errorDetails p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.errorBox > div > p {
+  margin: 0;
+}
+
+.errorBox .errorDetails {
+  color: inherit;
+}

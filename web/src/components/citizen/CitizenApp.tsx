@@ -106,7 +106,19 @@ export function CitizenApp({ jobId }: { jobId?: string }) {
           onSample={(sampleId) => run({ sampleId })}
         />
       )}
-      {screen === "analyzing" && <AnalyzingScreen lang={lang} analysis={analysis} onResult={() => go("result")} onRetry={home} />}
+      {screen === "analyzing" && (
+        <AnalyzingScreen
+          lang={lang}
+          analysis={analysis}
+          onResult={() => go("result")}
+          onRetry={home}
+          onPhoto={(file) => run({ file })}
+          onSample={() => {
+            home();
+            setTimeout(() => document.getElementById("samples-title")?.scrollIntoView({ block: "start" }), 60);
+          }}
+        />
+      )}
       {screen === "result" && analysis.result && (
         <ResultScreen lang={lang} result={analysis.result} speech={speech} reload={analysis.reload} onBack={home} />
       )}

@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { api, type AnalysisResult, type Risk, type Severity } from "@/lib/api";
 import { STEP_ORDER, useAnalysis, type OcrCheck, type StepId } from "@/lib/useAnalysis";
 import { AccountMenu, useMe } from "./Account";
+import { ERRORS, errorDetail } from "@/lib/errors";
 import { CouncilFaces, CouncilPanel, type CouncilNav, type CouncilTarget } from "./Council";
 import { money, SEVERITY_LABEL, SEVERITY_RANK } from "./format";
 import { Icon, type IconName } from "@/components/shared/Icons";
@@ -157,10 +158,23 @@ export function CounselApp({ jobId }: { jobId: string }) {
                 )}
               </>
             ) : (
-              <>
-                <h1 className={styles.stateTitle}>The analysis could not be completed</h1>
-                <p className={styles.stateText}>{error === "offline" ? "The analysis server is not reachable. Check that the backend is running, then try again." : error}</p>
-              </>
+              (() => {
+                // the message says what to do (spec 29 step 1.4); the raw text goes under Details
+                const code = analysis.errorCode ?? (error === "offline" ? "offline" : "failed");
+                const detail = errorDetail(error, code);
+                return (
+                  <>
+                    <h1 className={styles.stateTitle}>{ERRORS[code].title.en}</h1>
+                    <p className={styles.stateText}>{ERRORS[code].body.en}</p>
+                    {detail && (
+                      <details className={styles.errorDetails}>
+                        <summary>Details</summary>
+                        <p>{detail}</p>
+                      </details>
+                    )}
+                  </>
+                );
+              })()
             )}
             <Link href="/counsel" className={styles.primaryBtn}>
               <Icon name="arrowLeft" size={16} />

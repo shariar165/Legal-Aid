@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { STEPS } from "@/lib/citizen/analysis";
 import { formatNumber, STRINGS, type Lang } from "@/lib/citizen/i18n";
 import type { useAnalysis } from "@/lib/useAnalysis";
+import { ERROR_UI, ERRORS, errorDetail, type ErrorAction } from "@/lib/errors";
 import { Icon } from "@/components/shared/Icons";
 import { useScreenFocus } from "./useScreenFocus";
 import styles from "./citizen.module.css";
@@ -17,15 +18,20 @@ interface Props {
   analysis: ReturnType<typeof useAnalysis>;
   onResult: () => void;
   onRetry: () => void;
+  /** a new photo taken from the error screen starts a new run (spec 29 step 1.4) */
+  onPhoto: (file: File) => void;
+  /** back to the samples on the home screen */
+  onSample: () => void;
 }
 
-export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
+export function AnalyzingScreen({ lang, analysis, onResult, onRetry, onPhoto, onSample }: Props) {
   const { stepsDone, ocrCheck, events, status, name, error, deviceOcr } = analysis;
   const [ocr, setOcr] = useState<OcrState>("pending");
   const [value, setValue] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const heading = useScreenFocus<HTMLHeadingElement>();
+  const photoInput = useRef<HTMLInputElement>(null);
 
   /** Index of the step currently running; STEPS.length when all are done. */
   const current = STEPS.findIndex((s) => !stepsDone.includes(s.id));
@@ -60,25 +66,59 @@ export function AnalyzingScreen({ lang, analysis, onResult, onRetry }: Props) {
   };
 
   if (status === "error") {
+    const code = analysis.errorCode ?? (error === "offline" ? "offline" : "failed");
+    const copy = ERRORS[code];
+    const detail = errorDetail(error, code);
+    const act = (a: ErrorAction, primary: boolean) => {
+      const cls = primary ? styles.btnDark : styles.btnSolid;
+      if (a === "photo")
+        return (
+          <button key={a} type="button" className={cls} onClick={() => photoInput.current?.click()}>
+            <span className={styles.withIcon}>
+              <Icon name="camera" size={20} strokeWidth={2} />
+              {ERROR_UI.photo[lang]}
+            </span>
+          </button>
+        );
+      return (
+        <button key={a} type="button" className={cls} onClick={a === "sample" ? onSample : onRetry}>
+          {ERROR_UI[a][lang]}
+        </button>
+      );
+    };
     return (
       <div className={styles.screen}>
         <div className={styles.analyzingBody}>
           <div className={styles.intro}>
             <h1 ref={heading} tabIndex={-1} className={styles.h2}>
-              {T.failed[lang]}
+              {copy.title[lang]}
             </h1>
-            <p className={styles.subtle}>
-              {error === "offline"
-                ? STRINGS.home.offline[lang]
-                : error === "ocr_unreadable" || error === "ocr_empty" || error === "ocr_blurry" || error === "ocr_failed"
-                  ? T[error][lang]
-                  : error}
-            </p>
+            <p className={styles.subtle}>{copy.body[lang]}</p>
+            {detail && (
+              <details className={styles.errorDetails}>
+                <summary>{ERROR_UI.details[lang]}</summary>
+                <p lang="en">{detail}</p>
+              </details>
+            )}
           </div>
           <div className={styles.nextArea}>
-            <button type="button" className={styles.btnDark} onClick={onRetry}>
-              {T.retry[lang]}
-            </button>
+            {copy.actions.map((a, i) => act(a, i === 0))}
+            {copy.actions.includes("photo") && (
+              <input
+                ref={photoInput}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className={styles.visuallyHidden}
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) onPhoto(f);
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
