@@ -147,7 +147,9 @@ export const STRINGS = {
     },
     help: { bn: "প্রবাসী কল্যাণ হেল্পডেস্কে যোগাযোগ", en: "Contact migrant welfare helpdesk" },
     helpSub: { bn: "Contact migrant welfare helpdesk", en: "প্রবাসী কল্যাণ হেল্পডেস্কে যোগাযোগ" },
-    calling: { bn: "কল করা হচ্ছে…", en: "Calling…" },
+    helpSheetTitle: { bn: "প্রবাসবন্ধু কল সেন্টার · ২৪ ঘণ্টা", en: "Probash Bandhu call centre · 24 hours" },
+    helpInBd: { bn: "বাংলাদেশ থেকে · টোল-ফ্রি", en: "From Bangladesh · toll-free" },
+    helpAbroad: { bn: "বিদেশ থেকে", en: "From abroad" },
     openSource: { bn: "সরকারি উৎসে দেখুন", en: "Open official source" },
     letterTitle: { bn: "এজেন্সিকে পাঠানোর চিঠি", en: "Letter to send to the agency" },
     letterSub: {
