@@ -141,6 +141,13 @@ def council_settings() -> dict:
 
 
 def ledger_enabled() -> bool:
+    """Four Ledgers: `ledger.enabled` in config.yaml (off), unless AIN_LEDGER=1 or 0 overrides it for this process.
+    Anything else in AIN_LEDGER is refused, so a typo on a deployment cannot quietly leave the feature off."""
+    env = (os.getenv("AIN_LEDGER") or "").strip()
+    if env in ("1", "0"):
+        return env == "1"
+    if env:
+        raise ConfigError(f"AIN_LEDGER must be 1 or 0, not {env!r}")
     return bool((_raw().get("ledger") or {}).get("enabled"))
 
 

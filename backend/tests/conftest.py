@@ -18,6 +18,7 @@ os.environ["AIN_DB"] = str(Path(_DATA) / "ain.db")
 os.environ["AIN_RUNS_DIR"] = str(Path(_DATA) / "runs")
 os.environ["AIN_CORS"] = "http://localhost:3000"
 os.environ["AIN_COOKIE_SECURE"] = "0"  # TestClient talks plain http
+os.environ.pop("AIN_LEDGER", None)  # tests start from config.yaml's default; the ones that need the flag set it
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest  # noqa: E402
