@@ -5200,6 +5200,27 @@ button.clause:hover {
   .docPill .chip {
     flex: none;
   }
+
+  /* the chip says "Demo", as on a phone, so the file name keeps some room */
+  .topRow:has(.docPill) .docPill .hideSm {
+    display: none;
+  }
+
+  .topRow:has(.docPill) .docPill .showSm {
+    display: inline;
+  }
+}
+
+/* the narrow end of that range: Download memo shows its icon too (it is named by its aria-label) */
+@media (min-width: 641px) and (max-width: 860px) {
+  .topRow:has(.docPill) .actions .primaryBtn span {
+    display: none;
+  }
+
+  .topRow:has(.docPill) .actions .primaryBtn {
+    width: 44px;
+    padding: 0;
+  }
 }
 
 /* the raw error text, closed by default (spec 29 step 1.4) */
