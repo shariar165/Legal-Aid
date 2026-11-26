@@ -195,8 +195,8 @@ a redeploy, and the backend's `AIN_CORS` must list the Vercel origin. Spec: `doc
 **Railway (backend, lite)**: `cd backend && bash scripts/railway_up.sh --service backend` copies exactly what the
 server reads (code, corpus, demo files, the warmed LLM cache; never `.data`, `runs/` or `.env`) into a temp folder and
 runs `railway up` on it. `Dockerfile.lite` installs `requirements-lite.txt` (no torch, sentence-transformers or
-EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`, trusting `X-Forwarded-For` so
-per-IP limits see real clients. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
+EasyOCR; ~125 MB resident, inside a 0.5 GB plan) and runs uvicorn with `AIN_DENSE=0`. It trusts `X-Forwarded-For`,
+but behind Vercel's rewrite that holds Vercel's proxy address, not the visitor's, so no rate limit uses IPs. `railway.json` turns on Serverless (sleeps when idle) and the `/api/health` check.
 Service variables: `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `AIN_DATA_KEY`, `AIN_CORS=https://ain-copilot.vercel.app`,
 `AIN_DATA_DIR=/data`, `AIN_RUNS_DIR=/data/runs`, optionally `AIN_LEDGER=1` (Four Ledgers on), with a volume mounted at `/data` so accounts and saved results
 survive restarts and redeploys. Point Vercel's `AIN_INTERNAL_API` at the service's public URL and redeploy.
