@@ -296,7 +296,9 @@ export interface AblationRow {
   cited: string;
   claim: string;
   citation_id: string | null;
-  outcome: "supported" | "unsupported" | "unresolvable" | "repealed" | "inapplicable";
+  /** since spec 29 step 2.2: supported · wrong · fabricated · outside_corpus; a stored comparison keeps the older outcomes */
+  outcome: "supported" | "wrong" | "fabricated" | "outside_corpus" | "unsupported" | "unresolvable" | "repealed" | "inapplicable";
+  why?: "repealed" | "wrong_regime" | "not_supported";
   detail: string;
 }
 
@@ -306,6 +308,10 @@ export interface Ablation {
   citations_found: number;
   resolvable: number;
   supported: number;
+  wrong: number;
+  fabricated: number;
+  outside_corpus: number;
+  checkable: number;
   rows: AblationRow[];
   ain_citations: number;
   ain_verified: number;

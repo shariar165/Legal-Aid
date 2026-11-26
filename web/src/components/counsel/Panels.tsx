@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, type Ablation, type AnalysisResult, type TraceEvent, type Verdict } from "@/lib/api";
-import { citeLabel, GATE_ICON, GATE_STATUS_LABEL, GATES, ORIGIN_LABEL, OUTCOME, VERDICT_ICON, VERDICT_LABEL } from "./format";
+import { citeLabel, GATE_ICON, GATE_STATUS_LABEL, GATES, ORIGIN_LABEL, OUTCOME, VERDICT_ICON, VERDICT_LABEL, WRONG_WHY } from "./format";
 import { Icon } from "@/components/shared/Icons";
 import styles from "./counsel.module.css";
 
@@ -187,15 +187,21 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
     );
   }
   const ainPct = data.ain_citations ? Math.round((100 * data.ain_verified) / data.ain_citations) : 0;
-  const plainPct = data.citations_found ? Math.round((100 * data.supported) / data.citations_found) : 0;
+  // only law Jukti can check counts; a comparison stored before spec 29 step 2.2 has no counts, so they come from its rows
+  const tally = (tone: "ok" | "bad" | "none") => data.rows.filter((r) => OUTCOME[r.outcome].tone === tone).length;
+  const checkable = tally("ok") + tally("bad");
+  const wrong = tally("bad");
+  const unchecked = tally("none");
+  const plainPct = checkable ? Math.round((100 * tally("ok")) / checkable) : 0;
   return (
     <div className={styles.panel}>
       <div className={styles.versus}>
         <div className={styles.vsCol} data-side="plain">
           <span className={styles.vsLabel}>Plain LLM · one prompt</span>
-          <span className={styles.vsBig}>{plainPct}%</span>
+          <span className={styles.vsBig}>{checkable ? `${plainPct}%` : "–"}</span>
           <span className={styles.vsSub}>
-            {data.supported} of {data.citations_found} citations survive the gates
+            {wrong} of {checkable} checkable {checkable === 1 ? "citation was" : "citations were"} wrong
+            {unchecked > 0 && `; ${unchecked} could not be checked here`}
           </span>
           <span className={styles.judgeModel}>{data.plain_model}</span>
         </div>
@@ -208,20 +214,25 @@ export function AblationPanel({ result }: { result: AnalysisResult }) {
         </div>
       </div>
       <ol className={styles.ledger}>
-        {data.rows.map((r, i) => (
-          <li key={i} className={styles.ledgerRow} data-verdict={OUTCOME[r.outcome].ok ? "verified" : "dropped"}>
-            <div className={styles.ledgerTop}>
-              <span className={styles.claimId}>{r.risk}</span>
-              <span className={styles.citeLink}>{r.cited}</span>
-              <span className={styles.verdictPill} data-verdict={OUTCOME[r.outcome].ok ? "verified" : "dropped"}>
-                <Icon name={OUTCOME[r.outcome].ok ? "checkCircle" : "xCircle"} size={13} />
-                {OUTCOME[r.outcome].label}
-              </span>
-            </div>
-            <p className={styles.prop}>{r.claim}</p>
-            <p className={styles.gateDetail}>{r.detail}</p>
-          </li>
-        ))}
+        {data.rows.map((r, i) => {
+          const o = OUTCOME[r.outcome];
+          const verdict = o.tone === "ok" ? "verified" : o.tone === "bad" ? "dropped" : "unchecked";
+          return (
+            <li key={i} className={styles.ledgerRow} data-verdict={verdict}>
+              <div className={styles.ledgerTop}>
+                <span className={styles.claimId}>{r.risk}</span>
+                <span className={styles.citeLink}>{r.cited}</span>
+                <span className={styles.verdictPill} data-verdict={verdict}>
+                  <Icon name={o.tone === "ok" ? "checkCircle" : o.tone === "bad" ? "xCircle" : "minus"} size={13} />
+                  {o.label}
+                  {r.why && `: ${WRONG_WHY[r.why]}`}
+                </span>
+              </div>
+              <p className={styles.prop}>{r.claim}</p>
+              <p className={styles.gateDetail}>{r.detail}</p>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
