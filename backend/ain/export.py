@@ -31,6 +31,11 @@ def memo_docx(r: AnalysisResult) -> bytes:
     d.add_paragraph(r.memo.jurisdiction_note)
 
     sections = {v.claim.citation_id: v.section for v in r.ledger if v.section}
+    bound = r.ratification  # who is bound by each international instrument cited
+
+    def cite(cid: str) -> str:
+        name = label(sections[cid]).en
+        return f"{name} ({bound[cid].note.en.rstrip('.')})" if cid in bound else name
     risks = {k.id: k for k in r.risks}
     for n, issue in enumerate(r.memo.issues, 1):
         risk = risks.get(issue.risk_id)
@@ -54,7 +59,7 @@ def memo_docx(r: AnalysisResult) -> bytes:
             para = d.add_paragraph()
             para.add_run(f"{title}. ").bold = True
             para.add_run(body)
-        cites = [label(sections[c]).en for c in issue.citation_ids if c in sections]
+        cites = [cite(c) for c in issue.citation_ids if c in sections]
         if cites:
             d.add_paragraph("Authorities: " + "; ".join(cites))
         if issue.mitigation_clause:
@@ -85,7 +90,7 @@ def memo_docx(r: AnalysisResult) -> bytes:
     for v in r.ledger:
         row = t.add_row().cells
         row[0].text = v.claim.proposition[:300]
-        row[1].text = label(v.section).en if v.section else v.claim.citation_id
+        row[1].text = cite(v.claim.citation_id) if v.section else v.claim.citation_id
         row[2].text = " / ".join(g.status for g in v.gates)
         row[3].text = MARK[v.verdict] + (f"\n{v.note}" if v.note else "")
         row[4].text = v.section.url if v.section else "-"

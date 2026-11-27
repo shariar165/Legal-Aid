@@ -296,7 +296,9 @@ export interface AblationRow {
   cited: string;
   claim: string;
   citation_id: string | null;
-  outcome: "supported" | "unsupported" | "unresolvable" | "repealed" | "inapplicable";
+  /** since spec 29 step 2.2: supported · wrong · fabricated · outside_corpus; a stored comparison keeps the older outcomes */
+  outcome: "supported" | "wrong" | "fabricated" | "outside_corpus" | "unsupported" | "unresolvable" | "repealed" | "inapplicable";
+  why?: "repealed" | "wrong_regime" | "not_supported";
   detail: string;
 }
 
@@ -306,6 +308,10 @@ export interface Ablation {
   citations_found: number;
   resolvable: number;
   supported: number;
+  wrong: number;
+  fabricated: number;
+  outside_corpus: number;
+  checkable: number;
   rows: AblationRow[];
   ain_citations: number;
   ain_verified: number;
@@ -515,6 +521,25 @@ export interface AnalysisResult {
   four_ledgers?: FourLedgers | null;
   /** every cited section's name in Bangla and English (computed by the backend) */
   citation_names?: Record<string, L10n>;
+  /** for each cited international instrument, whether Bangladesh and the destination ratified it (spec 29 step 2.1) */
+  ratification?: Record<string, Ratification>;
+}
+
+export interface PartyRatification {
+  country: string;
+  name: L10n;
+  ratified: boolean;
+  date: string | null;
+}
+
+export interface Ratification {
+  instrument: string;
+  title: string;
+  url: string;
+  parties: PartyRatification[];
+  /** neither party ratified it: an international standard, not binding law here */
+  persuasive: boolean;
+  note: L10n;
 }
 
 export interface CouncilMember {

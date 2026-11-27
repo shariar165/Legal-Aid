@@ -550,6 +550,7 @@ function Report({ result, live, focusRisk, onAsk, onCouncil, onChecks, onJump, o
             issue={result.memo.issues.find((x) => x.risk_id === r.id)}
             rows={result.ledger.filter((v) => v.claim.risk_id === r.id)}
             clauses={result.document.clauses.filter((c) => r.clause_ids.includes(c.id))}
+            ratification={result.ratification}
             active={focusRisk === r.id}
             onAskCouncil={() => onAsk(r.id)}
             onClause={onClause}

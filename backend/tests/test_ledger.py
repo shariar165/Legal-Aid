@@ -58,6 +58,25 @@ def test_paper_facts_from_the_malaysia_sample(docs):
     assert (sa.contract_months, sa.ticket_paid_by) == (24, "employer")
 
 
+def test_the_salary_row_opens_the_clause_the_salary_was_read_from(docs):
+    """spec 29 step 2.6: on the EPZ sample the first clause naming wages is Part A's data-sharing clause, not the
+    appointment letter's salary clause"""
+    doc, facts, _ = ingestion.build_document((docs / "rmg_dhaka_epz.txt").read_bytes(), "rmg_dhaka_epz.txt", "sample")
+    by_id = {c.id: c for c in doc.clauses}
+    assert facts.salary_amount == 12500
+    assert by_id[facts.fact_clauses["salary"]].text.startswith("1. Appointment.")
+    assert ledger._clause_for("salary", facts, doc.clauses) == facts.fact_clauses["salary"]
+
+
+def test_a_salary_fallback_clause_must_hold_the_salary_figure():
+    clauses = ingestion.segment("1. Data. Wages and health records are shared with the buyer.\n\n"
+                                "2. Pay. You will receive a monthly gross wage of BDT 125,000.\n\n"
+                                "3. Pay. Your monthly wage is ১২,৫০০ টাকা.")
+    facts = ingestion.DocFacts(salary_amount=12500)  # read elsewhere, with no clause recorded
+    assert ledger._clause_for("salary", facts, clauses) == clauses[2].id  # Bangla digits; 125,000 is not 12,500
+    assert ledger._clause_for("salary", ingestion.DocFacts(), clauses) is None
+
+
 async def test_malaysia_with_promises_gives_the_expected_rows(docs, ledger_on):
     r = await _run(docs, _promises())
     four = r.four_ledgers

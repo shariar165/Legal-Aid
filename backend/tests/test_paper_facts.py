@@ -103,7 +103,7 @@ def test_conflicting_ticket_clauses_give_none():
 def test_the_samples_give_their_facts_with_clause_ids(docs):
     _, my, _ = ingestion.build_document((docs / "migrant_my_contract.txt").read_bytes(), "migrant_my_contract.txt", "sample")
     assert (my.contract_months, my.hours_per_day, my.ticket_paid_by, my.passport_held_by) == (36, 12, "worker", "employer")
-    assert my.fact_clauses == {"contract_months": "C2", "passport": "C5", "hours_per_day": "C6", "ticket": "C7"}
+    assert my.fact_clauses == {"salary": "C3", "contract_months": "C2", "passport": "C5", "hours_per_day": "C6", "ticket": "C7"}
     _, msa, _ = ingestion.build_document((docs / "long_migrant_msa.txt").read_bytes(), "long_migrant_msa.txt", "sample")
     assert (msa.contract_months, msa.hours_per_day, msa.ticket_paid_by, msa.passport_held_by) == (24, 8, "employer", "employer")
     assert (msa.hours_per_week, my.hours_per_week) == (48, None)  # "six (6) days per week" states no weekly hours

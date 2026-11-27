@@ -3671,6 +3671,12 @@ button.clause:hover {
   color: var(--bad-ink);
 }
 
+/* the plain-chatbot comparison: law Jukti doesn't hold is neither right nor wrong */
+.verdictPill[data-verdict="unchecked"] {
+  border: 1px solid var(--c-line-strong);
+  color: var(--c-ink-2);
+}
+
 .prop {
   margin: 8px 0 10px;
   font-size: 14.5px;

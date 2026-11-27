@@ -4,6 +4,7 @@ import type { AnalysisResult, LedgerCell } from "@/lib/api";
 import { DESK, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
 import type { DeskRow, LawBadge, Node } from "@/lib/desk/rows";
 import { Icon } from "@/components/shared/Icons";
+import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import { citeName, clauseNo, isBangla } from "./util";
 import s from "./desk.module.css";
 
@@ -150,6 +151,7 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                             <>
                               <span className={s.cellValue}>{r.law.title ? r.law.title[lang] : lawName}</span>
                               {r.law.title && lawName && <span className={s.lawCite}>{lawName}</span>}
+                              <RatifyBadge r={result.ratification?.[r.law.citationIds[0]]} lang={lang} />
                             </>
                           ) : (
                             <span className={s.cellValue}>{r.law.badge ? "" : T.noLaw[lang]}</span>

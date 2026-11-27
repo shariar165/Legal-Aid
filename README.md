@@ -310,7 +310,7 @@ Two self-hosted n8n workflows, both off until configured (see `automation/n8n/RE
 
 ```bash
 cd backend                       # venv active
-python -m pytest -q              # 390 offline tests
+python -m pytest -q              # 412 offline tests
 python -m eval.run_eval          # recall / precision / off-playbook count / citation validity / drop rate / ablation
 python -m eval.bench_quality     # bench trap set: do the quota savers change any answer? Also the council pressure trap (eval/pressure_trap.json)
 python -m scripts.smoke_live     # live keys: model check + hero docs + cache warm-up
@@ -352,7 +352,7 @@ The tests cover:
    - In **Verification**, filter the ledger to ✕ Dropped: the 2012 Trafficking Act citation fails the currency gate, and the Critic's re-anchored 2026 citation passes ✓.
    - Open the *Dhaka EPZ* sample. The Router shows the Labour Act struck through. Labour Act s.176 (trade unions) is ✕ dropped as inapplicable inside an EPZ, and the off-playbook multi-union risk is flagged *Valid abroad · void in BD*.
    - In **Council**, show each member's vote, any dissent and its ⚠ human-review flag. Ask the entire council "Should I sign this contract as it stands?", then press **Hold a deliberation**: the members answer each other and the Chief Justice's ruling appears. Switch the answer language to বাংলা to show the same in Bangla.
-3. **Proof, 30 s.** Open **Verification → Compare with a plain chatbot**: the plain prompt's citations mostly fail (invented sections, repealed Acts, the wrong regime), while the memo's citations are 100% verified. Download the DOCX.
+3. **Proof, 30 s.** Open **Verification → Compare with a plain chatbot**: of the plain prompt's citations that Jukti can check, most are wrong (repealed Acts, the wrong regime, sections that don't exist), while the memo's citations are 100% verified. Law that isn't in the corpus is marked "outside our corpus", never counted as wrong. Download the DOCX.
 
 ## Honest limitations
 - **Rehearsal Council (মহড়া) is shelved.** A practice run of the talk with a recruiting agent (dalal) before paying, coached by the council. It ran in fake mode only, was never merged, and is kept at tag `archive/rehearsal`. It is not in this build.
@@ -363,6 +363,13 @@ The tests cover:
 - The 2026 Labour Act amendments are read from bdlaws' consolidated text. The Bangla text is authoritative, and English propositions are checked against it by the judge models.
 - Cross-lingual dense retrieval is weak on CPU-sized models, so the system relies on **bilingual queries** (Bangla BM25 MRR 0.75 against 0.19 for English-only dense search).
 - The gold set covers only our own seeded demo documents. Treat the eval numbers as regression checks, not as a benchmark.
+- **Ratification is a hand-checked table.** Each ILO citation says whether Bangladesh and the destination ratified it
+  (C181: neither; it is shown as a persuasive international standard). The table (`corpus/ratifications.yaml`)
+  covers C029, C095 and C181 for the 9 countries, read from NORMLEX in a browser on 2026-11-27, because NORMLEX
+  refuses automated fetches. Nothing re-checks it automatically, and a ratification after that date won't show.
+- **The chatbot comparison only judges law Jukti holds.** A plain-model citation is called "Section doesn't exist"
+  only for an act the corpus holds in full (the bdlaws scrapes). The Malaysian and international acts are excerpts,
+  so a made-up section of one of them reads "Outside our corpus", like any law the corpus doesn't hold.
 - EasyOCR on CPU takes about 1–5 minutes per page on first read. Results are cached by file hash, and demo photos are pre-cached.
 - The hosted demo (Vercel + Railway lite) has no EasyOCR and no dense retrieval, to fit 0.5 GB of RAM. The demo photo
   reads from the OCR cache, and search is BM25 only. A **new photo is read on the phone** with tesseract.js (spec 28):
@@ -399,5 +406,5 @@ The tests cover:
 - The paper facts the Four Ledgers compare (contract length, hours a day, hours a week where the contract states them, who pays the ticket out, who keeps the passport) are read by regular expressions, clause by clause and sentence by sentence, in English and a few Bangla words. They skip probation and notice periods, overtime limits, Ramadan hours and return tickets, and give no value at all when two readings disagree. They do not understand sentences: unusual wording can still be misread or missed, and a missed fact leaves that row's paper cell empty. Each fact names the clause it came from, so it can be checked. The contract length drives every projected amount, so the user can confirm or correct it (`POST /api/jobs/{id}/term`, no model call), and the projection says whether its term was confirmed by the user, read from the contract, or taken from what the worker was told.
 - Adding or changing promises later (`POST /api/jobs/{id}/promises`) updates the ledger, the risk list and the stats but does not redraft the memo, because that would need a model call (`memo_includes_promises` says so). No gate runs on that path, so a new `PB-PROMISE-GAP` risk stays out of the risk list as `not_verified_yet`. It adds no severity until `POST /api/jobs/{id}/promises/verify` runs the 4 gates on it, which takes one judge call (the Virtual Bench as well, if its severity calls for one).
 - The pressure trap scores each seat on its Groq backup model by default, like the rest of `eval/bench_quality.py`. The `--pressure-routing config` run uses the seats' own routing, but upstream rate limits on the free models sent many calls to the backup anyway: of 18 answers each, Sunny gave 0 on Gemma, Grey 7 on Xing 4.0 and Regal 15 on dots.3. Only Regal's row is mostly its own model.
-- **Live gold-set eval (2026-11-13), over two days to fit the free quota (`run_eval --stop-on-quota`):** recall 67–92% and precision 64–91% across the four hero documents (EPZ best at 92% / 91%), every memo citation verified, and no risk at all on the clean control contract. The plain-LLM ablation got 0 of 54 of its own citations supported. Live, only the Saudi contract reached 3 off-playbook risks; Malaysia, EPZ and the long MSA found 2 each, so the offline bar did not hold live. (These numbers predate the 2026-11-14 playbook rules for the forum and the trip home.)
+- **Live gold-set eval (2026-11-13), over two days to fit the free quota (`run_eval --stop-on-quota`):** recall 67–92% and precision 64–91% across the four hero documents (EPZ best at 92% / 91%), every memo citation verified, and no risk at all on the clean control contract. The plain-LLM ablation got 0 of 54 of its own citations supported (counted before spec 29 step 2.2, when law outside the corpus still counted as unsupported). Live, only the Saudi contract reached 3 off-playbook risks; Malaysia, EPZ and the long MSA found 2 each, so the offline bar did not hold live. (These numbers predate the 2026-11-14 playbook rules for the forum and the trip home.)
 - **Grey's OpenRouter model was withdrawn mid-eval.** Between the two eval days OpenRouter stopped serving Xing 4.0 29B (404, "no provider serves this model anymore"), so Grey answered day 2 of the eval on its Groq backup, GPT-OSS 120B, the Chief Justice's family. Grey now runs on Groq's Qwen 3.8 27B, with ERNIE 5.5 Flash preview as its backup. Qwen is also the single-judge model and shares its Groq rate limit (8,000 tokens a minute), so runs can queue longer, and its Groq daily token limit has run out before. Groq serves only two judge families (GPT-OSS and Qwen), so when OpenRouter is out of quota Sunny and Regal both fall back to GPT-OSS and the bench marks them "same family (fallback)".

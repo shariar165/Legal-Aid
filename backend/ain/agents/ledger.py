@@ -49,7 +49,7 @@ RULE_FOR = {"salary": "PB-MIN-WAGE", "deductions": "PB-DEDUCTION-CAP", "recruitm
             "passport": "PB-PASSPORT"}
 PAY_BENEFIT_TERMS = ("salary", "deductions", "ticket")  # a said_vs_paper gap on these is the PB-PROMISE-GAP risk
 TERMS = ("salary", "deductions", "recruitment_cost", "hours_per_day", "ticket", "passport", "contract_months")
-# where the paper cell's clause is found when ingestion did not record one (fact_clauses covers the four regex facts)
+# where the paper cell's clause is found when ingestion did not record one (fact_clauses covers the regex facts and the salary)
 TERM_HINTS = {
     "salary": r"salary|wage|বেতন|মজুরি",
     "deductions": r"deduct|কর্তন",
@@ -196,9 +196,20 @@ def _clause_for(term: str, facts: DocFacts, clauses: list[Clause]) -> str | None
         return facts.fact_clauses[term]
     pat = re.compile(TERM_HINTS[term], re.I)
     for c in clauses:
-        if pat.search(c.text) and not (term == "salary" and re.search(r"deduct", c.text, re.I)):
+        if term == "salary" and (re.search(r"deduct", c.text, re.I) or not _states_salary(c.text, facts)):
+            continue  # a clause that only mentions wages (e.g. a data-sharing clause) is not the salary clause
+        if pat.search(c.text):
             return c.id
     return None
+
+
+def _states_salary(text: str, facts: DocFacts) -> bool:
+    """The clause holds the salary figure, written with Latin or Bangla digits, with or without thousands commas."""
+    if facts.salary_amount is None:
+        return False
+    plain = re.sub(r"[,\s]", "", text)
+    n = f"{facts.salary_amount:.2f}".rstrip("0").rstrip(".")
+    return any(re.search(rf"(?<![\d০-৯]){re.escape(form)}(?![\d০-৯])", plain) for form in (n, n.translate(BN_DIGITS)))
 
 
 def _deductions_text(facts: DocFacts, wage: WageCalc | None, monthly: float, cur: str) -> L10n:

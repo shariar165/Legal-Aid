@@ -4,14 +4,25 @@ The plain model gets the (redacted) contract and one instruction - list the risk
 statutes. No retrieval, no playbook, no verification. Its citations are then resolved against the
 corpus and passed through existence, currency and entailment. The split screen in the UI shows
 how many of its citations survive versus Jukti's.
+
+Outcomes (spec 29 step 2.2). A citation is only called wrong when Jukti can check it:
+  supported       the act and section are in the corpus, apply here, are in force, and the judge agrees
+  wrong           repealed, the wrong regime for this document, or the section does not say what is claimed
+  fabricated      the act is held in full (a complete bdlaws text) and has no such section
+  outside_corpus  everything else: real or not, the law is not in the corpus (or only an excerpt is), so it
+                  cannot be checked here and is never counted against the model
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import re
+from functools import cache
 
 from rapidfuzz import fuzz
+
+from corpus.scrape_bdlaws import ACTS_FILE, norm_section_no
 
 from ain.agents.verifier import gate_currency, gate_entailment
 from ain.llm import LLM, MalformedAnswer, dict_items
@@ -62,8 +73,14 @@ def _act_candidates(corpus: Corpus) -> dict[str, list[str]]:
     return names
 
 
-def resolve(corpus: Corpus, act: str, section: str) -> str | None:
-    """Map a free-text citation to a corpus citation_id, or None when it cannot be found."""
+@cache
+def full_acts() -> frozenset[str]:
+    """Acts the corpus holds in full: bdlaws scrapes without a section list. Every other act is an excerpt."""
+    return frozenset(a["key"] for a in json.loads(ACTS_FILE.read_text(encoding="utf-8")) if not a.get("sections"))
+
+
+def resolve_act(corpus: Corpus, act: str) -> str | None:
+    """Map a free-text act name to a corpus act_key, or None when the corpus does not hold that act."""
     act_l = act.lower()
     year = re.search(r"(1[89]\d\d|20\d\d)", act_l)
     best, best_score = None, 0.0
@@ -75,16 +92,40 @@ def resolve(corpus: Corpus, act: str, section: str) -> str | None:
         score = max(fuzz.token_set_ratio(act_l, n) for n in names if n)
         if score > best_score:
             best, best_score = key, score
-    if not best or best_score < 75:
-        return None
-    m = re.match(r"\s*(?:s\.|section|art\.?|article|para\.?)?\s*([0-9]+[A-Z]?)", section, re.I)
+    return best if best and best_score >= 75 else None
+
+
+# "s.28A", "28(A)", "২৮ক", "Art. 7", "section 12(1)(f)": the number and a section letter. A lowercase letter in
+# brackets is a clause, as in 12(1)(f) or 28(a), and is not part of the section number.
+SECTION_RE = re.compile(r"\s*(?:s\.|sec\.|section|art\.?|article|para\.?|ধারা)?\s*([0-9০-৯]+)(?:([A-Za-zকখগঘঙচ])(?![A-Za-z])|\(([A-Zকখগঘঙচ])\))?", re.I)
+
+
+def section_no(section: str) -> str | None:
+    m = SECTION_RE.match(section)
     if not m:
         return None
-    cid = f"{best}-s{m.group(1).upper()}"
-    if cid in corpus:
-        return cid
-    alt = f"{best}-a{m.group(1)}"
-    return alt if alt in corpus else None
+    letter = m.group(2) or (m.group(3) if m.group(3) and not m.group(3).islower() else "")
+    return norm_section_no(m.group(1) + (letter or ""))
+
+
+def lookup(corpus: Corpus, act: str, section: str) -> tuple[str | None, str | None]:
+    """(act_key, citation_id): the act Jukti holds, if any, and the section in it, if it exists."""
+    key = resolve_act(corpus, act)
+    no = section_no(section) if key else None
+    if not key or not no:
+        return key, None
+    for cid in (f"{key}-s{no}", f"{key}-a{no}"):
+        if cid in corpus:
+            return key, cid
+    return key, None
+
+
+def resolve(corpus: Corpus, act: str, section: str) -> str | None:
+    """Map a free-text citation to a corpus citation_id, or None when it cannot be found."""
+    return lookup(corpus, act, section)[1]
+
+
+OUTSIDE = "This law is not in Jukti's corpus (or only an excerpt of it is), so it cannot be checked here. It may well be real."
 
 
 async def run(llm: LLM, corpus: Corpus, result: AnalysisResult) -> AblationResult:
@@ -107,20 +148,26 @@ async def run(llm: LLM, corpus: Corpus, result: AnalysisResult) -> AblationResul
     for item in items:
         for c in dict_items(item.get("citations"), "ablation citations"):
             act, section, claim_text = str(c.get("act", "")), str(c.get("section", "")), str(c.get("claim", ""))
-            cid = resolve(corpus, act, section)
+            key, cid = lookup(corpus, act, section)
             row = {"risk": item.get("risk", ""), "cited": f"{act} s.{section}", "claim": claim_text, "citation_id": cid}
             if cid is None:
-                row.update(outcome="unresolvable", detail="No such section in the verified corpus - cannot be checked (possible hallucination or out-of-scope law).")
+                if key in full_acts():
+                    row.update(outcome="fabricated", detail=f"Jukti holds the whole {SHORT_EN.get(key, key)}, and it has no section {section}.")
+                else:
+                    row.update(outcome="outside_corpus", detail=OUTSIDE)
             else:
                 sec = corpus.get(cid)
                 cur = gate_currency(sec)
                 if cur.status == "fail":
-                    row.update(outcome="repealed", detail=cur.detail)
+                    row.update(outcome="wrong", why="repealed", detail=cur.detail)
                 elif not set(sec.packs) & result.route.pack_ids:
-                    row.update(outcome="inapplicable", detail="Exists, but this law does not govern the document (wrong regime).")
+                    row.update(outcome="wrong", why="wrong_regime", detail="Exists, but this law does not govern the document (wrong regime).")
                 else:
                     g3 = await gate_entailment(llm, Claim(id="ab", risk_id="ab", proposition=claim_text, citation_id=cid, origin="ablation"), sec)
-                    row.update(outcome="supported" if g3.status == "pass" else "unsupported", detail=g3.detail)
+                    if g3.status == "pass":
+                        row.update(outcome="supported", detail=g3.detail)
+                    else:
+                        row.update(outcome="wrong", why="not_supported", detail=g3.detail)
             rows.append(row)
     ain_rows = [v for v in result.ledger if v.claim.risk_id != "P"]
     return AblationResult(
@@ -129,6 +176,9 @@ async def run(llm: LLM, corpus: Corpus, result: AnalysisResult) -> AblationResul
         citations_found=len(rows),
         resolvable=sum(r["citation_id"] is not None for r in rows),
         supported=sum(r["outcome"] == "supported" for r in rows),
+        wrong=sum(r["outcome"] == "wrong" for r in rows),
+        fabricated=sum(r["outcome"] == "fabricated" for r in rows),
+        outside_corpus=sum(r["outcome"] == "outside_corpus" for r in rows),
         rows=rows,
         ain_citations=len(ain_rows),
         ain_verified=sum(v.verdict in ("verified", "partial") for v in ain_rows),

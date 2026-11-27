@@ -26,12 +26,23 @@ export const GATE_STATUS_LABEL: Record<GateStatus, string> = { pass: "passed", w
 export const VERDICT_LABEL: Record<Verdict, string> = { verified: "Verified", partial: "Partial", dropped: "Dropped" };
 export const VERDICT_ICON: Record<Verdict, IconName> = { verified: "checkCircle", partial: "alert", dropped: "xCircle" };
 
-export const OUTCOME: Record<AblationRow["outcome"], { label: string; ok: boolean }> = {
-  supported: { label: "Supported", ok: true },
-  unsupported: { label: "Not supported by the text", ok: false },
-  unresolvable: { label: "Section not found", ok: false },
-  repealed: { label: "Repealed law", ok: false },
-  inapplicable: { label: "Wrong regime", ok: false },
+/** tone: ok = survived the gates, bad = wrong, none = Jukti could not check it (never counted against the model) */
+export const OUTCOME: Record<AblationRow["outcome"], { label: string; tone: "ok" | "bad" | "none" }> = {
+  supported: { label: "Supported", tone: "ok" },
+  wrong: { label: "Wrong", tone: "bad" },
+  fabricated: { label: "Section doesn't exist", tone: "bad" },
+  outside_corpus: { label: "Outside our corpus", tone: "none" },
+  // a comparison stored before spec 29 step 2.2; "unresolvable" mixed made-up sections with law Jukti doesn't hold
+  unsupported: { label: "Not supported by the text", tone: "bad" },
+  unresolvable: { label: "Not checkable here", tone: "none" },
+  repealed: { label: "Repealed law", tone: "bad" },
+  inapplicable: { label: "Wrong regime", tone: "bad" },
+};
+
+export const WRONG_WHY: Record<NonNullable<AblationRow["why"]>, string> = {
+  repealed: "repealed",
+  wrong_regime: "wrong regime",
+  not_supported: "the text doesn't say this",
 };
 
 /** "Contract Act 1872 · s.27" from a corpus record. */

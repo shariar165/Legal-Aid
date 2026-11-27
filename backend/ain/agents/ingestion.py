@@ -285,15 +285,16 @@ def _money(m: re.Match[str]) -> tuple[float, str]:
     return (_num(m.group(2)), _cur(m.group(1))) if m.group(1) else (_num(m.group(3)), _cur(m.group(4)))
 
 
-def _salary(clauses: list[Clause]) -> tuple[float | None, str | None, str | None]:
+def _salary(clauses: list[Clause]) -> tuple[float | None, str | None, str | None, str | None]:
+    """The salary amount, currency and text, and the clause it was read from."""
     for c in clauses:
         low = c.text.lower()
         if re.search(r"salary|wage|বেতন|মজুরি", low) and not re.search(r"deduct", low):
             m = MONEY.search(c.text)
             if m:
                 amount, cur = _money(m)
-                return amount, cur, m.group(0)
-    return None, None, None
+                return amount, cur, m.group(0), c.id
+    return None, None, None, None
 
 
 def _deductions(clauses: list[Clause]) -> list[Deduction]:
@@ -349,7 +350,9 @@ def extract_facts(text: str, clauses: list[Clause]) -> DocFacts:
     gl = re.search(r"governed by the laws? of ([A-Z][A-Za-z ]+?)(?:\s+and\b|[\.,;])", text)
     f.governing_law = gl.group(1).strip() if gl else None
 
-    f.salary_amount, f.salary_currency, f.salary_text = _salary(clauses)
+    f.salary_amount, f.salary_currency, f.salary_text, salary_clause = _salary(clauses)
+    if salary_clause:  # the Case Desk's salary row opens the clause the figure was read from
+        f.fact_clauses["salary"] = salary_clause
     f.deductions = _deductions(clauses)
 
     f.payment_terms_days = _days_before(text, r"\(?(\d{2,3})\)?\s*days?\s+(?:after|from|of)\s+(?:the\s+)?(?:date\s+of\s+)?(?:shipment|bill of lading|invoice)")

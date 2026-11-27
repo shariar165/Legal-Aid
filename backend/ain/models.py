@@ -51,6 +51,24 @@ class Section(BaseModel):
 # ---------------------------------------------------------------- ingestion
 
 
+class PartyRatification(BaseModel):
+    country: str  # BD, MY, SA…
+    name: L10n
+    ratified: bool
+    date: str | None = None  # as NORMLEX gives it
+
+
+class Ratification(BaseModel):
+    """Whether Bangladesh and the destination are bound by an international instrument (corpus/ratifications.yaml)."""
+
+    instrument: str  # C181
+    title: str
+    url: str  # the NORMLEX ratification page
+    parties: list[PartyRatification]
+    persuasive: bool  # neither party ratified it: an international standard, not binding law here
+    note: L10n  # "Ratified by Bangladesh; not by Malaysia."
+
+
 class Clause(BaseModel):
     id: str
     index: int
@@ -156,6 +174,8 @@ class RouteDecision(BaseModel):
     excluded: list[PackDecision] = Field(default_factory=list)
     # set when the document is outside Jukti's niche (no employment or migration terms): only general checks ran
     scope_note: L10n | None = None
+    # whose ratification of an international instrument matters: Bangladesh and the destination (spec 29 step 2.1)
+    parties: list[str] = Field(default_factory=lambda: ["BD"])
 
     @property
     def pack_ids(self) -> set[str]:
@@ -489,9 +509,19 @@ class AblationResult(BaseModel):
     citations_found: int
     resolvable: int
     supported: int
+    # spec 29 step 2.2: 0 on a comparison stored before it (those rows keep their old outcomes)
+    wrong: int = 0
+    fabricated: int = 0
+    outside_corpus: int = 0
     rows: list[dict]
     ain_citations: int
     ain_verified: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def checkable(self) -> int:
+        """Citations to law Jukti holds: supported, wrong or fabricated. Outside the corpus is not counted."""
+        return self.supported + self.wrong + self.fabricated
 
 
 class Stats(BaseModel):
@@ -544,6 +574,19 @@ class AnalysisResult(BaseModel):
         from ain.naming import label  # naming imports this module
 
         return {v.claim.citation_id: label(v.section) for v in self.ledger if v.section is not None}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def ratification(self) -> dict[str, Ratification]:
+        """For each cited international instrument, who is bound by it (computed, so older results have it too)."""
+        from ain import ratification  # it imports this module
+
+        codes = ratification.parties(self.destination.code if self.destination else None)
+        out = {}
+        for v in self.ledger:
+            if v.section is not None and (r := ratification.status(v.section.act_key, codes)):
+                out[v.claim.citation_id] = r
+        return out
 
 
 # ---------------------------------------------------------------- council chat

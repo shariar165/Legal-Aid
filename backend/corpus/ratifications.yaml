@@ -1,0 +1,49 @@
+# Ratifications of the ILO conventions in the corpus, for Bangladesh and every destination in ain/countries.yaml.
+# A fact table, not statute text (spec 29 step 2.1): read from each convention's NORMLEX "Ratifications of ..." page.
+# NORMLEX refuses automated fetches, so the pages were read in a browser on the date `checked`.
+# A country absent from a page's list has not ratified: ratified: false, no date. Dates are as NORMLEX gives them;
+# every ratification below was "In Force" with no note. tests/test_ratification.py checks that the table is complete.
+
+instruments:
+  C029:
+    title: Forced Labour Convention, 1930 (No. 29)
+    url: https://normlex.ilo.org/dyn/nrmlx_en/f?p=NORMLEXPUB:11300:0::NO::P11300_INSTRUMENT_ID:312174
+    checked: 2026-11-27
+    countries:
+      BD: {ratified: true, date: 22 Jun 1972}
+      MY: {ratified: true, date: 11 Nov 1957}
+      SA: {ratified: true, date: 15 Jun 1978}
+      AE: {ratified: true, date: 27 May 1982}
+      QA: {ratified: true, date: 12 Mar 1998}
+      OM: {ratified: true, date: 30 Oct 1998}
+      KW: {ratified: true, date: 23 Sep 1968}
+      BH: {ratified: true, date: 11 Jun 1981}
+      SG: {ratified: true, date: 25 Oct 1965}
+  C095:
+    title: Protection of Wages Convention, 1949 (No. 95)
+    url: https://normlex.ilo.org/dyn/nrmlx_en/f?p=NORMLEXPUB:11300:0::NO::P11300_INSTRUMENT_ID:312240
+    checked: 2026-11-27
+    countries:
+      BD: {ratified: false}
+      MY: {ratified: true, date: 17 Nov 1961}  # Malaysia's own NORMLEX page shows it too, with no territorial note
+      SA: {ratified: true, date: 07 Dec 2020}
+      AE: {ratified: false}
+      QA: {ratified: false}
+      OM: {ratified: false}
+      KW: {ratified: false}
+      BH: {ratified: false}
+      SG: {ratified: false}
+  C181:
+    title: Private Employment Agencies Convention, 1997 (No. 181)
+    url: https://normlex.ilo.org/dyn/nrmlx_en/f?p=NORMLEXPUB:11300:0::NO::P11300_INSTRUMENT_ID:312326
+    checked: 2026-11-27  # 40 ratifications, none of them these nine countries
+    countries:
+      BD: {ratified: false}
+      MY: {ratified: false}
+      SA: {ratified: false}
+      AE: {ratified: false}
+      QA: {ratified: false}
+      OM: {ratified: false}
+      KW: {ratified: false}
+      BH: {ratified: false}
+      SG: {ratified: false}
