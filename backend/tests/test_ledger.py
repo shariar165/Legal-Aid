@@ -391,6 +391,9 @@ async def test_law_cells_have_a_short_title_and_mismatches_carry_their_status(do
     # every cited section has a name in both languages, built from the corpus record
     names = r.model_dump()["citation_names"]
     assert "ন্যূনতম মজুরি আদেশ" in names["MY-MWO-2024-p3"]["bn"] and "Minimum Wages Order" in names["MY-MWO-2024-p3"]["en"]
+    short = r.model_dump()["citation_short"]  # and a short one for the desk's law cell (spec 29 step 3.1)
+    assert short.keys() == names.keys()
+    assert short["MY-MWO-2024-p3"] == {"en": "Minimum Wages Order 2024 (MY) · para 3", "bn": "ন্যূনতম মজুরি আদেশ ২০২৪ (মালয়েশিয়া) · অনুচ্ছেদ ৩"}
 
 
 async def test_the_projection_says_where_its_term_came_from(docs, ledger_on):

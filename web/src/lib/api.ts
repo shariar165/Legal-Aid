@@ -521,6 +521,8 @@ export interface AnalysisResult {
   four_ledgers?: FourLedgers | null;
   /** every cited section's name in Bangla and English (computed by the backend) */
   citation_names?: Record<string, L10n>;
+  /** the same sections' short names for the Case Desk's law cell, "OEMA 2013 · s.31" (spec 29 step 3.1) */
+  citation_short?: Record<string, L10n>;
   /** for each cited international instrument, whether Bangladesh and the destination ratified it (spec 29 step 2.1) */
   ratification?: Record<string, Ratification>;
 }

@@ -68,3 +68,27 @@ def test_ilo_supervisory_observations_are_verbatim_and_marked_interpretive(corpu
         assert "interpretive" in label(s).en
         g4 = gate_currency(s)
         assert g4.status == "pass" and "not binding" in g4.detail
+
+
+def test_every_act_has_a_short_desk_label_whose_number_is_the_corpus_record(corpus):
+    """Spec 29 step 3.1: the Case Desk's law cell. The act name is short; the section number is read from the record,
+    and the Bangla form has Bangla digits."""
+    from ain.naming import EN_TO_BN_DIGITS, SHORT_ACT, label, short_label
+
+    keys = {s.act_key for s in corpus.sections if s.kind != "company_policy"}
+    assert keys <= set(SHORT_ACT), f"no short name for {sorted(keys - set(SHORT_ACT))}"
+    for s in corpus.sections:
+        short, full = short_label(s), label(s)
+        assert len(short.en) <= len(full.en) and len(short.bn) <= len(full.bn), short.en
+        if s.kind == "law":  # same "· s.31" tail as the full label, which comes from the record
+            assert short.en.split(" · ")[-1] == full.en.split(" · ")[-1]
+            assert short.bn.split(" · ")[-1] == full.bn.split(" · ")[-1]
+        if s.lang == "bn" or s.kind == "law":
+            assert not any(c.isascii() and c.isdigit() for c in short.bn.split(" · ")[0]), short.bn
+        if s.kind == "standard":
+            assert "voluntary" in short.en and "স্বেচ্ছামূলক" in short.bn
+        if s.kind == "supervisory":
+            assert "interpretive" in short.en
+    oema = corpus.get("BD-OEMA-2013-s31")
+    assert short_label(oema).en == "OEMA 2013 · s.31"
+    assert short_label(oema).bn == "অভিবাসী আইন ২০১৩ · ধারা " + "31".translate(EN_TO_BN_DIGITS)

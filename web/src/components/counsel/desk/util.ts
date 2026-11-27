@@ -10,6 +10,11 @@ export function citeName(result: AnalysisResult, citationId: string, lang: Lang)
   return section ? citeLabel(section) : citationId;
 }
 
+/** The short name for a narrow cell ("OEMA 2013 · s.31"); older results without it get the full name. */
+export function citeShort(result: AnalysisResult, citationId: string, lang: Lang): string {
+  return result.citation_short?.[citationId]?.[lang] ?? citeName(result, citationId, lang);
+}
+
 export const isBangla = (text: string) => /[ঀ-৿]/.test(text);
 
 /** The clause's own number when it starts with one ("2. Salary…" → 2, "১০. …" → 10), else its position. */

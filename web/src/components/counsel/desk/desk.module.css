@@ -841,7 +841,7 @@ button.clause[data-on="true"]:hover {
   gap: 4px;
   font-size: var(--fs-14);
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word; /* a long word moves to the next line whole; it is cut only if it is wider than the cell */
 }
 
 .cell[data-empty="true"] .cellValue {
@@ -892,13 +892,14 @@ button.clause[data-on="true"]:hover {
   background: var(--line-strong);
 }
 
+/* label, short citation, then the status chips on their own line (spec 29 step 3.1) */
 .lawCell {
   flex: 1.7 1 0;
   min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: var(--r);
@@ -911,24 +912,23 @@ button.clause[data-on="true"]:hover {
   color: var(--muted);
 }
 
-.lawText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.lawCite {
-  font-size: var(--fs-12);
-  color: var(--lg-law-ink);
-}
-
-/* the law cell keeps to a few lines; the evidence file has the whole text */
-.lawText .cellValue,
-.lawCite {
+/* the law cell keeps to three lines; the hover and the evidence file have the full name */
+.lawValue {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  max-width: 100%;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.lawStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
 }
 
 /* flag off or an older result: no told or paid cells, so paper and law share the row and keep more of their text */
@@ -936,8 +936,7 @@ button.clause[data-on="true"]:hover {
   flex: 1.4 1 0;
 }
 
-.cells[data-ledger="off"] .cellClamp,
-.cells[data-ledger="off"] .lawText .cellValue {
+.cells[data-ledger="off"] .cellClamp {
   -webkit-line-clamp: 3;
 }
 

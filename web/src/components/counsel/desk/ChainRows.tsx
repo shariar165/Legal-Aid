@@ -5,7 +5,7 @@ import { DESK, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
 import type { DeskRow, LawBadge, Node } from "@/lib/desk/rows";
 import { Icon } from "@/components/shared/Icons";
 import { RatifyBadge } from "@/components/shared/RatifyBadge";
-import { citeName, clauseNo, isBangla } from "./util";
+import { citeName, citeShort, clauseNo, isBangla } from "./util";
 import s from "./desk.module.css";
 
 /* The chain rows: told · paper · paid · law for each term, one button per row. Nodes and badges follow the
@@ -96,7 +96,11 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
           <ul className={s.chainList} data-ledger={ledgerOn ? "on" : "off"}>
             {rows.map((r) => {
               const clause = r.kind === "risk" && r.clauseIds[0] ? clauseIndex.get(r.clauseIds[0]) : undefined;
-              const lawName = r.law.citationIds[0] ? citeName(result, r.law.citationIds[0], lang) : null;
+              const cite = r.law.citationIds[0];
+              const lawShort = cite ? citeShort(result, cite, lang) : null;
+              // the cell shows the short citation; the hover names the act in full, after what the law says here
+              const lawTip = [r.law.title?.[lang], cite && citeName(result, cite, lang)].filter(Boolean).join(" · ") || undefined;
+              const ratify = cite ? result.ratification?.[cite] : undefined;
               return (
                 <li key={r.key}>
                   <button type="button" className={s.row} aria-pressed={r.key === selectedKey} onClick={() => onSelect(r.key)}>
@@ -142,22 +146,18 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                         </>
                       )}
                       <span className={s.divider} aria-hidden="true" />
-                      <span className={s.lawCell} data-empty={!r.law.badge && !lawName}>
-                        <span className={s.lawText}>
-                          <span className={s.cellLabel} data-k="law">
-                            {T.law[lang]}
-                          </span>
-                          {r.law.title || lawName ? (
-                            <>
-                              <span className={s.cellValue}>{r.law.title ? r.law.title[lang] : lawName}</span>
-                              {r.law.title && lawName && <span className={s.lawCite}>{lawName}</span>}
-                              <RatifyBadge r={result.ratification?.[r.law.citationIds[0]]} lang={lang} />
-                            </>
-                          ) : (
-                            <span className={s.cellValue}>{r.law.badge ? "" : T.noLaw[lang]}</span>
-                          )}
+                      {/* spec 29 step 3.1: the short citation, then the status on a line of its own (never beside it) */}
+                      <span className={s.lawCell} data-empty={!r.law.badge && !lawShort && !r.law.title} title={lawTip}>
+                        <span className={s.cellLabel} data-k="law">
+                          {T.law[lang]}
                         </span>
-                        {r.law.badge && <LawBadgePill badge={r.law.badge} lang={lang} />}
+                        <span className={s.lawValue}>{lawShort ?? r.law.title?.[lang] ?? (r.law.badge ? "" : T.noLaw[lang])}</span>
+                        {(r.law.badge || ratify) && (
+                          <span className={s.lawStatus}>
+                            {r.law.badge && <LawBadgePill badge={r.law.badge} lang={lang} />}
+                            <RatifyBadge r={ratify} lang={lang} />
+                          </span>
+                        )}
                       </span>
                     </span>
                   </button>
