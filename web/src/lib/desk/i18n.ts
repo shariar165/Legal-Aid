@@ -110,6 +110,7 @@ export const DESK = {
     noPayslips: { bn: "বেতন-স্লিপ: এখনো যোগ হয়নি", en: "Payslips: not added yet" },
     clause: (n: number, lang: Lang) => (lang === "bn" ? `ধারা ${num(n, "bn")}` : `Clause ${n}`),
     violation: { bn: "লঙ্ঘন", en: "Violation" },
+    belowIlo: { bn: "আইএলও মানদণ্ডের নিচে", en: "Below ILO standard" },
     verified: { bn: "ধারা যাচাইকৃত", en: "Section verified" }, // the gates verify the cited section, not that anyone broke it
     partial: { bn: "আংশিক", en: "Partial" },
     notVerified: { bn: "যাচাই হয়নি", en: "Not verified" },

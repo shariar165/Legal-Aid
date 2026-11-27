@@ -3,7 +3,7 @@
 import type { Ref } from "react";
 import type { AnalysisResult, BenchResult, PersonaId, Severity } from "@/lib/api";
 import { DESK, num, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
-import { claimFor, type DeskRow, type LawRef } from "@/lib/desk/rows";
+import { claimFor, persuasiveBadge, type DeskRow, type LawRef } from "@/lib/desk/rows";
 import { Icon } from "@/components/shared/Icons";
 import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import { CouncilAvatar, memberLabel } from "../Council";
@@ -214,7 +214,11 @@ function LawBlock({ result, law, lang, violation }: { result: AnalysisResult; la
   const { verification, claim } = claimFor(result, id, law.riskId);
   const section = verification?.section ?? null;
   const pending = law.status === "not_verified_yet";
-  const badge = violation ? "violation" : pending ? "pending" : law.status === "verified" ? "verified" : law.status === "partial" ? "partial" : "not_verified";
+  const badge = persuasiveBadge(
+    violation ? "violation" : pending ? "pending" : law.status === "verified" ? "verified" : law.status === "partial" ? "partial" : "not_verified",
+    result,
+    id,
+  );
   return (
     <div className={s.block} data-k="law">
       <span className={s.blockLabel}>

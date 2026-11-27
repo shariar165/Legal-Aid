@@ -8,7 +8,13 @@ import { TERM_NAME } from "./i18n";
 
 /** between two cells: ≠ only where the backend found a mismatch, = only for comparable cells with none, else a dash */
 export type Node = "ne" | "eq" | "dash";
-export type LawBadge = "violation" | "verified" | "partial" | "not_verified" | "pending";
+export type LawBadge = "violation" | "below_ilo" | "verified" | "partial" | "not_verified" | "pending";
+
+/** A violation of an instrument neither party ratified is a breach of an international standard, not of binding law
+ *  here: it reads "Below ILO standard" in amber, not a red "Violation" (step 2.1's ratification table). */
+export function persuasiveBadge(badge: LawBadge, result: AnalysisResult, citationId: string | undefined): LawBadge {
+  return badge === "violation" && citationId && result.ratification?.[citationId]?.persuasive ? "below_ilo" : badge;
+}
 
 /** One law a row rests on, for the evidence file. */
 export interface LawRef {

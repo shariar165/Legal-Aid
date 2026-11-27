@@ -77,3 +77,11 @@ async def test_high_risks_go_to_the_virtual_bench(docs):
     benched = [k for k in r.risks if k.bench]
     assert benched and all(k.severity in ("critical", "high", "medium") for k in benched)
     assert any(k.bench.human_review for k in benched)  # a dissent is surfaced, not hidden
+
+
+async def test_the_epz_grievance_risk_opens_the_appointment_letters_committee_clause(docs):
+    """Offline h7 matches the participation committee only: Part A's "6. Worker Data" (grievance records) is not it."""
+    r, _ = await _run(docs, "rmg_dhaka_epz.txt")
+    risk = next(k for k in r.risks if k.title.en.startswith("Grievances go only to a committee"))
+    clauses = {c.id: c.text for c in r.document.clauses}
+    assert [clauses[i][:32] for i in risk.clause_ids] == ["6. Workers' Representation. You "]

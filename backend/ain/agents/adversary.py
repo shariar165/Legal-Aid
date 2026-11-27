@@ -244,7 +244,7 @@ def _fake_hypotheses(clauses: list[Clause], facts: DocFacts, route: RouteDecisio
         hyps.append(
             {
                 "key": "h7", "title_en": "Grievances go only to a committee that EPZ law dissolves", "title_bn": "অভিযোগ শুধু এমন কমিটিতে, যা ইপিজেড আইনে বিলুপ্ত হয়ে যায়",
-                "category": "absence", "severity": "medium", "clause_ids": _ids(clauses, r"participation committee|grievance", 2),
+                "category": "absence", "severity": "medium", "clause_ids": _ids(clauses, r"participation committee", 2),  # not "grievance": Part A's data clause names grievance records
                 "finding": "The appointment letter sends grievances only to the participation committee and says nothing about the worker's own written grievance procedure.",
                 "why_non_obvious": "In an EPZ the participation committee exists only until a Workers' Welfare Association is formed; with the buyer pushing for worker organisation, the only grievance route named can vanish, while the 30-day statutory grievance clock keeps running.",
                 "queries": ["অংশগ্রহণকারী কমিটি স্বয়ংক্রিয়ভাবে বিলুপ্ত", "অভিযোগ লিখিত আকারে রেজিস্ট্রি ডাকযোগে মালিকের নিকট", "EPZ worker grievance procedure written complaint"],

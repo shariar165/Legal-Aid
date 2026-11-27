@@ -1037,6 +1037,12 @@ button.clause[data-on="true"]:hover {
   color: var(--card);
 }
 
+/* an unratified instrument: amber, as solid as "Violation" but not red */
+.badge[data-b="below_ilo"] {
+  background: var(--warn);
+  color: var(--card);
+}
+
 .badge[data-b="verified"] {
   background: var(--ok-tint);
   color: var(--ok-ink);

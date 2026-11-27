@@ -2,7 +2,7 @@
 
 import type { AnalysisResult, LedgerCell } from "@/lib/api";
 import { DESK, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
-import type { DeskRow, LawBadge, Node } from "@/lib/desk/rows";
+import { persuasiveBadge, type DeskRow, type LawBadge, type Node } from "@/lib/desk/rows";
 import type { ReactNode } from "react";
 import { Icon } from "@/components/shared/Icons";
 import { RatifyBadge } from "@/components/shared/RatifyBadge";
@@ -14,6 +14,7 @@ import s from "./desk.module.css";
 
 const BADGE: Record<LawBadge, keyof typeof DESK.rows> = {
   violation: "violation",
+  below_ilo: "belowIlo",
   verified: "verified",
   partial: "partial",
   not_verified: "notVerified",
@@ -164,7 +165,7 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
               <span className={s.lawValue}>{lawShort ?? r.law.title?.[lang] ?? (r.law.badge ? "" : T.noLaw[lang])}</span>
               {(r.law.badge || ratify) && (
                 <span className={s.lawStatus}>
-                  {r.law.badge && <LawBadgePill badge={r.law.badge} lang={lang} />}
+                  {r.law.badge && <LawBadgePill badge={persuasiveBadge(r.law.badge, result, cite)} lang={lang} />}
                   <RatifyBadge r={ratify} lang={lang} />
                 </span>
               )}
