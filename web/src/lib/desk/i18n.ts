@@ -91,6 +91,7 @@ export const DESK = {
   rows: {
     title: { bn: "চার খাতা", en: "Four Ledgers" },
     riskTitle: { bn: "কাগজ ও আইন", en: "Paper and law" },
+    otherRisks: { bn: "এই চুক্তির অন্য ঝুঁকি", en: "Other risks in this contract" },
     ne: { bn: "অমিল", en: "Mismatch" },
     eq: { bn: "মিল", en: "Match" },
     dash: { bn: "তুলনা নেই", en: "No comparison" },

@@ -3,6 +3,7 @@
 import type { AnalysisResult, LedgerCell } from "@/lib/api";
 import { DESK, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
 import type { DeskRow, LawBadge, Node } from "@/lib/desk/rows";
+import type { ReactNode } from "react";
 import { Icon } from "@/components/shared/Icons";
 import { RatifyBadge } from "@/components/shared/RatifyBadge";
 import { citeName, citeShort, clauseNo, isBangla } from "./util";
@@ -56,6 +57,23 @@ function Cell({ k, label, cell, empty, lang }: { k: "said" | "paper" | "paid"; l
   );
 }
 
+function RowGroup({ id, title, cols, children }: { id: string; title: string | null; cols: number; children: ReactNode }) {
+  return (
+    <div className={s.rowGroup} role={title ? "group" : undefined} aria-labelledby={title ? id : undefined}>
+      {title && (
+        <h3 id={id} className={s.groupTitle}>
+          {title}
+        </h3>
+      )}
+      <div className={s.chainScroll}>
+        <ul className={s.chainList} data-cols={cols}>
+          {children}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   result: AnalysisResult;
   rows: DeskRow[];
@@ -76,6 +94,87 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
   const paid = ledgerOn && showPaid;
   const cols = 2 + Number(told) + Number(paid); // paper and law always
   const clauseIndex = new Map(result.document.clauses.map((c) => [c.id, c]));
+  const terms = rows.filter((r) => r.kind === "term");
+  const risks = rows.filter((r) => r.kind === "risk");
+  const both = terms.length > 0 && risks.length > 0;
+  // the first group is named by its columns: "Told · paper · law", or "Paper · law" with nothing told yet
+  const termsTitle = [told && T.said[lang], T.paper[lang], paid && T.paid[lang], T.law[lang]]
+    .filter(Boolean)
+    .map((w, i) => (i === 0 || lang === "bn" ? w : (w as string).toLowerCase()))
+    .join(" · ");
+
+  const row = (r: DeskRow) => {
+    const clause = r.kind === "risk" && r.clauseIds[0] ? clauseIndex.get(r.clauseIds[0]) : undefined;
+    const cite = r.law.citationIds[0];
+    const lawShort = cite ? citeShort(result, cite, lang) : null;
+    // the cell shows the short citation; the hover names the act in full, after what the law says here
+    const lawTip = [r.law.title?.[lang], cite && citeName(result, cite, lang)].filter(Boolean).join(" · ") || undefined;
+    const ratify = cite ? result.ratification?.[cite] : undefined;
+    const term = r.kind === "term";
+    return (
+      <li key={r.key}>
+        <button type="button" className={s.row} aria-pressed={r.key === selectedKey} onClick={() => onSelect(r.key)}>
+          <span className={s.rowHead}>
+            <span className={s.rowTitle} lang={lang}>
+              {r.title[lang]}
+            </span>
+            {r.severity && (
+              <span className={s.sev} data-sev={r.severity}>
+                {SEVERITY_NAME[r.severity][lang]}
+              </span>
+            )}
+            {r.pending && <span className={s.pendingPill}>{T.pending[lang]}</span>}
+            {r.mismatches.length > 0 && <span className={s.count}>{T.count(r.mismatches.length, lang)}</span>}
+          </span>
+          {/* a risk row is clause ↔ law; a term row leaves out the columns nobody has filled (step 3.2) */}
+          <span className={s.cells} data-cols={term ? cols : 2}>
+            {term && told && (
+              <>
+                <Cell k="said" label={T.said[lang]} cell={r.said} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
+                <NodeMark n={r.saidPaper} lang={lang} />
+              </>
+            )}
+            {term ? (
+              <Cell k="paper" label={T.paper[lang]} cell={r.paper} empty={T.notOnPaper[lang]} lang={lang} />
+            ) : (
+              <span className={s.cell} data-k="paper">
+                <span className={s.cellLabel}>
+                  {T.paper[lang]}
+                  {clause && ` · ${T.clause(clauseNo(clause), lang)}`}
+                </span>
+                {clause && (
+                  <span className={s.cellClamp} lang={isBangla(clause.text) ? "bn" : "en"}>
+                    {clause.text}
+                  </span>
+                )}
+              </span>
+            )}
+            {term && paid && (
+              <>
+                <NodeMark n="dash" lang={lang} />
+                <Cell k="paid" label={T.paid[lang]} cell={r.paid} empty={T.noPayslip[lang]} lang={lang} />
+              </>
+            )}
+            <span className={s.divider} aria-hidden="true" />
+            {/* spec 29 step 3.1: the short citation, then the status on a line of its own (never beside it) */}
+            <span className={s.lawCell} data-empty={!r.law.badge && !lawShort && !r.law.title} title={lawTip}>
+              <span className={s.cellLabel} data-k="law">
+                {T.law[lang]}
+              </span>
+              <span className={s.lawValue}>{lawShort ?? r.law.title?.[lang] ?? (r.law.badge ? "" : T.noLaw[lang])}</span>
+              {(r.law.badge || ratify) && (
+                <span className={s.lawStatus}>
+                  {r.law.badge && <LawBadgePill badge={r.law.badge} lang={lang} />}
+                  <RatifyBadge r={ratify} lang={lang} />
+                </span>
+              )}
+            </span>
+          </span>
+        </button>
+      </li>
+    );
+  };
+
   return (
     <section className={s.chain} aria-labelledby="chain-title">
       <div className={s.chainHead}>
@@ -99,80 +198,20 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
       {rows.length === 0 ? (
         <p className={s.muted}>{T.empty[lang]}</p>
       ) : (
-        <div className={s.chainScroll}>
-          <ul className={s.chainList} data-cols={cols}>
-            {rows.map((r) => {
-              const clause = r.kind === "risk" && r.clauseIds[0] ? clauseIndex.get(r.clauseIds[0]) : undefined;
-              const cite = r.law.citationIds[0];
-              const lawShort = cite ? citeShort(result, cite, lang) : null;
-              // the cell shows the short citation; the hover names the act in full, after what the law says here
-              const lawTip = [r.law.title?.[lang], cite && citeName(result, cite, lang)].filter(Boolean).join(" · ") || undefined;
-              const ratify = cite ? result.ratification?.[cite] : undefined;
-              return (
-                <li key={r.key}>
-                  <button type="button" className={s.row} aria-pressed={r.key === selectedKey} onClick={() => onSelect(r.key)}>
-                    <span className={s.rowHead}>
-                      <span className={s.rowTitle} lang={lang}>
-                        {r.title[lang]}
-                      </span>
-                      {r.severity && (
-                        <span className={s.sev} data-sev={r.severity}>
-                          {SEVERITY_NAME[r.severity][lang]}
-                        </span>
-                      )}
-                      {r.pending && <span className={s.pendingPill}>{T.pending[lang]}</span>}
-                      {r.mismatches.length > 0 && <span className={s.count}>{T.count(r.mismatches.length, lang)}</span>}
-                    </span>
-                    {/* flag off, an older result or nothing told / paid yet: those cells are left out and the rest get the width */}
-                    <span className={s.cells} data-cols={cols}>
-                      {told && (
-                        <>
-                          <Cell k="said" label={T.said[lang]} cell={r.kind === "term" ? r.said : null} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
-                          <NodeMark n={r.saidPaper} lang={lang} />
-                        </>
-                      )}
-                      {r.kind === "term" ? (
-                        <Cell k="paper" label={T.paper[lang]} cell={r.paper} empty={T.notOnPaper[lang]} lang={lang} />
-                      ) : (
-                        <span className={s.cell} data-k="paper">
-                          <span className={s.cellLabel}>
-                            {T.paper[lang]}
-                            {clause && ` · ${T.clause(clauseNo(clause), lang)}`}
-                          </span>
-                          {clause && (
-                            <span className={s.cellClamp} lang={isBangla(clause.text) ? "bn" : "en"}>
-                              {clause.text}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {paid && (
-                        <>
-                          <NodeMark n="dash" lang={lang} />
-                          <Cell k="paid" label={T.paid[lang]} cell={r.paid} empty={T.noPayslip[lang]} lang={lang} />
-                        </>
-                      )}
-                      <span className={s.divider} aria-hidden="true" />
-                      {/* spec 29 step 3.1: the short citation, then the status on a line of its own (never beside it) */}
-                      <span className={s.lawCell} data-empty={!r.law.badge && !lawShort && !r.law.title} title={lawTip}>
-                        <span className={s.cellLabel} data-k="law">
-                          {T.law[lang]}
-                        </span>
-                        <span className={s.lawValue}>{lawShort ?? r.law.title?.[lang] ?? (r.law.badge ? "" : T.noLaw[lang])}</span>
-                        {(r.law.badge || ratify) && (
-                          <span className={s.lawStatus}>
-                            {r.law.badge && <LawBadgePill badge={r.law.badge} lang={lang} />}
-                            <RatifyBadge r={ratify} lang={lang} />
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <>
+          {/* spec 29 step 3.3: the ledger rows first, then the other risks as compact clause ↔ law rows (severity order,
+              from deskRows). A group heading only when both groups are there. */}
+          {terms.length > 0 && (
+            <RowGroup id="chain-terms" title={both ? termsTitle : null} cols={cols}>
+              {terms.map(row)}
+            </RowGroup>
+          )}
+          {risks.length > 0 && (
+            <RowGroup id="chain-risks" title={both ? T.otherRisks[lang] : null} cols={2}>
+              {risks.map(row)}
+            </RowGroup>
+          )}
+        </>
       )}
     </section>
   );

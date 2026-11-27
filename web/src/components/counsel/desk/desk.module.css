@@ -672,6 +672,18 @@ button.clause[data-on="true"]:hover {
   color: var(--muted);
 }
 
+/* spec 29 step 3.3: ledger rows, then the other risks, each under its own small heading */
+.rowGroup + .rowGroup {
+  margin-top: 28px;
+}
+
+.groupTitle {
+  margin: 0 0 10px;
+  font-size: var(--fs-16);
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .chainScroll {
   overflow-x: auto;
   padding: 2px 2px 8px;
