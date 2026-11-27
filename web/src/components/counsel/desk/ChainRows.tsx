@@ -65,10 +65,16 @@ interface Props {
   /** what the worker was told is on file: an empty told cell then means "not said" */
   hasPromises: boolean;
   ledgerOn: boolean;
+  /** some row has a told value / a paid value; else that column is left out (spec 29 step 3.2) */
+  showTold: boolean;
+  showPaid: boolean;
 }
 
-export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromises, ledgerOn }: Props) {
+export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromises, ledgerOn, showTold, showPaid }: Props) {
   const T = DESK.rows;
+  const told = ledgerOn && showTold;
+  const paid = ledgerOn && showPaid;
+  const cols = 2 + Number(told) + Number(paid); // paper and law always
   const clauseIndex = new Map(result.document.clauses.map((c) => [c.id, c]));
   return (
     <section className={s.chain} aria-labelledby="chain-title">
@@ -77,7 +83,7 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
           {ledgerOn ? T.title[lang] : T.riskTitle[lang]}
         </h2>
         {/* the ≠ / = marks sit between told and paper, so the legend goes with them */}
-        {ledgerOn && (
+        {told && (
           <>
             <span className={s.legend} aria-hidden="true">
               <NodeMark n="ne" lang={lang} size={22} /> {T.ne[lang]}
@@ -87,13 +93,14 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
             </span>
           </>
         )}
+        {ledgerOn && !paid && <span className={s.legend}>{T.noPayslips[lang]}</span>}
       </div>
 
       {rows.length === 0 ? (
         <p className={s.muted}>{T.empty[lang]}</p>
       ) : (
         <div className={s.chainScroll}>
-          <ul className={s.chainList} data-ledger={ledgerOn ? "on" : "off"}>
+          <ul className={s.chainList} data-cols={cols}>
             {rows.map((r) => {
               const clause = r.kind === "risk" && r.clauseIds[0] ? clauseIndex.get(r.clauseIds[0]) : undefined;
               const cite = r.law.citationIds[0];
@@ -116,9 +123,9 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                       {r.pending && <span className={s.pendingPill}>{T.pending[lang]}</span>}
                       {r.mismatches.length > 0 && <span className={s.count}>{T.count(r.mismatches.length, lang)}</span>}
                     </span>
-                    {/* flag off or an older result: no told or paid cells, so paper and law get the width */}
-                    <span className={s.cells} data-ledger={ledgerOn ? "on" : "off"}>
-                      {ledgerOn && (
+                    {/* flag off, an older result or nothing told / paid yet: those cells are left out and the rest get the width */}
+                    <span className={s.cells} data-cols={cols}>
+                      {told && (
                         <>
                           <Cell k="said" label={T.said[lang]} cell={r.kind === "term" ? r.said : null} empty={hasPromises ? T.notSaid[lang] : "–"} lang={lang} />
                           <NodeMark n={r.saidPaper} lang={lang} />
@@ -139,10 +146,10 @@ export function ChainRows({ result, rows, selectedKey, onSelect, lang, hasPromis
                           )}
                         </span>
                       )}
-                      {ledgerOn && (
+                      {paid && (
                         <>
                           <NodeMark n="dash" lang={lang} />
-                          <Cell k="paid" label={T.paid[lang]} cell={null} empty={T.noPayslip[lang]} lang={lang} />
+                          <Cell k="paid" label={T.paid[lang]} cell={r.paid} empty={T.noPayslip[lang]} lang={lang} />
                         </>
                       )}
                       <span className={s.divider} aria-hidden="true" />

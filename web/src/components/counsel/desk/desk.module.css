@@ -932,17 +932,21 @@ button.clause[data-on="true"]:hover {
 }
 
 /* flag off or an older result: no told or paid cells, so paper and law share the row and keep more of their text */
-.cells[data-ledger="off"] .cell[data-k="paper"] {
+.cells[data-cols="2"] .cell[data-k="paper"] {
   flex: 1.4 1 0;
 }
 
-.cells[data-ledger="off"] .cellClamp {
+.cells[data-cols="2"] .cellClamp {
   -webkit-line-clamp: 3;
 }
 
-/* two cells need no sideways scroll (the 580px floor is for four) */
-.chainList[data-ledger="off"] {
+/* two cells need no sideways scroll, and three need less of it (the 580px floor is for four) */
+.chainList[data-cols="2"] {
   min-width: 0;
+}
+
+.chainList[data-cols="3"] {
+  min-width: 440px;
 }
 
 .badge[data-b="violation"] {
@@ -1409,12 +1413,12 @@ button.clause[data-on="true"]:hover {
     margin-left: 0;
   }
 
-  /* flag off on a phone: paper above law, each the full width */
-  .cells[data-ledger="off"] {
+  /* two cells on a phone (flag off, or nothing told or paid yet): paper above law, each the full width */
+  .cells[data-cols="2"] {
     flex-direction: column;
   }
 
-  .cells[data-ledger="off"] .divider {
+  .cells[data-cols="2"] .divider {
     display: none;
   }
 }

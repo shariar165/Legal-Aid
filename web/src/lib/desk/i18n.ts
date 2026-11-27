@@ -102,6 +102,7 @@ export const DESK = {
     notSaid: { bn: "বলা হয়নি", en: "Not said" },
     notOnPaper: { bn: "কাগজে নেই", en: "Not on paper" },
     noPayslip: { bn: "বেতন-স্লিপ যোগ হয়নি", en: "No payslip yet" },
+    noPayslips: { bn: "বেতন-স্লিপ: এখনো যোগ হয়নি", en: "Payslips: not added yet" },
     clause: (n: number, lang: Lang) => (lang === "bn" ? `ধারা ${num(n, "bn")}` : `Clause ${n}`),
     violation: { bn: "লঙ্ঘন", en: "Violation" },
     verified: { bn: "ধারা যাচাইকৃত", en: "Section verified" }, // the gates verify the cited section, not that anyone broke it

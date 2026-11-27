@@ -30,6 +30,8 @@ export interface DeskRow {
   pending: boolean;
   said: LedgerCell | null;
   paper: LedgerCell | null;
+  /** what the payslip shows (null until payslips exist) */
+  paid: LedgerCell | null;
   saidPaper: Node;
   law: { title: L10n | null; citationIds: string[]; badge: LawBadge | null };
   mismatches: Mismatch[];
@@ -105,6 +107,7 @@ function termRow(row: LedgerRow, result: AnalysisResult): DeskRow {
     pending,
     said: row.said,
     paper: row.paper,
+    paid: row.paid,
     saidPaper: svp ? "ne" : comparable(row, four.promises?.exchange_rate) ? "eq" : "dash",
     law,
     mismatches: row.mismatches,
@@ -134,6 +137,7 @@ function riskRow(risk: Risk, result: AnalysisResult): DeskRow {
     pending: false,
     said: null,
     paper: null,
+    paid: null,
     saidPaper: "dash",
     law: { title: null, citationIds: ids, badge: STATUS_BADGE[status] },
     mismatches: [],

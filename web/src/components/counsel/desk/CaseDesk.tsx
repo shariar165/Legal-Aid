@@ -70,6 +70,9 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
   const four = result.four_ledgers ?? null;
   const pending = !!four?.pending_risks.length;
   const mismatches = four?.rows.reduce((n, r) => n + r.mismatches.length, 0) ?? 0;
+  // a column nobody has filled is left out, not shown as a row of dashes (spec 29 step 3.2)
+  const hasTold = !!four?.rows.some((r) => r.said);
+  const hasPaid = !!four?.rows.some((r) => r.paid);
 
   const verify = async () => {
     setVerifying(true);
@@ -151,7 +154,7 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
 
       <div className={s.panes}>
         <ContractPane result={result} rows={rows} selected={selected} onSelect={select} lang={lang} wide={wide} />
-        <ChainRows result={result} rows={rows} selectedKey={selectedKey} onSelect={select} lang={lang} hasPromises={!!four?.promises} ledgerOn={!!four} />
+        <ChainRows result={result} rows={rows} selectedKey={selectedKey} onSelect={select} lang={lang} hasPromises={!!four?.promises} ledgerOn={!!four} showTold={hasTold} showPaid={hasPaid} />
         <EvidenceFile
           ref={evidenceRef}
           result={result}
