@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api, type AnalysisResult } from "@/lib/api";
-import { DESK, type Lang } from "@/lib/desk/i18n";
+import { DESK, SEVERITY_NAME, type Lang } from "@/lib/desk/i18n";
 import { DESK_LANG_KEY, usePref } from "@/lib/prefs";
 import { deskRows, firstRow } from "@/lib/desk/rows";
 import { HeroChip, MoneyHero } from "@/components/shared/MoneyHero";
@@ -46,7 +46,17 @@ interface Props {
 export function CaseDesk({ result, reload, onAsk, clause }: Props) {
   // Counsel is English-first, so the desk opens in English; a choice of বাংলা is remembered on this device (spec 29 1.2)
   const [lang, setLang] = usePref<Lang>(DESK_LANG_KEY, LANGS, "en");
-  const rows = useMemo(() => deskRows(result), [result]);
+  const four = result.four_ledgers ?? null;
+  // a column nobody has filled is left out, not shown as a row of dashes (spec 29 step 3.2)
+  const hasTold = !!four?.rows.some((r) => r.said);
+  const hasPaid = !!four?.rows.some((r) => r.paid);
+  // a buyer–supplier contract (spec 29 step 3.4): nothing told, and no worker's wage on paper or worked out. Its desk
+  // is the risk group only, with no ledger header; an EPZ contract with a worker's wage on paper is not one.
+  const b2b = !!four && !hasTold && !result.wage && !four.rows.some((r) => r.term === "salary" && r.paper);
+  const rows = useMemo(() => {
+    const all = deskRows(result);
+    return b2b ? all.filter((r) => r.kind === "risk") : all;
+  }, [result, b2b]);
   const [picked, setPicked] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -67,9 +77,9 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
     [wide],
   );
 
-  const four = result.four_ledgers ?? null;
   const pending = !!four?.pending_risks.length;
   const mismatches = four?.rows.reduce((n, r) => n + r.mismatches.length, 0) ?? 0;
+  const topRisk = b2b ? rows.find((r) => r.kind === "risk") : undefined; // rows come most serious first
 
   const verify = async () => {
     setVerifying(true);
@@ -102,7 +112,18 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
           </div>
         }
         chips={
-          four && (
+          four &&
+          (b2b ? (
+            topRisk && (
+              <button type="button" className={`${s.saidBtn} ${s.topRisk}`} onClick={() => select(topRisk.key)}>
+                <b>
+                  {DESK.hero.topRisk[lang]}
+                  {topRisk.severity && ` · ${SEVERITY_NAME[topRisk.severity][lang]}`}
+                </b>
+                <span lang={lang}>{topRisk.title[lang]}</span>
+              </button>
+            )
+          ) : (
             <>
               <HeroChip n={four.rows.length} label={DESK.hero.terms[lang]} lang={lang} />
               <HeroChip n={mismatches} label={DESK.hero.mismatches[lang]} lang={lang} />
@@ -113,11 +134,12 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
                 </button>
               )}
             </>
-          )
+          ))
         }
       >
         {/* flag off or an older result: nothing about the ledgers at all */}
-        {four && <MoneyStrip result={result} lang={lang} reload={reload} />}
+        {/* a buyer–supplier contract has no worker's money to project, so no strip unless the backend found a line */}
+        {four && !(b2b && !four.claim_projection.lines.length) && <MoneyStrip result={result} lang={lang} reload={reload} />}
       </MoneyHero>
 
       {four && formOpen && (
@@ -151,7 +173,7 @@ export function CaseDesk({ result, reload, onAsk, clause }: Props) {
 
       <div className={s.panes}>
         <ContractPane result={result} rows={rows} selected={selected} onSelect={select} lang={lang} wide={wide} />
-        <ChainRows result={result} rows={rows} selectedKey={selectedKey} onSelect={select} lang={lang} hasPromises={!!four?.promises} ledgerOn={!!four} />
+        <ChainRows result={result} rows={rows} selectedKey={selectedKey} onSelect={select} lang={lang} hasPromises={!!four?.promises} ledgerOn={!!four && !b2b} showTold={hasTold} showPaid={hasPaid} />
         <EvidenceFile
           ref={evidenceRef}
           result={result}

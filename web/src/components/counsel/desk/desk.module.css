@@ -126,8 +126,68 @@
 .stripRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+}
+
+/* three groups, each under a small heading, split by a rule (spec 29 step 3.5) */
+.stripGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stripGroup + .stripGroup {
+  padding-left: 20px;
+  border-left: 1px solid var(--deep-line);
+}
+
+.groupHead {
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-deep-muted);
+}
+
+/* spacing pulls Bangla conjuncts apart, and Bangla has no capitals */
+:global([lang="bn"]) .groupHead {
+  letter-spacing: 0;
+}
+
+.groupBody {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
+  gap: 6px 16px;
+  min-height: 44px;
+}
+
+/* under 1280 px the loss group takes the first row and the rest wrap below it, instead of squeezing */
+@media (max-width: 1279px) {
+  .stripGroup[data-g="loss"] {
+    flex-basis: 100%;
+  }
+
+  .stripGroup[data-g="be"] {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .stripGroup[data-g="loss"] + .stripGroup[data-g="term"] {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .stripGroup,
+  .stripGroup + .stripGroup {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: none;
+  }
 }
 
 .fig {
@@ -194,6 +254,17 @@
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* the top risk of a buyer–supplier contract: its title wraps, the label stays on the first line */
+.topRisk {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-height: 44px;
+  padding: 6px 16px;
+  border-radius: var(--r);
+  white-space: normal;
+  text-align: left;
 }
 
 .saidBtn:hover {
@@ -672,6 +743,18 @@ button.clause[data-on="true"]:hover {
   color: var(--muted);
 }
 
+/* spec 29 step 3.3: ledger rows, then the other risks, each under its own small heading */
+.rowGroup + .rowGroup {
+  margin-top: 28px;
+}
+
+.groupTitle {
+  margin: 0 0 10px;
+  font-size: var(--fs-16);
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .chainScroll {
   overflow-x: auto;
   padding: 2px 2px 8px;
@@ -841,7 +924,7 @@ button.clause[data-on="true"]:hover {
   gap: 4px;
   font-size: var(--fs-14);
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word; /* a long word moves to the next line whole; it is cut only if it is wider than the cell */
 }
 
 .cell[data-empty="true"] .cellValue {
@@ -892,13 +975,14 @@ button.clause[data-on="true"]:hover {
   background: var(--line-strong);
 }
 
+/* label, short citation, then the status chips on their own line (spec 29 step 3.1) */
 .lawCell {
   flex: 1.7 1 0;
   min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: var(--r);
@@ -911,39 +995,41 @@ button.clause[data-on="true"]:hover {
   color: var(--muted);
 }
 
-.lawText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.lawCite {
-  font-size: var(--fs-12);
-  color: var(--lg-law-ink);
-}
-
-/* the law cell keeps to a few lines; the evidence file has the whole text */
-.lawText .cellValue,
-.lawCite {
+/* the law cell keeps to three lines; the hover and the evidence file have the full name */
+.lawValue {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  max-width: 100%;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.lawStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
 }
 
 /* flag off or an older result: no told or paid cells, so paper and law share the row and keep more of their text */
-.cells[data-ledger="off"] .cell[data-k="paper"] {
+.cells[data-cols="2"] .cell[data-k="paper"] {
   flex: 1.4 1 0;
 }
 
-.cells[data-ledger="off"] .cellClamp,
-.cells[data-ledger="off"] .lawText .cellValue {
+.cells[data-cols="2"] .cellClamp {
   -webkit-line-clamp: 3;
 }
 
-/* two cells need no sideways scroll (the 580px floor is for four) */
-.chainList[data-ledger="off"] {
+/* two cells need no sideways scroll, and three need less of it (the 580px floor is for four) */
+.chainList[data-cols="2"] {
   min-width: 0;
+}
+
+.chainList[data-cols="3"] {
+  min-width: 440px;
 }
 
 .badge[data-b="violation"] {
@@ -1410,12 +1496,12 @@ button.clause[data-on="true"]:hover {
     margin-left: 0;
   }
 
-  /* flag off on a phone: paper above law, each the full width */
-  .cells[data-ledger="off"] {
+  /* two cells on a phone (flag off, or nothing told or paid yet): paper above law, each the full width */
+  .cells[data-cols="2"] {
     flex-direction: column;
   }
 
-  .cells[data-ledger="off"] .divider {
+  .cells[data-cols="2"] .divider {
     display: none;
   }
 }

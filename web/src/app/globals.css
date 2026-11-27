@@ -226,6 +226,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Bangla sizes (spec 29 step 3.6). Bengali glyphs sit visibly smaller than Latin at the same size.
+   - The lift: text that inherits its size is set 1.08em larger where the page turns Bangla. That is the body when
+     <html> is Bangla (Citizen), or the first element of a Bangla run inside English (the Case Desk in Counsel). An
+     English run inside Bangla is set back. <html> itself never changes, so rem stays 16px. :lang() follows the
+     nearest lang attribute, and :where() keeps every rule at zero specificity, so a component's own size wins.
+   - The scale: px tokens do not inherit an em lift, so the 12px step reads at 14px in Bangla. Custom properties
+     inherit, so an English island inside Bangla gets 12px back. */
+:where(html:lang(bn) > body),
+:where(body *:lang(bn):not(:lang(bn) > *)) {
+  font-size: 1.08em;
+}
+
+:where(body *:lang(en):not(:lang(en) > *)):where(:lang(bn) > *) {
+  font-size: calc(1em / 1.08);
+}
+
+:where(:lang(bn)) {
+  --fs-12: 14px;
+}
+
+:where(:lang(en)) {
+  --fs-12: 12px;
+}
+
 @media print {
   html,
   body {

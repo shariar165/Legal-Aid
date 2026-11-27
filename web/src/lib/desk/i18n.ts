@@ -60,20 +60,24 @@ export const DESK = {
     stepFrom: (a: number, b: number | null, lang: Lang) =>
       lang === "bn" ? (b ? `মাস ${num(a, "bn")}–${num(b, "bn")}` : `মাস ${num(a, "bn")} থেকে`) : b ? `months ${a}–${b}` : `from month ${a}`,
     addSaid: { bn: "যা বলা হয়েছিল যোগ করুন", en: "Add what was said" },
+    topRisk: { bn: "সবচেয়ে বড় ঝুঁকি", en: "Top risk" },
     editSaid: { bn: "যা বলা হয়েছিল বদলান", en: "Edit what was said" },
   },
 
   money: {
     projected: { bn: "প্রক্ষেপিত দাবি", en: "Projected claim" },
     noLines: { bn: "যাচাই করা আইনের ওপর দাঁড়ানো কোনো প্রক্ষেপিত লাইন নেই।", en: "No projected line rests on verified law." },
-    term: { bn: "মেয়াদ", en: "Term" },
+    term: { bn: "চুক্তির মেয়াদ", en: "Contract term" },
+    loss: { bn: "কর্মীর ক্ষতি", en: "Worker's loss" },
     months: { bn: "মাস", en: "months" },
-    confirm: { bn: "ঠিক আছে", en: "Correct" },
-    change: { bn: "বদলান", en: "Change" },
+    // the button says what it confirms (spec 29 step 3.5)
+    confirm: (n: number, lang: Lang) => (lang === "bn" ? `${num(n, "bn")} মাস ঠিক` : `Confirm ${n} months`),
+    change: { bn: "মেয়াদ বদলান", en: "Edit term" },
     save: { bn: "সংরক্ষণ", en: "Save" },
     cancel: { bn: "বাতিল", en: "Cancel" },
     noTerm: { bn: "চুক্তিতে মেয়াদ পাওয়া যায়নি", en: "No term found in the contract" },
     termInput: { bn: "চুক্তির মেয়াদ, মাসে", en: "Contract term in months" },
+    noTermAdd: { bn: "মেয়াদ পাওয়া যায়নি · যোগ করুন", en: "Term not found · Add" },
     gap: { bn: "প্রতিশ্রুতির ফারাক", en: "Promise gap" },
     breakEven: { bn: "খরচ উঠতে", en: "Cost earned back in" },
     minimum: { bn: "সর্বনিম্ন", en: "Minimum" },
@@ -91,6 +95,7 @@ export const DESK = {
   rows: {
     title: { bn: "চার খাতা", en: "Four Ledgers" },
     riskTitle: { bn: "কাগজ ও আইন", en: "Paper and law" },
+    otherRisks: { bn: "এই চুক্তির অন্য ঝুঁকি", en: "Other risks in this contract" },
     ne: { bn: "অমিল", en: "Mismatch" },
     eq: { bn: "মিল", en: "Match" },
     dash: { bn: "তুলনা নেই", en: "No comparison" },
@@ -102,6 +107,7 @@ export const DESK = {
     notSaid: { bn: "বলা হয়নি", en: "Not said" },
     notOnPaper: { bn: "কাগজে নেই", en: "Not on paper" },
     noPayslip: { bn: "বেতন-স্লিপ যোগ হয়নি", en: "No payslip yet" },
+    noPayslips: { bn: "বেতন-স্লিপ: এখনো যোগ হয়নি", en: "Payslips: not added yet" },
     clause: (n: number, lang: Lang) => (lang === "bn" ? `ধারা ${num(n, "bn")}` : `Clause ${n}`),
     violation: { bn: "লঙ্ঘন", en: "Violation" },
     verified: { bn: "ধারা যাচাইকৃত", en: "Section verified" }, // the gates verify the cited section, not that anyone broke it

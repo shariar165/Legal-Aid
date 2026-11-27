@@ -577,6 +577,14 @@ class AnalysisResult(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def citation_short(self) -> dict[str, L10n]:
+        """The same sections' short names for the Case Desk's law cell ("OEMA 2013 · s.31"), spec 29 step 3.1."""
+        from ain.naming import short_label
+
+        return {v.claim.citation_id: short_label(v.section) for v in self.ledger if v.section is not None}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def ratification(self) -> dict[str, Ratification]:
         """For each cited international instrument, who is bound by it (computed, so older results have it too)."""
         from ain import ratification  # it imports this module
