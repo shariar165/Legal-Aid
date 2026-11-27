@@ -126,8 +126,68 @@
 .stripRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+}
+
+/* three groups, each under a small heading, split by a rule (spec 29 step 3.5) */
+.stripGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stripGroup + .stripGroup {
+  padding-left: 20px;
+  border-left: 1px solid var(--deep-line);
+}
+
+.groupHead {
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-deep-muted);
+}
+
+/* spacing pulls Bangla conjuncts apart, and Bangla has no capitals */
+:global([lang="bn"]) .groupHead {
+  letter-spacing: 0;
+}
+
+.groupBody {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
+  gap: 6px 16px;
+  min-height: 44px;
+}
+
+/* under 1280 px the loss group takes the first row and the rest wrap below it, instead of squeezing */
+@media (max-width: 1279px) {
+  .stripGroup[data-g="loss"] {
+    flex-basis: 100%;
+  }
+
+  .stripGroup[data-g="be"] {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .stripGroup[data-g="loss"] + .stripGroup[data-g="term"] {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .stripGroup,
+  .stripGroup + .stripGroup {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: none;
+  }
 }
 
 .fig {

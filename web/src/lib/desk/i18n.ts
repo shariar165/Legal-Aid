@@ -67,10 +67,12 @@ export const DESK = {
   money: {
     projected: { bn: "প্রক্ষেপিত দাবি", en: "Projected claim" },
     noLines: { bn: "যাচাই করা আইনের ওপর দাঁড়ানো কোনো প্রক্ষেপিত লাইন নেই।", en: "No projected line rests on verified law." },
-    term: { bn: "মেয়াদ", en: "Term" },
+    term: { bn: "চুক্তির মেয়াদ", en: "Contract term" },
+    loss: { bn: "কর্মীর ক্ষতি", en: "Worker's loss" },
     months: { bn: "মাস", en: "months" },
-    confirm: { bn: "ঠিক আছে", en: "Correct" },
-    change: { bn: "বদলান", en: "Change" },
+    // the button says what it confirms (spec 29 step 3.5)
+    confirm: (n: number, lang: Lang) => (lang === "bn" ? `${num(n, "bn")} মাস ঠিক` : `Confirm ${n} months`),
+    change: { bn: "মেয়াদ বদলান", en: "Edit term" },
     save: { bn: "সংরক্ষণ", en: "Save" },
     cancel: { bn: "বাতিল", en: "Cancel" },
     noTerm: { bn: "চুক্তিতে মেয়াদ পাওয়া যায়নি", en: "No term found in the contract" },

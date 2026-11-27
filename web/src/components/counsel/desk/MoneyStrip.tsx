@@ -1,15 +1,16 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { api, type AnalysisResult } from "@/lib/api";
 import { DESK, num, type Lang } from "@/lib/desk/i18n";
 import { Icon } from "@/components/shared/Icons";
 import { citeName, money } from "./util";
 import s from "./desk.module.css";
 
-/* Under the hero, one compact row: each figure, with a short tag where its label alone does not say what it is (worker's account, minimum), the contract
-   term with its confirm control, then "details" for the full explanations. Every figure and label is the backend's
-   own. (The button for what was said sits with the hero's chips, in CaseDesk.) */
+/* Under the hero, three headed groups (spec 29 step 3.5): the worker's loss (projected loss · promise gap), break-even,
+   and the contract term with its confirm control; then "details" for the full explanations. A short tag marks a figure
+   whose label alone does not say what it is (worker's account, minimum). Every figure and label is the backend's own.
+   (The button for what was said sits with the hero's chips, in CaseDesk.) */
 
 interface Props {
   result: AnalysisResult;
@@ -29,30 +30,34 @@ export function MoneyStrip({ result, lang, reload }: Props) {
   return (
     <div className={s.strip}>
       <div className={s.stripRow}>
-        <span className={s.fig}>
-          <span className={s.figLabel}>{T.claimShort[lang]}</span>
-          <b className={s.figNum}>{cp.lines.length > 0 ? money(cp.currency ?? "", cp.projected_total) : "–"}</b>
-        </span>
-
-        {gap && (
+        <StripGroup id={`${detailsId}-loss`} head={T.loss[lang]} kind="loss">
           <span className={s.fig}>
-            <span className={s.figLabel}>{T.gap[lang]}</span>
-            <b className={s.figNum}>{money(gap.currency, gap.total)}</b>
-            <span className={s.tag} data-tone="quiet">
-              {T.account[lang]}
-            </span>
+            <span className={s.figLabel}>{T.claimShort[lang]}</span>
+            <b className={s.figNum}>{cp.lines.length > 0 ? money(cp.currency ?? "", cp.projected_total) : "–"}</b>
           </span>
-        )}
+          {gap && (
+            <span className={s.fig}>
+              <span className={s.figLabel}>{T.gap[lang]}</span>
+              <b className={s.figNum}>{money(gap.currency, gap.total)}</b>
+              <span className={s.tag} data-tone="quiet">
+                {T.account[lang]}
+              </span>
+            </span>
+          )}
+        </StripGroup>
 
         {be && (
-          <span className={s.fig}>
-            <span className={s.figLabel}>{T.breakEvenShort[lang]}</span>
-            <b className={s.figNum}>{be.months !== null ? T.atLeast(be.months, lang) : T.notWithin[lang]}</b>
-            {be.is_minimum && be.months !== null && <span className={s.tag}>{T.minimum[lang]}</span>}
-          </span>
+          <StripGroup id={`${detailsId}-be`} head={T.breakEvenShort[lang]} kind="be">
+            <span className={s.fig}>
+              <b className={s.figNum}>{be.months !== null ? T.atLeast(be.months, lang) : T.notWithin[lang]}</b>
+              {be.is_minimum && be.months !== null && <span className={s.tag}>{T.minimum[lang]}</span>}
+            </span>
+          </StripGroup>
         )}
 
-        <TermControl result={result} lang={lang} reload={reload} />
+        <StripGroup id={`${detailsId}-term`} head={T.term[lang]} kind="term">
+          <TermControl result={result} lang={lang} reload={reload} />
+        </StripGroup>
 
         <button type="button" className={`${s.btnOnDeepQuiet} ${s.detailsBtn}`} aria-expanded={open} aria-controls={detailsId} onClick={() => setOpen((o) => !o)}>
           {open ? T.detailsHide[lang] : T.details[lang]}
@@ -103,6 +108,17 @@ export function MoneyStrip({ result, lang, reload }: Props) {
   );
 }
 
+function StripGroup({ id, head, kind, children }: { id: string; head: string; kind: string; children: ReactNode }) {
+  return (
+    <div className={s.stripGroup} data-g={kind} role="group" aria-labelledby={id}>
+      <span id={id} className={s.groupHead}>
+        {head}
+      </span>
+      <div className={s.groupBody}>{children}</div>
+    </div>
+  );
+}
+
 /* The term the projection runs over; confirm or correct it like the OCR salary. Stays visible in the compact row;
    where the months came from is in the details. */
 function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: Lang; reload: () => Promise<void> }) {
@@ -136,7 +152,6 @@ function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: L
 
   return (
     <span className={s.term}>
-      <span className={s.figLabel}>{T.term[lang]}</span>
       {!editing && term ? (
         <>
           <span className={s.termValue}>
@@ -146,7 +161,7 @@ function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: L
           {term.source !== "user" && (
             <button type="button" className={s.btnOnDeep} disabled={busy} onClick={() => void send(term.months)} title={term.label[lang]}>
               <Icon name="check" size={16} strokeWidth={2.5} />
-              {T.confirm[lang]}
+              {T.confirm(term.months, lang)}
             </button>
           )}
           <button type="button" className={s.btnOnDeepQuiet} disabled={busy} onClick={() => setEditing(true)}>
