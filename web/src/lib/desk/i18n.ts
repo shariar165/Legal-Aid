@@ -60,6 +60,7 @@ export const DESK = {
     stepFrom: (a: number, b: number | null, lang: Lang) =>
       lang === "bn" ? (b ? `মাস ${num(a, "bn")}–${num(b, "bn")}` : `মাস ${num(a, "bn")} থেকে`) : b ? `months ${a}–${b}` : `from month ${a}`,
     addSaid: { bn: "যা বলা হয়েছিল যোগ করুন", en: "Add what was said" },
+    topRisk: { bn: "সবচেয়ে বড় ঝুঁকি", en: "Top risk" },
     editSaid: { bn: "যা বলা হয়েছিল বদলান", en: "Edit what was said" },
   },
 
@@ -74,6 +75,7 @@ export const DESK = {
     cancel: { bn: "বাতিল", en: "Cancel" },
     noTerm: { bn: "চুক্তিতে মেয়াদ পাওয়া যায়নি", en: "No term found in the contract" },
     termInput: { bn: "চুক্তির মেয়াদ, মাসে", en: "Contract term in months" },
+    noTermAdd: { bn: "মেয়াদ পাওয়া যায়নি · যোগ করুন", en: "Term not found · Add" },
     gap: { bn: "প্রতিশ্রুতির ফারাক", en: "Promise gap" },
     breakEven: { bn: "খরচ উঠতে", en: "Cost earned back in" },
     minimum: { bn: "সর্বনিম্ন", en: "Minimum" },

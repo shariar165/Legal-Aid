@@ -196,6 +196,17 @@
   cursor: pointer;
 }
 
+/* the top risk of a buyer–supplier contract: its title wraps, the label stays on the first line */
+.topRisk {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-height: 44px;
+  padding: 6px 16px;
+  border-radius: var(--r);
+  white-space: normal;
+  text-align: left;
+}
+
 .saidBtn:hover {
   background: var(--on-deep-hover);
 }

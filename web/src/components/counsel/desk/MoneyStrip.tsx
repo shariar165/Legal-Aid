@@ -108,7 +108,8 @@ export function MoneyStrip({ result, lang, reload }: Props) {
 function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: Lang; reload: () => Promise<void> }) {
   const T = DESK.money;
   const term = result.four_ledgers!.claim_projection.term ?? null;
-  const [editing, setEditing] = useState(!term);
+  // no term found: a button that opens the input, not an empty input (spec 29 step 3.4)
+  const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(term ? String(term.months) : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -152,22 +153,26 @@ function TermControl({ result, lang, reload }: { result: AnalysisResult; lang: L
             {T.change[lang]}
           </button>
         </>
+      ) : !editing ? (
+        <button type="button" className={s.btnOnDeepQuiet} onClick={() => setEditing(true)}>
+          <Icon name="plus" size={16} strokeWidth={2.5} />
+          {T.noTermAdd[lang]}
+        </button>
       ) : (
         <form className={s.termForm} onSubmit={submit}>
           {!term && <span className={s.termSource}>{T.noTerm[lang]}</span>}
           <label className={s.termInput}>
             <span className={s.srOnly}>{T.termInput[lang]}</span>
-            <input type="number" inputMode="numeric" min={1} max={240} value={value} onChange={(e) => setValue(e.target.value)} />
+            {/* opened by a click on "Edit term" or "Add", so the caret goes where the reader is already looking */}
+            <input type="number" inputMode="numeric" min={1} max={240} value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
             <span aria-hidden="true">{T.months[lang]}</span>
           </label>
           <button type="submit" className={s.btnOnDeep} disabled={busy}>
             {T.save[lang]}
           </button>
-          {term && (
-            <button type="button" className={s.btnOnDeepQuiet} onClick={() => setEditing(false)}>
-              {T.cancel[lang]}
-            </button>
-          )}
+          <button type="button" className={s.btnOnDeepQuiet} onClick={() => setEditing(false)}>
+            {T.cancel[lang]}
+          </button>
         </form>
       )}
       {error && (
