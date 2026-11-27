@@ -1468,3 +1468,11 @@ a.citName {
   color: var(--ink-2);
   text-align: right;
 }
+
+/* Bangla subtitles and footnotes are body text: 16px, not 14 (spec 29 step 3.6) */
+.uploadSub:lang(bn),
+.sampleSub:lang(bn),
+.helpSub:lang(bn),
+.homeFoot:lang(bn) {
+  font-size: var(--fs-16);
+}
