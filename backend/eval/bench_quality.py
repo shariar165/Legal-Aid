@@ -3,6 +3,8 @@
     python -m eval.bench_quality                            # every arm on the trap set (Groq judges, no OpenRouter quota)
     python -m eval.bench_quality --arms baseline_1,baseline_2 --keep
     python -m eval.bench_quality --probe bench_b=allam-2-7b  # a candidate fallback judge: first opinions only
+    python -m eval.bench_quality --arms "" --no-pressure --probe bench_b=openrouter/baidu/ernie-5.5-flash-preview:free
+                                                            # a seat's own OpenRouter model, no fallback (1 free request a trap)
     python -m eval.bench_quality --gold                     # also gold.yaml recall/precision through the whole pipeline
     python -m eval.bench_quality --arms "" --keep           # only the council pressure trap (see below)
     python -m eval.bench_quality --arms "" --keep --gold --gold-arms final --gold-routing config
@@ -43,6 +45,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import random
 import shutil
 import statistics
@@ -322,12 +325,20 @@ def score(res: dict, traps: list[dict], base: dict | None, ref: dict[str, dict] 
 
 
 async def probe(seat_model: str, traps: list[dict]) -> dict:
-    """First opinions only, from a candidate model in one seat (via that seat's Groq backup)."""
+    """First opinions only, from a candidate model in one seat: a Groq model via that seat's Groq backup, or
+    `openrouter/<model>` as the seat's own OpenRouter model with no fallback or backup, so every answer is the
+    candidate's (one free request per trap; the run stops at OpenRouter's daily quota)."""
     role, model = seat_model.split("=", 1)
     raw = config._raw()
-    raw["roles"][role]["backup"]["model"] = model
-    use_cache(f"probe_{model.replace('/', '_')}")
-    groq_only()
+    use_cache("probe_" + re.sub(r"[^\w.-]", "_", model))  # "/" and ":" are not allowed in a folder name
+    if model.startswith("openrouter/"):
+        model = model.removeprefix("openrouter/")
+        raw["roles"][role] = {"provider": "openrouter", "model": model}
+        llm_mod.reset_breakers()
+        llm_mod.halt_on_quota("openrouter")
+    else:
+        raw["roles"][role]["backup"]["model"] = model
+        groq_only()
     llm = TimedLLM()
     p = next(x for x in bench.PERSONAS if x.role == role)
     rows, errors = {}, []
