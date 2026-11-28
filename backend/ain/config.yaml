@@ -11,7 +11,7 @@ roles:
   fast:     {provider: groq, model: openai/gpt-oss-20b,                   # facts extraction, routing confirmation
              backup: {provider: openrouter, model: "google/gemma-4-26b-a4b-it:free"}}  # was Xing 4.0, withdrawn 2026-11
   reasoner: {provider: groq, model: openai/gpt-oss-120b,                  # risk analysis, adversarial counsel, drafting
-             backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
+             backup: {provider: openrouter, model: "recursive/flint-v1.0:free"}}
   judge:    {provider: groq, model: qwen/qwen3.8-27b,                     # single-judge entailment (different family from drafter)
              backup: {provider: openrouter, model: "google/gemma-4-31b-it:free"}}
   plain:    {provider: groq, model: openai/gpt-oss-120b}                  # ablation baseline: same model as the reasoner, one prompt, no tools
@@ -20,16 +20,20 @@ roles:
   bench_a:  {provider: openrouter, model: "google/gemma-4-31b-it:free",   # Sunny - Google
              fallbacks: ["google/gemma-4-26b-a4b-it:free"],
              backup: {provider: groq, model: openai/gpt-oss-120b}}  # Qwen is Grey's now; Groq has no third judge family
-  bench_b:  {provider: openrouter, model: "dots-studio/dots-3-note-preview:free",   # Regal - rednote
+  # Regal moved to ERNIE when OpenRouter withdrew dots-3-note-preview (2026-11-27); Ling 3.2 Flash was gone too, and
+  # Nvidia's free endpoints fail data_collection: deny.
+  bench_b:  {provider: openrouter, model: "baidu/ernie-5.5-flash-preview:free",   # Regal - Baidu
              backup: {provider: groq, model: openai/gpt-oss-20b}}  # wanted: llama-3.3-70b (retired on Groq, no free OpenRouter endpoint)
   # Grey moved to Groq when OpenRouter withdrew Xing 4.0 (2026-11-13): a free preview model can go without notice, and
   # Qwen is a different family from the Chief Justice (GPT-OSS). See docs/specs/2026-11-13-17-grey-on-qwen-and-seat-health.md
   bench_c:  {provider: groq, model: qwen/qwen3.8-27b,                     # Grey - Alibaba
-             backup: {provider: openrouter, model: "baidu/ernie-5.5-flash-preview:free"}}
+             backup: {provider: openrouter, model: "recursive/flint-v1.0:free"}}  # not ERNIE: that is Regal's family now
   # The Chief Justice only writes the ruling from the judges' votes, so it runs on Groq: reliable, and it saves
   # one of every seven OpenRouter free requests a bench would otherwise spend.
+  # Flint is the only other free family that passes deny (2026-11-27), so if Groq itself fails, Grey and the Chief
+  # Justice share it; seat health labels that as same-family.
   chairman: {provider: groq, model: openai/gpt-oss-120b,
-             backup: {provider: openrouter, model: "dots-studio/dots-3-note-preview:free"}}
+             backup: {provider: openrouter, model: "recursive/flint-v1.0:free"}}
 
 providers:
   # Free tier: ~8k tokens/minute per model. Calls are paced under `tpm` (re-synced from Groq's own headers); a single

@@ -111,8 +111,8 @@ export default function DocsPage() {
               <span className={s.tag}>GPT-OSS 120B / 20B</span>
               <span className={s.tag}>Qwen 3.8 27B</span>
               <span className={s.tag}>Gemma 4 31B</span>
-              <span className={s.tag}>dots.3</span>
               <span className={s.tag}>ERNIE 5.5 Flash</span>
+              <span className={s.tag}>Flint v1.0</span>
               <span className={s.tag}>multilingual-e5-small</span>
               <span className={s.tag}>EasyOCR</span>
               <p>Groq runs the main pipeline; two judges sit on OpenRouter&apos;s free models and one on Groq, and no two judges share a model. Every role has a backup on the other provider.</p>
